@@ -1,0 +1,229 @@
+This file contains some examples of things you can do with balor.
+Remember, all of this is experimental. It may not work with your engraver:
+there are many kinds of BJJCZ galvo laser control boards. I have put 
+photographs of my machine's controller in this directory. If your board doesn't
+have the same model number, and maybe possibly revision, it may well not work.
+This software is, again, EXPERIMENTAL. It may contain serious bugs that will 
+damage your machine or ruin your workpiece. Accordingly, there is no warranty.
+See the license file in the main directory. Lasers are dangerous and can set
+things on fire or blind you. The beam from the laser cutter is focused but its
+specular reflection can absolutely damage your vision under optically 
+unfavorable circumstances. 
+
+A digression. When I was doing my thesis research in an optics lab, we had a
+2W CW laser being used for illumination in a microscope. The collimated beam
+was directed into the microscope objective through a dichoric mirror. So, 
+when the beam came out of the objective it was (rapidly) diverging. One day,
+a grad student whom we affectionately called "Screwdriver Teeth" (after an 
+earlier incident that had ended with a chipped tooth) was messing
+around with a glass slide on the microscope stage while the laser was running
+and I was looking at it about a meter away. He turned the slide at just the
+right angle that it got me in the eye with the specular reflection, and it was
+painfully bright. I suffered no longterm vision loss, but it was sobering. 
+If you're using one of these machines, please take appropriate precautions.
+1064 nm light is completely invisible and vision loss to lasers is insidious.
+
+Also, while a q-switched or MOPA laser usually prefers to disintegrate things,
+with the right (wrong) settings it can totally set them on fire, too. 
+
+Disintegrated things probably shouldn't be inhaled. Fume extraction would be
+good especially if you are going to mark plastic as the calibration section
+below will suggest.
+
+Please be sure to read the explanatory text rather than just pasting the
+commands in blindly and hoping for the best. READ IT ALL. Google the things
+you don't know what they are. Look at the source code. If after doing those
+things you still don't understand, please ask me for help:
+ 	bryce@gnosticinstruments.com
+In the rest of this document, I will convince you that I am not a technical
+writer, but I will try to help you, my time and interest permitting. 
+Support requests that provide pcap files (see below) and pictures of the 
+control board similar to the ones I have provided for my machine will be 
+prioritized.
+
+How to make it work:
+    You should probably do some captures of your laser engraver talking to 
+Ezcad2 to make sure that the protocol at least looks the same. An example file,
+ThreeOvals.pcap, is provided so you can see what it looks like when my machine
+starts up and engraves three ovals. 
+    You can capture USB traffic with wireshark:
+See here: https://wiki.wireshark.org/CaptureSetup/USB
+    If your laser does not produce similar-looking traffic, please let me 
+know. I'd appreciate also having a photograph of the board and any serial 
+numbers or marks that may distinguish it.
+
+    In principle, Balor is cross-platform. It uses a user-space USB 
+driver with libusb. 
+
+    On GNU/Linux, it should just work, providing of course that you have a
+working pyusb installed (left as an exercise to the reader.) The program might
+not work if you are not root. You will need to correctly configure udev rules 
+and user groups so that this is not necessary. My laser has USB vendor ID
+0x9588 and product ID 0x9899. You can also just run it as root if you want, I'm
+not going to judge you.
+
+    On Windows, you will need to install pyusb and a backend for it, such as
+libusb, along with its generic driver. Then, use something called Zadig to 
+associate the generic USB driver with the laser engraver instead of the 
+proprietary driver that comes with Ezcad2.
+
+    On Mac OS... I don't have any idea, but PyUSB is supposed to work on it and
+I suppose it would be like Linux above otherwise.
+
+How to calibrate, do distortion compensation, and mark test patterns:
+    The machine uses internal coordinates which are 16-bit integers for its
+movements. Depending on what lens you have on your engraver, each "galvo unit"
+as I call it will correspond to a different distance. For example, if you have
+a 150mm working area machine, the galvo unit is about 2.3 microns of distance.
+Key word is "about." This is very approximate. First, it is notably different
+in the X and Y dimensions, by about 10%. Second, it is different depending on
+where you are in the working area. The distortion is, essentially, 
+"barrel distortion", the opposite of pincushion distortion. The machine seems
+to have some degree of distortion correction built in, and a table for this is
+loaded when the machine starts up. This software, as it comes to you, has the 
+table that is loaded into my machine; I do not know whether it is customized to
+the individual machine, or if it is generic to the lens and galvo scanner. In
+any case, it is not good enough; it does not completely linearize the relation
+between galvo units and distance. So, this software uses a second calibration 
+based on the radial basis function. A file, cal_0002.csv, contains calibration
+data to calibrate my laser to real units and compensate for the remaining 
+distortion.
+    If you want to collect the internal calibration table for your laser, 
+instead of using the one for mine, use wireshark to capture your laser starting
+up under Ezcad, then use the utilities in the "scripts" directory to extract
+the init sequence and replace the one in balor/BJJCZ_LMCV4_FIBER_M_blobs.py
+with your own. Probably this data is stored in some format in the EzCAD folder
+and can be retrieved; I haven't looked into it. Broadly, these are the steps:
+    Use pcap2pickle.py to turn your pcap file into a big text file you can 
+look at and identify the startup sequence (everything from the beginning to 
+the point where the laser is just getting hit with 0x25 or 0x07 queries every 
+few ms, which is EzCad keeping an eye on it.) 
+	
+    ./pcap2pickle.py startup/startup_sequence.pcap startup.pickle > startup.txt
+
+    Get the start and end addresses from startup.txt, and you can run it 
+again with the starting and ending addresses, like so:
+	./pcap2pickle.py quitting.pcap quit.pickle 34e 493 > quit.txt
+	# That's saving the quitting sequence, not the init, but you get
+	# the idea
+
+    Then you use pickle2py.py to create a python file from the pickle:
+    ./pickle2py.py startup.pickle:init  > startup.py
+
+    Open the file and copy the thing called "init" and replace the one in
+BJJCZ_LMCV4_FIBER_M_blobs.py with yours. The foregoing is probably optional
+because the radial basis function calibration/compensation should be able to 
+compensate for you not having the appropriate internal distortion correction
+table.
+
+   Speaking of which, the radial basis function. Get yourself a good set of
+calipers. (I have an idea for doing this part with a flatbed scanner but have
+done nothing on that yet.) You will also need something flat that your laser 
+can mark on. Ideally, it should be able to make a deep enough mark that you can
+feel it with the caliper jaws. I use Canon CLC transparency film. Instead of
+calipers, you can of course use a measuring microscope or other calibrated 
+optical equipment.
+ 
+    Then you use the balor-test.py program to make a calibration grid pattern.
+You're going to mark this pattern (using balor itself) onto your material and
+then measure the coordinates of where the line intersections actually are
+relative to galvo 0x8000,0x8000 (the center position.)
+    Make a copy of cal_0002.csv and use it as a template.
+    This is the invocation to mark the grid:
+	./balor-test.py mark -t grid | ./balor.py -o mark
+	(You should probably have verified that your laser works with balor
+   well enough to light a pattern with the guide laser first.)
+   The result should be a grid with an X in the center. The intersection of
+the lines of the X is the zero point of your laser. Use the calipers to 
+measure the distances of the points along the X and Y axes, then measure from
+the axes to every other line intersection and thereby fill out cal_0002.csv.
+Have fun with that. Note, so as to avoid getting confused, a small right
+triangle is drawn to mark the +x, +y direction of your laser. The 90 degree
+corner of the triangle is nearest the y axis. Probably label them and add
+labels (with a marker or whatever) to all the lines, so you don't get confused.
+You will probably get confused anyway, so you can use the script view_cal.py
+to check how often you got confused while making all those measurements:
+	./scripts/view_cal.py cal_0002.csv
+You should see something approximating barrel distortion. Look for outliers 
+that probably represent some kind of gross error (getting confused about axes,
+signs, etc). 
+	Having obtained your calibration file, you can then supply it to 
+balor's generators (balor-test, balor-raster, balor-vector) so you can use
+milimeters instead of galvo units (calibration) and maintain that relation
+regardless of where in the field you are engraving (compensation). 
+   I guess, if you wanted to use some other units, e.g. cm, you could just use
+them consistently in the calibration file and ignore all the times my code just
+assumes it is mm and calls it mm. The galvo DACs don't care, yo.
+
+   You will probably want to try out your shiny new calibration file.
+./balor-test.py mark -t cal --calfile cal_0002.csv | ./balor.py -o mark
+   This will make a grid of 1 cm squares inside a big crossed lines figure in
+a box. Measure all the squares to make sure each one is 10.00 mm in width and
+height, look at the intersection of the four lines to make sure they cross 0
+at the same point, and make sure the sides of the outer box are straight and
+perpendicular to each other.
+
+   The box marks the calibrated area of your laser using your new calfile.
+It will be somewhat smaller than the nominal size of your engraving area.
+balor-test provides various options for customizing the calibration pattern so
+you can calibrate a larger area if you like, though note that the distortion
+gets a bit wild outside of this area. The "good" area is really a circle rather
+than a square, though, so you can definitely go farther along the X and Y axes
+if you want. Note that if you do this stuff you will also need to change the
+calibration file accordingly (e.g. adding more data points or just changing the
+galvo unit coordinates corresponding to the measured points.)
+
+    The default settings for balor-test are for making nice visible lines on
+Canon CLC transparency film with my 20W q-switched 1064 nm laser. The power is
+always relative to maximum laser power, so if you have say a 50W laser you will
+probably fry the transparency film, or make unecessarily wide lines that will
+be more difficult to measure accurately. You can configure laser power, 
+q switch frequency, and cutting speed with balor-test, run it with the -h 
+option for an explanation of command line settings. 
+
+    Balor test can also generate a grid lighting pattern, like this:
+./balor-test.py light -t oldgrid -c 8192 | ./balor -o light
+Be sure both the generator (balor-test) and balor itself are set to "light"
+mode. I don't know what happens when you try to mark with a light pattern or
+light with a mark pattern, but I bet it isn't great. I've so far avoided 
+finding out.
+
+   As noted above, you may need to run balor with root permissions, e.g.
+./balor-test.py light -t oldgrid -c 8192 | sudo ./balor -o light
+
+How to preview an image before sending it to the laser cutter:
+	Balor comes with a debugging program that can produce a graphical output
+ approximating what the machine will produce. It's more like a plot of the 
+galvo movements than an actual preview. Grey lines are travels, green are cuts,
+red are cuts made with the laser off (probably a bug.)  
+
+	./balor-debug.py -f msbf-file.bin -o output.png
+
+It will also produce text-mode output:
+
+	./balor-debug.py -f msbf-file.bin -o output.txt
+
+Which will be a (probably long) text file explaining each command in the MSBF.
+That's useful for debugging, maybe. Note that balor-debug doesn't take
+calfiles into account, so if you used a calfile to produce the MSBF, you will
+see distortion in the graphical plot produced by balor-debug. This is in fact
+the correction necessary to compensate for the machine's distortion as 
+correct for by the calfile.
+
+How to engrave a raster image:
+	Suppose you've got a greyscale or black and white image called 
+parrot-grey.png. First use balor-raster in light mode to show where it is 
+going to end up on your workpiece:
+./balor-raster.py light -f parrot-grey.png -c cal_0002.csv -s 200 | ./balor.py -o light -r 200
+
+	I prefer to generate the machine-specific binary format separately
+ rather than use a pipeline because it takes a long time:
+	./balor-raster.py mark -f parrot-grey.png --laser-power 40 --q-switch-frequency 40 --raster-x-res 0.1 --raster-y-res 0.1 -c cal_0002.csv -o parrot-g.bin -s 80.0 -t -0.5
+
+	 ./balor.py -o mark -f parrot-g.bin
+
+	You will observe that there are a lot of settings there. Use balor-raster.py -h to give you the
+quick rundown. You can preview the image with balor-debug.
+
+How to engrave a vector image:
+	
