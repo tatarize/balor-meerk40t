@@ -6,6 +6,7 @@ from meerk40t.core.cutcode import LaserSettings
 from meerk40t.core.spoolers import Spooler
 from meerk40t.device.lasercommandconstants import *
 from meerk40t.kernel import Service
+import balor
 
 
 def plugin(kernel, lifecycle):
@@ -72,7 +73,8 @@ class BalorDevice(Service):
         self.setting(str, "label", "balor-device")
 
         self.setting(str, 'operation', "light")  # light or mark
-        self.setting(str, 'calfile', "cal_0002.csv")  # Provide a calibration file for the machine.
+        self.setting(str, 'calfile', None)  # Provide a calibration file for the machine.
+        self.calfile = None
         self.setting(str, 'machine', "BJJCZ_LMCV4_FIBER_M")
         self.setting(float, "travel_speed", 2000.0)
         self.setting(float, "laser_power", 50.0)
