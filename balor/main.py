@@ -7,8 +7,6 @@ from meerk40t.core.spoolers import Spooler
 from meerk40t.device.lasercommandconstants import *
 from meerk40t.kernel import Service
 
-import balor
-
 
 def plugin(kernel, lifecycle):
     if lifecycle == 'register':
