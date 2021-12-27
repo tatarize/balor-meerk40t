@@ -203,16 +203,28 @@ class OpSetCutSpeed(Operation):
         sim.cut_speed = self.params[0]*1.9656
 
 class OpMystery0D(Operation):
-    name = "UNKNOWN OP 0x0D (unknown)"
+    name = "Alternate travel (0x800D)"
     opcode = 0x800D
     def text_decode(self):
-        return "Unknown operation 0x800D, param=%d"%self.params[0]
+        return "Alternate travel operation 0x800D, param=%d"%self.params[0]
+    def simulate(self, sim):
+        sim.travel(self.params[self.x], self.params[self.y])
+    def text_decode(self):
+        xs, ys, unit = self.job.get_scale()
+        x = '%.3f %s'%(self.params[1]*xs, unit) if unit else '%d'%self.params[1]
+        y = '%.3f %s'%(self.params[0]*ys, unit) if unit else '%d'%self.params[0]
+        d = '%.3f %s'%(self.params[3]*xs, unit) if unit else '%d'%self.params[3]
+        return "Alt travel to x=%s y=%s angle=%04X dist=%s"%(
+                x,y,self.params[2],
+                d)
+OpAltTravel = OpMystery0D
 
 class OpSetMystery0F(Operation):
-    name = "UNKNOWN OP SET 0x0F (unknown)"
+    name = "POLYGON DELAY"
     opcode = 0x800F
     def text_decode(self):
-        return "Unknown operation 0x800F, param=%d"%self.params[0]
+        return "Set polygon delay, param=%d"%self.params[0]
+OpPolygonDelay = OpSetMystery0F
 
 class OpSetLaserPower(Operation):
     name = "SET LASER POWER (power)"
@@ -269,7 +281,8 @@ class Job:
         self.operations = []
     def get_scale(self):
         return self.x_scale, self.y_scale, self.scale_unit
-
+    def clear_operations(self):
+        self.operations = []
     def get_position(self):
         return len(self.operations)-1
 
@@ -283,7 +296,8 @@ class Job:
     def add_light_prefix(self, travel_speed):
         self.extend([OpBeginJob(),
                 OpSetTravelSpeed(travel_speed),
-                OpMystery0D(0x0008)])
+                #OpMystery0D(0x0008)
+                ])
 
     def line(self, x0, y0, x1, y1, seg_size=5, Op=OpCut):
         length = ((x0-x1)**2 + (y0-y1)**2)**0.5
@@ -301,7 +315,7 @@ class Job:
                 OpSetQSwitchPeriod(q_switch_period),
                 OpSetLaserPower(laser_power),
                 OpSetCutSpeed(cut_speed),
-                OpMystery0D(0x0008),
+                #OpMystery0D(0x0008),
             ])
 #self.settings[color] = (q_switch_period, laser_power, cut_speed, hatch_angle,
 #                hatch_spacing, hatch_pattern, repeats)
@@ -317,7 +331,7 @@ class Job:
                 OpSetLaserOnTimeComp(0x0064, 0x8000),
                 OpSetLaserOffTimeComp(0x0064),
                 OpSetMystery0F(0x000A),
-                OpMystery0D(0x0008),
+                #OpMystery0D(0x0008),
             ])
     def laser_control(self, on):
         if on:

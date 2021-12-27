@@ -96,6 +96,12 @@ class Cal:
         gcal = np.asarray([(int(h[4],16), int(h[5],16)) for h in calfile])
 
         mm_x, mm_y, g_x, g_y = mcal[:,0], mcal[:,1], gcal[:,0], gcal[:,1]
+
+        self.mm_xmax = mm_x[-1]
+        self.mm_xmin = mm_x[0]
+        self.mm_ymax = mm_y[-1]
+        self.mm_ymin = mm_y[0]
+
         self.linear_x = (mm_x[49] - mm_x[31]) / (g_x[49] - g_x[31])
         self.linear_y = (mm_y[41] - mm_y[39]) / (g_y[41] - g_y[39])
 

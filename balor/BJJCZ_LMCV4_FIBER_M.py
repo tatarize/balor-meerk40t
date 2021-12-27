@@ -3,6 +3,97 @@ import importlib
 import usb.core
 import usb.util
 import time
+import sys
+
+import threading
+class BJJCZ_LMCV4_FIBER_M_LightingHelper:
+    def __init__(self, machine):
+        self.machine = machine
+        self.thread = threading.Thread(
+                target=self.loop, args=(), daemon=True)
+        self.pattern = []
+        self.lock = threading.Lock()    
+        self.last_07_report = [0]*8
+        self.last_19_status_report = [0]*8
+        self.last_status_report = [0]*8
+        self.thread.start()
+        
+
+    def set_pattern(self, pattern):
+        self.pattern = pattern
+
+    def get_last_status_report(self):
+        self.lock.acquire()
+        sr = self.last_status_report
+        sr7 = self.last_07_report
+        sr19 = self.last_19_status_report
+        self.lock.release()
+        return sr, sr7, sr19
+
+    def send_pattern(self, packet):
+
+        # one of these does the resetting (or some combination does)
+        self.machine.send_query_status(0x0021, 0x0100)
+        reply = self.machine.get_status_report()
+        #print ("21 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
+        self.machine.send_query_status(0x0007, 0x0100)
+        reply = self.machine.get_status_report()
+        #print ("07-1 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
+        self.machine.send_query_status(0x0012)
+        reply = self.machine.get_status_report()
+        #print ("12 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
+        self.machine.send_query_status(0x000C)
+        reply = self.machine.get_status_report()
+        #print ("0C REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
+        
+        # Seems to do the travel
+        #self.machine.send_query_status(0x000D, 0x8001, 0x8001)
+        #reply = self.machine.get_status_report()
+        #print ("0D REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
+
+        #for _ in range(52):
+        #    self.machine.send_query_status(0x0025)
+        #    reply = self.machine.get_status_report()
+
+
+        #print ("**Sending pattern of len", len(packet), ":", ' '.join(['%02X'%x for x in packet]), file=sys.stderr)
+        self.machine.send_raw(packet)
+        self.machine.send_query_status(0x19)
+        self.last_19_status_report = self.machine.get_status_report()
+        self.machine.wait_for_rv_bits(query=0x25, wait_high=0x20)
+
+        # Probably this means "run program."
+        self.machine.send_query_status(0x0005) # this thing was the last added and was def necessary
+        reply = self.machine.get_status_report()
+        #print ("05 REPLY:", ' '.join(['%02X'%x for x  in reply]), file=sys.stderr)
+
+
+    def loop(self):
+        while 1:
+            self.machine.lock.acquire()
+            self.machine.send_query_status(0x25)
+            last_status_report = self.machine.get_status_report()
+            self.machine.lock.release()
+
+            self.machine.lock.acquire()
+            self.machine.send_query_status(0x07)
+            last_07_status_report = self.machine.get_status_report()
+            self.machine.lock.release()
+
+            ready = last_07_status_report[6]&0x20
+            running = last_07_status_report[6]&4
+
+            if ready and not running and self.pattern:
+                self.send_pattern(self.pattern)
+                self.pattern = []
+
+            self.lock.acquire()
+            self.last_status_report = last_status_report
+            self.last_07_report = last_07_status_report
+            self.lock.release()
+
+            time.sleep(0.01)
+
 
 class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
     packet_size=3072
@@ -14,6 +105,8 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
     ep_himo = 0x88 # endpoint for host in, machine out. (receive status reports)
     
     def __init__(self, index=0):
+        self.lock = threading.Lock()            
+        self.lighting_helper = None
         # If this isn't working, please insert ASCII art of an obscene gesture 
         # of your choice directed at python's importing mechanisms.
         from . import BJJCZ_LMCV4_FIBER_M_blobs 
@@ -25,6 +118,23 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
         self.send_sequence(self.sequences.init)
         # We sacrifice this time at the altar of the Unknown Race Condition.
         time.sleep(0.1)
+
+    def send_query_status(self, query_code=0x0025, parameter=0x0000, parameter2=0x0000):
+        query = bytearray([0]*12)
+        query[0] = query_code&0xFF
+        query[1] = query_code>>8
+        query[2] = (parameter&0xFF)
+        query[3] = (parameter&0xFF00)>>8
+        query[4] = parameter2&0xFF
+        query[5] = (parameter2&0xFF00)>>8
+        #print ("Sent query status", ' '.join(['%02X'%x for x in query]), file=sys.stderr)
+        assert self.device.write(self.ep_homi, query, 100) == len(query)
+
+    def send_raw(self, packet):
+        assert self.device.write(self.ep_homi, packet, 100) == len(packet)
+
+    def get_status_report(self):
+        return self.device.read(self.ep_himo, 8, 100)
 
     def connect_device(self, index=0):
         devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
@@ -55,8 +165,13 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
             if self.verbosity > 1: print ("")
         #print ("Sequence complete.")
 
+    def start_lighting_thread(self):
+        self.lighting_helper = BJJCZ_LMCV4_FIBER_M_LightingHelper(self)
+
+        return self.lighting_helper
 
     def light(self, cycles=4, delay=1, substitution_generator=None, noend=False):
+        self.lock.acquire()
         if self.verbosity: print ("Starting lighting")
         self.send_sequence(self.sequences.start, 
                 substitutions=self.sequences.start_overwrites,
@@ -70,7 +185,7 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
 
         if self.verbosity: print ("Ending lighting")
         if not noend: self.send_sequence(self.sequences.end)
-
+        self.lock.release()
     # Sequence
     # prefix: 0a6e-a89
     # (data)
@@ -87,6 +202,7 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
     # ./pickle2py.py separator.pickle:mark_packet_separator >> ../../balor/BJJCZ_LMCV4_FIBER_M_blobs.py
     def mark(self, data):
         assert not len(data) % self.packet_size
+        self.lock.acquire()
         if self.verbosity: print ("Mark prefix")
         self.send_sequence(self.sequences.mark_prefix)
         count = self.wait_for_rv_bits(0x07, 0x20)
@@ -129,6 +245,8 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
         if self.verbosity: print ("Waited %d cycles for laser to be done."%count)
         if self.verbosity: print ("Mark suffix")
         self.send_sequence(self.sequences.mark_suffix)
+        self.lock.release()
+
     def wait_for_rv_bits(self, query=0x07, wait_high=0x20, wait_low=0):
         count = 0
         state = None
