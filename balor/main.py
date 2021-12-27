@@ -69,18 +69,88 @@ class BalorDevice(Service):
             },
         ]
         self.register_choices("bed_dim", choices)
+        # self.setting(str, "label", "balor-device")
+        #
+        # self.setting(str, 'operation', "light")  # light or mark
+        # self.setting(str, 'calfile', None)  # Provide a calibration file for the machine.
+        # self.calfile = None
+        # self.setting(str, 'machine', "BJJCZ_LMCV4_FIBER_M")
+        # self.setting(float, "travel_speed", 2000.0)
+        # self.setting(float, "laser_power", 50.0)
+        # self.setting(float, "q_switch_frequency", 30.0)
+        # self.setting(float, "cut_speed", 100.0)
+        # self.setting(str, 'output', None)  # Output file.
 
-        self.setting(str, "label", "balor-device")
-
-        self.setting(str, 'operation', "light")  # light or mark
-        self.setting(str, 'calfile', None)  # Provide a calibration file for the machine.
-        self.calfile = None
-        self.setting(str, 'machine', "BJJCZ_LMCV4_FIBER_M")
-        self.setting(float, "travel_speed", 2000.0)
-        self.setting(float, "laser_power", 50.0)
-        self.setting(float, "q_switch_frequency", 30.0)
-        self.setting(float, "cut_speed", 100.0)
-        self.setting(str, 'output', None)  # Output file.
+        choices = [
+            {
+                "attr": "label",
+                "object": self,
+                "default": "balor-device",
+                "type": str,
+                "label": _("Label"),
+                "tip": _("What is this device called."),
+            },
+            {
+                "attr": "operation",
+                "object": self,
+                "default": "light",
+                "type": str,
+                "choices": ("light", "mark"),
+                "label": _("Operation type: light or mark"),
+                "tip": _("Mark or light outline"),
+            },
+            {
+                "attr": "calfile",
+                "object": self,
+                "default": None,
+                "type": str,
+                "label": _("Calibration File"),
+                "tip": _(
+                    "Provide a calibration file for the machine"
+                ),
+            },
+            {
+                "attr": "machine",
+                "object": self,
+                "default": "BJJCZ_LMCV4_FIBER_M",
+                "type": str,
+                "label": _("Machine Type"),
+                "tip": _(
+                    "What type of machine are we controlling?"
+                ),
+            },
+            {
+                "attr": "travel_speed",
+                "object": self,
+                "default": 2000.0,
+                "type": float,
+                "label": _("Travel Speed"),
+                "tip": _(
+                    "How fast do we travel when not cutting?"
+                ),
+            },
+            {
+                "attr": "q_switch_frequency",
+                "object": self,
+                "default": 30.0,
+                "type": float,
+                "label": _("Q Switch Frequency"),
+                "tip": _(
+                    "Frequency of the Q Switch (full disclosure, no clue)"
+                ),
+            },
+            {
+                "attr": "output",
+                "object": self,
+                "default": None,
+                "type": str,
+                "label": _("Output File"),
+                "tip": _(
+                    "Additional save to file option for a job."
+                ),
+            },
+        ]
+        self.register_choices("balor", choices)
 
         @self.console_argument("machine_type", type=str, help="machine specified")
         @self.console_command("machine", help=_("Specify which machine interface to use."))
