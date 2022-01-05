@@ -129,6 +129,16 @@ class BalorDevice(Service):
                 ),
             },
             {
+                "attr": "laser_power",
+                "object": self,
+                "default": 50.0,
+                "type": float,
+                "label": _("Laser Power"),
+                "tip": _(
+                    "How what power level do we cut at?"
+                ),
+            },
+            {
                 "attr": "cut_speed",
                 "object": self,
                 "default": 100.0,
