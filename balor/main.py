@@ -14,13 +14,12 @@ def plugin(kernel, lifecycle):
         kernel.register("provider/device/balor", BalorDevice)
     elif lifecycle == 'preboot':
         suffix = "balor"
-        for d in kernel.root.derivable():
-            if d.startswith(suffix):
-                kernel.root(
-                    "service device start -p {path} {suffix}\n".format(
-                        path=d, suffix=suffix
-                    )
+        for d in kernel.settings.derivable(suffix):
+            kernel.root(
+                "service device start -p {path} {suffix}\n".format(
+                    path=d, suffix=suffix
                 )
+            )
 
 
 class BalorDevice(Service):
