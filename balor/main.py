@@ -129,6 +129,16 @@ class BalorDevice(Service):
                 ),
             },
             {
+                "attr": "cut_speed",
+                "object": self,
+                "default": 100.0,
+                "type": float,
+                "label": _("Cut Speed"),
+                "tip": _(
+                    "How fast do we cut?"
+                ),
+            },
+            {
                 "attr": "q_switch_frequency",
                 "object": self,
                 "default": 30.0,
