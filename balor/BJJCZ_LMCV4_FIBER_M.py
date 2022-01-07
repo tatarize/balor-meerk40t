@@ -137,8 +137,13 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
         return self.device.read(self.ep_himo, 8, 100)
 
     def connect_device(self, index=0):
+        if self.verbosity: print("Connecting to USB!")
         devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
-        device = list(devices)[index]
+        try:
+            device = list(devices)[index]
+        except e:
+            print("No USB Device was found to connect to... eat error you filthy animal!")
+            raise e
         self.manufacturer = usb.util.get_string(device, device.iManufacturer)
         self.product = usb.util.get_string(device, device.iProduct)
         device.set_configuration() # It only has one.
@@ -147,7 +152,7 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
         return device
     
     def send_sequence(self, sequence, substitutions=[], substitution_generator=None):
-        #print ("Sending Sequence...")
+        if self.verbosity: print ("Sending Sequence...")
         for n,(direction, endpoint, data) in enumerate(sequence):
             if substitution_generator and n in substitutions: data = substitution_generator(data)
             if direction: # Read

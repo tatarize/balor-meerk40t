@@ -33,7 +33,7 @@ class BalorDevice(Service):
             {
                 "attr": "bedwidth",
                 "object": self,
-                "default": 0x10000,
+                "default": 0xFFFF,
                 "type": float,
                 "label": _("Width"),
                 "tip": _("Width of the laser bed."),
@@ -41,7 +41,7 @@ class BalorDevice(Service):
             {
                 "attr": "bedheight",
                 "object": self,
-                "default": 0x10000,
+                "default": 0xFFFF,
                 "type": float,
                 "label": _("Height"),
                 "tip": _("Height of the laser bed."),
@@ -227,6 +227,7 @@ class BalorDriver:
         self.service = service
         self.name = str(self.service)
 
+        self.laser_initialized = False
         self.settings = LaserSettings()
 
         self.process_item = None
@@ -249,6 +250,9 @@ class BalorDriver:
         return "BalorDriver(%s)" % self.name
 
     def init_laser(self):
+        if self.laser_initialized:
+            return
+        self.laser_initialized = True
         # TODO: We should actually use the settings we have from the current cut rather than the preset values.
         self.job = balor.MSBF.JobFactory(self.service.machine)
         self.cal = balor.Cal.Cal(self.service.calfile)
@@ -269,11 +273,16 @@ class BalorDriver:
         self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000)) #centerize?
 
     def send_laser(self):
+        print("Serializing Job.")
+        data = self.job.serialize()
+        self.connected_machine = balor.BJJCZ_LMCV4_FIBER_M.BJJCZ_LMCV4_FIBER_M()
+        self.connected_machine.light(data)
         if not self.service.output:
-            out_file = sys.stdout.buffer
+            sys.stdout.buffer.write()
         else:
-            out_file = open(self.service.output, 'wb')
-        out_file.write(self.job.serialize())
+            with open(self.service.output, 'wb') as e:
+                e.write(self.job.serialize())
+        self.laser_initialized = False
 
     def shutdown(self, *args, **kwargs):
         self._shutdown = True
@@ -516,8 +525,8 @@ class BalorDriver:
         :param plot:
         :return:
         """
-        mils_per_mm = 39.3701
         self.init_laser()
+        mils_per_mm = 39.3701
         start = plot.start()
         self.job.laser_control(False)
         self.job.append(balor.MSBF.OpTravel(*self.job.cal.interpolate(start[0] / mils_per_mm, start[1] / mils_per_mm)))
@@ -544,10 +553,9 @@ class BalorDriver:
             self.service.current_x = x
             self.service.current_y = y
         self.job.laser_control(False)
-        self.send_laser()
 
     def plot_start(self):
-        pass
+        self.send_laser()
 
     def set_power(self, power=1000.0):
         self.settings.power = power
