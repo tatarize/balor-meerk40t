@@ -282,10 +282,10 @@ class BalorDriver:
             self.connected_machine.light(data)
 
         if not self.service.output:
-            sys.stdout.buffer.write()
+            sys.stdout.buffer.write(data)
         else:
             with open(self.service.output, 'wb') as e:
-                e.write(self.job.serialize())
+                e.write(data)
         self.laser_initialized = False
 
     def shutdown(self, *args, **kwargs):
