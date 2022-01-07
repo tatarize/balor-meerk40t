@@ -141,9 +141,9 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
         devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
         try:
             device = list(devices)[index]
-        except e:
+        except:
             print("No USB Device was found to connect to... eat error you filthy animal!")
-            raise e
+            return
         self.manufacturer = usb.util.get_string(device, device.iManufacturer)
         self.product = usb.util.get_string(device, device.iProduct)
         device.set_configuration() # It only has one.
