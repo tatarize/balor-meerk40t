@@ -276,7 +276,11 @@ class BalorDriver:
         print("Serializing Job.")
         data = self.job.serialize()
         self.connected_machine = balor.BJJCZ_LMCV4_FIBER_M.BJJCZ_LMCV4_FIBER_M()
-        self.connected_machine.light(data)
+        if self.service.operation == "mark":
+            self.connected_machine.mark(data)
+        else:
+            self.connected_machine.light(data)
+
         if not self.service.output:
             sys.stdout.buffer.write()
         else:
