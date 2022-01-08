@@ -223,7 +223,7 @@ class BalorDevice(Service):
             cutcode.append(LineCut(Point(7000, 9000), Point(9000, 9000), settings=settings))
             cutcode.append(LineCut(Point(9000, 9000), Point(9000, 7000), settings=settings))
             cutcode.append(LineCut(Point(9000, 7000), Point(7000, 7000), settings=settings))
-            self.controller.loop_job = self.cutcode_to_job(cutcode).serialize()
+            self.controller.loop_job = self.cutcode_to_job(cutcode, light=True).serialize()
 
         @self.console_command(
             "nolight",
@@ -236,7 +236,7 @@ class BalorDevice(Service):
             self.controller.loop_job = None
 
 
-    def cutcode_to_job(self, queue):
+    def cutcode_to_job(self, queue, light=False):
         job = balor.MSBF.Job()
         job.cal = balor.Cal.Cal(self.calfile)
         travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
@@ -245,13 +245,15 @@ class BalorDevice(Service):
         q_switch_period = int(
             round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9)
         )
-
-        job.add_mark_prefix(
-            travel_speed=travel_speed,
-            laser_power=laser_power,
-            q_switch_period=q_switch_period,
-            cut_speed=cut_speed,
-        )
+        if light:
+            job.add_light_prefix(travel_speed)
+        else:
+            job.add_mark_prefix(
+                travel_speed=travel_speed,
+                laser_power=laser_power,
+                q_switch_period=q_switch_period,
+                cut_speed=cut_speed,
+            )
         job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
 
         mils_per_mm = 39.3701
