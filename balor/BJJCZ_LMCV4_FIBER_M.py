@@ -78,7 +78,6 @@ class BJJCZ_LMCV4_FIBER_M_LightingHelper:
         return sr, sr7, sr19
 
     def send_pattern(self, packet):
-
         # one of these does the resetting (or some combination does)
         self.machine.send_query_status(WritePort, 0x0100)
         reply = self.machine.get_status_report()
@@ -110,8 +109,7 @@ class BJJCZ_LMCV4_FIBER_M_LightingHelper:
         self.machine.wait_for_rv_bits(query=ReadPort, wait_high=StopList)
 
         # Probably this means "run program."
-        self.machine.send_query_status(0x0005) # this thing was the last added and was def necessary
-        # 0x05 Execute List.
+        self.machine.send_query_status(ExecuteList) # this thing was the last added and was def necessary
 
         reply = self.machine.get_status_report()
         #print ("05 REPLY:", ' '.join(['%02X'%x for x  in reply]), file=sys.stderr)
