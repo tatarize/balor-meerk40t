@@ -231,9 +231,10 @@ class BalorDevice(Service):
             cutcode.append(
                 LineCut(Point(9000, 7000), Point(7000, 7000), settings=settings)
             )
-            self.controller.loop_job = self.cutcode_to_job(
+            job = self.cutcode_to_job(
                 cutcode, light=True
-            ).serialize()
+            )
+            self.controller.loop_job = job.serialize()
 
         @self.console_command(
             "nolight",
@@ -301,6 +302,7 @@ class BalorDevice(Service):
                 self.current_x = x
                 self.current_y = y
         job.laser_control(False)
+        job.calculate_distances()
         return job
 
 
