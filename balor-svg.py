@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import balor
-import sys, argparse, os, io, pickle
+import argparse
 
 parser = argparse.ArgumentParser(
     description="""
@@ -205,51 +205,6 @@ def render_fill(path, job, cal, settings, args, fill_color):
     # job.change_settings(*settings.get(fill_color))
 
 
-def render_stroke(path, job, cal, settings, args, stroke_color):
-
-    length = path.length()
-    points = separate_points(
-        path, args.segment_length, args.xscale, args.yscale, args.xoff, args.yoff
-    )
-
-    # points = [(c.real*args.xscale + args.xoff,c.imag*args.yscale + args.yoff
-    #                        ) for c in [path.point(t) for t in ts]]
-    job.change_settings(*settings.get(stroke_color)[:3])
-    print("Path", len(path), len(points), repr(path), file=sys.stderr)
-    for _ in range(settings.get(stroke_color)[6]):
-        job.laser_control(True)
-        ix, iy, _ = points[0]
-        try:
-            job.append(balor.MSBF.OpJumpTo(*cal.interpolate(ix, iy)))
-        except ValueError:
-            print("Not including this stroke path:", path, file=sys.stderr)
-            break
-        for x, y, discon in points[1:]:
-            if discon:
-                job.laser_control(False)
-                job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x, y)))
-                job.laser_control(True)
-            else:
-                job.line(ix, iy, x, y)
-            ix, iy = x, y
-        job.laser_control(False)
-
-
-def render_stroke_light(path, job, cal, settings, args, stroke_color):
-    length = path.length()
-    ts = np.linspace(0, 1, int(round(path.length() / args.segment_length)))
-    points = [
-        (c.real * args.xscale + args.xoff, c.imag * args.yscale + args.yoff)
-        for c in [path.point(t) for t in ts]
-    ]
-
-    ix, iy = points[0]
-    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(*points[0])))
-    for x, y in points[1:]:
-        job.line(ix, iy, x, y, Op=balor.MSBF.OpJumpTo)
-        ix, iy = x, y
-
-
 def render_svg(*args):
     if args.operation == "mark":
         render_svg_mark(*args)
@@ -261,16 +216,12 @@ def render_svg_light(svg, job, cal, args, settings):
     paths, attributes, svg_attributes = svg
 
     travel_speed = int(round(args.travel_speed / 2.0))  # units are 2mm/sec
-    cut_speed = int(round(args.cut_speed / 2.0))
-    laser_power = int(round(args.laser_power * 40.95))
-    q_switch_period = int(round(1.0 / (args.q_switch_frequency * 1e3) / 50e-9))
 
     job.add_light_prefix(travel_speed=travel_speed)
     job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
     begin = job.get_position()
     for path, attribute in zip(paths, attributes):
         print("begin", attribute.get("id", "no id"), file=sys.stderr)
-        fill_color = None
         stroke_color = None
         if "style" in attribute:
             style = attribute["style"].split(";")
@@ -285,27 +236,23 @@ def render_svg_light(svg, job, cal, args, settings):
                 elif k == "stroke":
                     stroke_color = None if v == "none" else int(v[1:], 16)
 
-        if fill_color != None and args.operation == "mark":
+        if stroke_color is not None:
             print(
-                "rendering hatching of", attribute.get("id", "no id"), file=sys.stderr
+                "rendering lighting stroke of",
+                attribute.get("id", "no id"),
+                file=sys.stderr,
             )
-            render_fill(path, job, cal, settings, args, fill_color)
-
-        if stroke_color != None:
-            if args.operation == "mark":
-                print(
-                    "rendering marking stroke of",
-                    attribute.get("id", "no id"),
-                    file=sys.stderr,
-                )
-                render_stroke(path, job, cal, settings, args, stroke_color)
-            else:
-                print(
-                    "rendering lighting stroke of",
-                    attribute.get("id", "no id"),
-                    file=sys.stderr,
-                )
-                render_stroke_light(path, job, cal, settings, args, stroke_color)
+            length = path.length()
+            ts = np.linspace(0, 1, int(round(path.length() / args.segment_length)))
+            points = [
+                (c.real * args.xscale + args.xoff, c.imag * args.yscale + args.yoff)
+                for c in [path.point(t) for t in ts]
+            ]
+            ix, iy = points[0]
+            job.append(balor.MSBF.OpJumpTo(*cal.interpolate(*points[0])))
+            for x, y in points[1:]:
+                job.line(ix, iy, x, y, Op=balor.MSBF.OpJumpTo)
+                ix, iy = x, y
         print("finished", attribute.get("id", "no id"), file=sys.stderr)
 
     end = job.get_position()
@@ -328,17 +275,13 @@ def render_svg_mark(svg, job, cal, args, settings):
     laser_power = int(round(args.laser_power * 40.95))
     q_switch_period = int(round(1.0 / (args.q_switch_frequency * 1e3) / 50e-9))
 
-    if args.operation == "mark":
-        job.add_mark_prefix(
-            travel_speed=travel_speed,
-            laser_power=laser_power,
-            q_switch_period=q_switch_period,
-            cut_speed=cut_speed,
-        )
-    else:
-        job.add_light_prefix(travel_speed=travel_speed)
+    job.add_mark_prefix(
+        travel_speed=travel_speed,
+        laser_power=laser_power,
+        q_switch_period=q_switch_period,
+        cut_speed=cut_speed,
+    )
     job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
-    begin = job.get_position()
     for path, attribute in zip(paths, attributes):
         print("begin", attribute.get("id", "no id"), file=sys.stderr)
         fill_color = None
@@ -364,30 +307,42 @@ def render_svg_mark(svg, job, cal, args, settings):
             )
             render_fill(path, job, cal, settings, args, fill_color)
         if stroke_color != None:
-            if args.operation == "mark":
-                print(
-                    "rendering marking stroke of",
-                    attribute.get("id", "no id"),
-                    file=sys.stderr,
-                )
-                render_stroke(path, job, cal, settings, args, stroke_color)
-            else:
-                print(
-                    "rendering lighting stroke of",
-                    attribute.get("id", "no id"),
-                    file=sys.stderr,
-                )
-                render_stroke_light(path, job, cal, settings, args, stroke_color)
+            print(
+                "rendering marking stroke of",
+                attribute.get("id", "no id"),
+                file=sys.stderr,
+            )
+            length = path.length()
+            points = separate_points(
+                path,
+                args.segment_length,
+                args.xscale,
+                args.yscale,
+                args.xoff,
+                args.yoff,
+            )
+            # points = [(c.real*args.xscale + args.xoff,c.imag*args.yscale + args.yoff
+            #                        ) for c in [path.point(t) for t in ts]]
+            job.change_settings(*settings.get(stroke_color)[:3])
+            print("Path", len(path), len(points), repr(path), file=sys.stderr)
+            for _ in range(settings.get(stroke_color)[6]):
+                job.laser_control(True)
+                ix, iy, _ = points[0]
+                try:
+                    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(ix, iy)))
+                except ValueError:
+                    print("Not including this stroke path:", path, file=sys.stderr)
+                    break
+                for x, y, discon in points[1:]:
+                    if discon:
+                        job.laser_control(False)
+                        job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x, y)))
+                        job.laser_control(True)
+                    else:
+                        job.line(ix, iy, x, y)
+                    ix, iy = x, y
+                job.laser_control(False)
         print("finished", attribute.get("id", "no id"), file=sys.stderr)
-    if args.operation == "light":
-        end = job.get_position()
-        print(
-            "Adding %d repetitions %d:%d" % (args.repetition, begin, end + 1),
-            file=sys.stderr,
-        )
-        if args.repetition > 1:
-            job.duplicate(begin, end + 1, args.repetition - 1)
-        print("Length of operations", len(job.operations), file=sys.stderr)
     job.append(balor.MSBF.OpJumpTo(*cal.interpolate(0.0, 0.0)))
     job.calculate_distances()
 
