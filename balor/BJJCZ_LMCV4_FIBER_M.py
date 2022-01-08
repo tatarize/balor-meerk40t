@@ -58,12 +58,14 @@ class BJJCZ_LMCV4_FIBER_M_LightingHelper:
 
         #print ("**Sending pattern of len", len(packet), ":", ' '.join(['%02X'%x for x in packet]), file=sys.stderr)
         self.machine.send_raw(packet)
-        self.machine.send_query_status(0x19)
+        self.machine.send_query_status(0x19) # Set-End-of-List
         self.last_19_status_report = self.machine.get_status_report()
-        self.machine.wait_for_rv_bits(query=0x25, wait_high=0x20)
+        self.machine.wait_for_rv_bits(query=0x25, wait_high=0x20) # 0x25, ReadPort, 0x20, Stop List
 
         # Probably this means "run program."
         self.machine.send_query_status(0x0005) # this thing was the last added and was def necessary
+        # 0x05 Execute List.
+
         reply = self.machine.get_status_report()
         #print ("05 REPLY:", ' '.join(['%02X'%x for x  in reply]), file=sys.stderr)
 
@@ -71,17 +73,17 @@ class BJJCZ_LMCV4_FIBER_M_LightingHelper:
     def loop(self):
         while 1:
             self.machine.lock.acquire()
-            self.machine.send_query_status(0x25)
+            self.machine.send_query_status(0x25)  # Read Port
             last_status_report = self.machine.get_status_report()
             self.machine.lock.release()
 
             self.machine.lock.acquire()
-            self.machine.send_query_status(0x07)
+            self.machine.send_query_status(0x07)  # 0x07 Get Version.
             last_07_status_report = self.machine.get_status_report()
             self.machine.lock.release()
 
-            ready = last_07_status_report[6]&0x20
-            running = last_07_status_report[6]&4
+            ready = last_07_status_report[6]&0x20 # 0x20 STOP LIST,
+            running = last_07_status_report[6]&4  # 0x04 Enable Laser
 
             if ready and not running and self.pattern:
                 self.send_pattern(self.pattern)
@@ -96,7 +98,7 @@ class BJJCZ_LMCV4_FIBER_M_LightingHelper:
 
 
 class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
-    packet_size=3072
+    packet_size=3072 # 0xC00, 12 x 256
     VID = 0x9588
     PID = 0x9899
     ep_hodi  = 0x01 # endpoint for the "dog," i.e. dongle.
@@ -119,7 +121,7 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
         # We sacrifice this time at the altar of the Unknown Race Condition.
         time.sleep(0.1)
 
-    def send_query_status(self, query_code=0x0025, parameter=0x0000, parameter2=0x0000):
+    def send_query_status(self, query_code=0x0025, parameter=0x0000, parameter2=0x0000):  # 0x25 Read Port
         query = bytearray([0]*12)
         query[0] = query_code&0xFF
         query[1] = query_code>>8
@@ -139,14 +141,10 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
     def connect_device(self, index=0):
         if self.verbosity: print("Connecting to USB!")
         devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
-        try:
-            device = list(devices)[index]
-        except:
-            print("No USB Device was found to connect to... eat error you filthy animal!")
-            return
+        device = list(devices)[index]
         self.manufacturer = usb.util.get_string(device, device.iManufacturer)
         self.product = usb.util.get_string(device, device.iProduct)
-        device.set_configuration() # It only has one.
+        device.set_configuration()  # It only has one.
         if self.verbosity: print ("Connected to", self.manufacturer, self.product)
         device.reset()
         return device
@@ -194,13 +192,14 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
     # Sequence
     # prefix: 0a6e-a89
     # (data)
-    # 19, 7
+    # 19, 7  # End of List, Get Version.
     # (Data)
-    # a96-aa1   19, 05, 07
+    # a96-aa1   19, 05, 07 # End of List, Execute List, GetVersion.
     # (Data)
-    # Then read 19,16 (0aa4-aab)
+    # Then read 19,16 (0aa4-aab) # End of List, Control Mode.
 
     # Then read 0x07 0x00 0x01 until 6 goes from 24 to 20
+    # 0x07 Get Version, 0x06,  PwmPulseWidth, 0x24: Write Analog Port X. 0x20 Stop List
     # then c220-c243
     #./pickle2py.py mark_prefix.pickle:mark_prefix mark_suffix.pickle:mark_suffix >>
     # ../../balor/BJJCZ_LMCV4_FIBER_M_blobs.py 
