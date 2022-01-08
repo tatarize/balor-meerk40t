@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 import time
 
 from meerk40t.core.cutcode import LaserSettings
@@ -7,6 +8,7 @@ from meerk40t.core.spoolers import Spooler
 from meerk40t.device.lasercommandconstants import *
 from meerk40t.kernel import Service
 import balor
+from balor.MSBF import Job
 
 
 def plugin(kernel, lifecycle):
@@ -49,7 +51,7 @@ class BalorDevice(Service):
             {
                 "attr": "scale_x",
                 "object": self,
-                "default": 1.000,
+                "default": 0.06608137,
                 "type": float,
                 "label": _("X Scale Factor"),
                 "tip": _(
@@ -59,7 +61,7 @@ class BalorDevice(Service):
             {
                 "attr": "scale_y",
                 "object": self,
-                "default": 1.000,
+                "default": 0.06608137,
                 "type": float,
                 "label": _("Y Scale Factor"),
                 "tip": _(
@@ -68,17 +70,6 @@ class BalorDevice(Service):
             },
         ]
         self.register_choices("bed_dim", choices)
-        # self.setting(str, "label", "balor-device")
-        #
-        # self.setting(str, 'operation', "light")  # light or mark
-        # self.setting(str, 'calfile', None)  # Provide a calibration file for the machine.
-        # self.calfile = None
-        # self.setting(str, 'machine', "BJJCZ_LMCV4_FIBER_M")
-        # self.setting(float, "travel_speed", 2000.0)
-        # self.setting(float, "laser_power", 50.0)
-        # self.setting(float, "q_switch_frequency", 30.0)
-        # self.setting(float, "cut_speed", 100.0)
-        # self.setting(str, 'output', None)  # Output file.
 
         choices = [
             {
@@ -180,6 +171,8 @@ class BalorDevice(Service):
 
         self.driver = BalorDriver(self)
         self.add_service_delegate(self.driver)
+        self.controller = BalorController(self)
+        self.add_service_delegate(self.controller)
 
         self.viewbuffer = ""
 
@@ -214,6 +207,16 @@ class BalorDevice(Service):
 
             return "spooler", spooler
 
+        @self.console_command(
+            "light",
+            help=_("spool <command>"),
+            regex=True,
+            input_type=(None, "elements"),
+            output_type="spooler",
+        )
+        def spool(command, channel, _, data=None, remainder=None, **kwgs):
+            pass
+
 
 class BalorDriver:
     def __init__(self, service, *args, **kwargs):
@@ -233,56 +236,13 @@ class BalorDriver:
         self._shutdown = False
         self.last_fetch = None
 
+        self.queue = []
+
         kernel = service._kernel
         _ = kernel.translation
 
-        self.job = None
-        self.cal = None
-
     def __repr__(self):
         return "BalorDriver(%s)" % self.name
-
-    def init_laser(self):
-        if self.laser_initialized:
-            return
-        self.laser_initialized = True
-        # TODO: We should actually use the settings we have from the current cut rather than the preset values.
-        self.job = balor.MSBF.JobFactory(self.service.machine)
-        self.cal = balor.Cal.Cal(self.service.calfile)
-        self.job.cal = self.cal
-
-        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
-        cut_speed = int(round(self.service.cut_speed / 2.0))
-        laser_power = int(round(self.service.laser_power * 40.95))
-        q_switch_period = int(
-            round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9)
-        )
-
-        if self.service.operation == "mark":
-            self.job.add_mark_prefix(
-                travel_speed=travel_speed,
-                laser_power=laser_power,
-                q_switch_period=q_switch_period,
-                cut_speed=cut_speed,
-            )
-        else:
-            self.job.add_light_prefix(travel_speed=travel_speed)
-        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
-
-    def send_laser(self):
-        print("Serializing Job.")
-        data = self.job.serialize()
-        self.connected_machine = balor.BJJCZ_LMCV4_FIBER_M.BJJCZ_LMCV4_FIBER_M()
-
-        # I believe mark data is correct for light as well, and only prefix dependent.
-        self.connected_machine.mark(data)
-
-        if not self.service.output:
-            sys.stdout.buffer.write(data)
-        else:
-            with open(self.service.output, "wb") as e:
-                e.write(data)
-        self.laser_initialized = False
 
     def shutdown(self, *args, **kwargs):
         self._shutdown = True
@@ -525,45 +485,63 @@ class BalorDriver:
         :param plot:
         :return:
         """
-        self.init_laser()
-        mils_per_mm = 39.3701
-        start = plot.start()
-        self.job.laser_control(False)
-        self.job.append(
-            balor.MSBF.OpJumpTo(
-                *self.job.cal.interpolate(
-                    start[0] / mils_per_mm, start[1] / mils_per_mm
-                )
-            )
-        )
-        self.job.laser_control(True)
-        for e in plot.generator():
-            on = 1
-            if len(e) == 2:
-                x, y = e
-            else:
-                x, y, on = e
-            x /= mils_per_mm
-            y /= mils_per_mm
-            if on == 0:
-                try:
-                    self.job.laser_control(False)
-                    self.job.append(
-                        balor.MSBF.OpJumpTo(*self.job.cal.interpolate(x, y))
-                    )
-                    self.job.laser_control(True)
-                    print("Moving to {x}, {y}".format(x=x, y=y))
-                except ValueError:
-                    print("Not including this stroke path:", file=sys.stderr)
-            else:
-                self.job.line(self.service.current_x, self.service.current_y, x, y)
-                print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
-            self.service.current_x = x
-            self.service.current_y = y
-        self.job.laser_control(False)
+        self.queue.append(plot)
 
     def plot_start(self):
-        self.send_laser()
+        job = balor.MSBF.Job()
+        job.cal = balor.Cal.Cal(self.service.calfile)
+        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
+        cut_speed = int(round(self.service.cut_speed / 2.0))
+        laser_power = int(round(self.service.laser_power * 40.95))
+        q_switch_period = int(
+            round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9)
+        )
+
+        job.add_mark_prefix(
+            travel_speed=travel_speed,
+            laser_power=laser_power,
+            q_switch_period=q_switch_period,
+            cut_speed=cut_speed,
+        )
+        job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
+
+        mils_per_mm = 39.3701
+        for plot in self.queue:
+            start = plot.start()
+            job.laser_control(False)
+            job.append(
+                balor.MSBF.OpJumpTo(
+                    *job.cal.interpolate(
+                        start[0] / mils_per_mm, start[1] / mils_per_mm
+                    )
+                )
+            )
+            job.laser_control(True)
+            for e in plot.generator():
+                on = 1
+                if len(e) == 2:
+                    x, y = e
+                else:
+                    x, y, on = e
+                x /= mils_per_mm
+                y /= mils_per_mm
+                if on == 0:
+                    try:
+                        job.laser_control(False)
+                        job.append(
+                            balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y))
+                        )
+                        job.laser_control(True)
+                        # print("Moving to {x}, {y}".format(x=x, y=y))
+                    except ValueError:
+                        print("Not including this stroke path:", file=sys.stderr)
+                else:
+                    job.line(self.service.current_x, self.service.current_y, x, y)
+                    # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
+                self.service.current_x = x
+                self.service.current_y = y
+        job.laser_control(False)
+        self.service.controller.queue_job(job)
 
     def set_power(self, power=1000.0):
         self.settings.power = power
@@ -618,3 +596,50 @@ class BalorDriver:
     @property
     def type(self):
         return "lhystudios"
+
+
+class BalorController:
+    def __init__(self, service):
+
+        self._shutdown = False
+        self.index = 0
+        self.loop_job = None
+        self.service = service
+        self.service.setting(bool, "mock", False)
+        self.connected_machine = balor.BJJCZ_LMCV4_FIBER_M.BJJCZ_LMCV4_FIBER_M()
+        self.job_queue = []
+        self.lock = threading.Lock()
+
+        self.service.threaded(self.data_sender, thread_name="balor-controller")
+
+    def shutdown(self):
+        self._shutdown = True
+
+    def queue_job(self, job):
+        if isinstance(job, Job):
+            job = job.serialize()
+        with self.lock:
+            self.job_queue.append(job)
+
+    def data_sender(self):
+        print("data_sender")
+        queue = []
+        connected = False
+        while not connected:
+            connected = self.connected_machine.connect_device(self.index)
+            if not connected:
+                print("connection failed")
+                time.sleep(0.5)
+                if self.service.mock:
+                    self.connected_machine.mock = True
+        while not self._shutdown:
+            if self.job_queue:
+                with self.lock:
+                    queue.extend(self.job_queue)
+                    self.job_queue.clear()
+                for q in queue:
+                    self.connected_machine.mark(q)
+                continue
+            if self.loop_job is not None:
+                self.connected_machine.mark(self.loop_job)
+        self.connected_machine.disconnect_device(self.index)
