@@ -220,16 +220,16 @@ class BalorDevice(Service):
             cutcode = CutCode()
             settings = LaserSettings()
             cutcode.append(
-                LineCut(Point(7000, 7000), Point(7000, 9000), settings=settings)
+                LineCut(Point(0x7000, 0x7000), Point(0x7000, 0x9000), settings=settings)
             )
             cutcode.append(
-                LineCut(Point(7000, 9000), Point(9000, 9000), settings=settings)
+                LineCut(Point(0x7000, 0x9000), Point(0x9000, 0x9000), settings=settings)
             )
             cutcode.append(
-                LineCut(Point(9000, 9000), Point(9000, 7000), settings=settings)
+                LineCut(Point(0x9000, 0x9000), Point(0x9000, 0x7000), settings=settings)
             )
             cutcode.append(
-                LineCut(Point(9000, 7000), Point(7000, 7000), settings=settings)
+                LineCut(Point(0x9000, 0x7000), Point(0x7000, 0x7000), settings=settings)
             )
             job = self.cutcode_to_job(
                 cutcode, light=True
