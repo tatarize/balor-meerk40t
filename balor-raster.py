@@ -2,74 +2,121 @@
 import balor
 import sys, argparse, os, io, pickle
 
-parser = argparse.ArgumentParser(description='''
+parser = argparse.ArgumentParser(
+    description="""
 Tool to convert raster images to the machine-specific binary format used
 by Beijing JCZ galvo-based laser engravers.
-This program produces raw bytestreams that can be sent by balor.''',
-epilog='''
+This program produces raw bytestreams that can be sent by balor.""",
+    epilog="""
 NOTE: This software is EXPERIMENTAL and has only been tested with a
 single machine. There are many different laser engraving machines 
 and the fact that they look the same, or even have the same markings,
-is not proof that they are really the same.''')
+is not proof that they are really the same.""",
+)
 
-parser.add_argument('operation', 
-        help="choose operational mode", default="light", choices=["mark", "light"])
+parser.add_argument(
+    "operation",
+    help="choose operational mode",
+    default="light",
+    choices=["mark", "light"],
+)
 
-parser.add_argument('-f', '--file', 
-        help="filename to load, in an image format supported by Pillow.", default=None)
+parser.add_argument(
+    "-f",
+    "--file",
+    help="filename to load, in an image format supported by Pillow.",
+    default=None,
+)
 
-parser.add_argument('-o', '--output', 
-    help="Specify the output file. (default stdout)",
-    default=None)
+parser.add_argument(
+    "-o", "--output", help="Specify the output file. (default stdout)", default=None
+)
 
-parser.add_argument('-c', '--calfile',
-    help="Provide a calibration file for the machine.")
+parser.add_argument(
+    "-c", "--calfile", help="Provide a calibration file for the machine."
+)
 
-parser.add_argument('-m', '--machine', 
-        help="specify which machine interface to use. Valid machines: "+', '.join(
-            [x.__name__ for x in balor.all_known_machines]), default="BJJCZ_LMCV4_FIBER_M")
+parser.add_argument(
+    "-m",
+    "--machine",
+    help="specify which machine interface to use. Valid machines: "
+    + ", ".join([x.__name__ for x in balor.all_known_machines]),
+    default="BJJCZ_LMCV4_FIBER_M",
+)
 
-parser.add_argument('--travel-speed',
+parser.add_argument(
+    "--travel-speed",
     help="Specify the traveling speed (mm/s)",
-    default=2000, type=float)
-parser.add_argument('--cut-speed',
-    help="Specify the cutting speed (mm/s)",
-    default=500, type=float)
-parser.add_argument('--laser-power',
+    default=2000,
+    type=float,
+)
+parser.add_argument(
+    "--cut-speed", help="Specify the cutting speed (mm/s)", default=500, type=float
+)
+parser.add_argument(
+    "--laser-power",
     help="Specify the laser power in percentage.",
-    default=50, type=float)
-parser.add_argument('--q-switch-frequency',
+    default=50,
+    type=float,
+)
+parser.add_argument(
+    "--q-switch-frequency",
     help="Specify the q switch frequency in KHz",
-    default=30.0, type=float)
+    default=30.0,
+    type=float,
+)
 
-parser.add_argument('--raster-x-res',
+parser.add_argument(
+    "--raster-x-res",
     help="X resolution (in mm) of the laser.",
-    default=0.15, type=float)
-parser.add_argument('--raster-y-res',
+    default=0.15,
+    type=float,
+)
+parser.add_argument(
+    "--raster-y-res",
     help="X resolution (in mm) of the laser.",
-    default=0.15, type=float)
+    default=0.15,
+    type=float,
+)
 
-parser.add_argument('-x', '--xoffs',
+parser.add_argument(
+    "-x",
+    "--xoffs",
     help="Specify an x offset for the image (mm.)",
-    default=0.0, type=float)
+    default=0.0,
+    type=float,
+)
 
-parser.add_argument('-y', '--yoffs',
+parser.add_argument(
+    "-y",
+    "--yoffs",
     help="Specify an y offset for the image (mm.)",
-    default=0.0, type=float)
-parser.add_argument('-d', '--dither',
-    help="Configure dithering",
-    default=0.1, type=float)
-parser.add_argument('-s', '--scale',
+    default=0.0,
+    type=float,
+)
+parser.add_argument(
+    "-d", "--dither", help="Configure dithering", default=0.1, type=float
+)
+parser.add_argument(
+    "-s",
+    "--scale",
     help="Pixels per mm (default 23.62 px/mm - 600 DPI)",
-    default=23.622047, type=float)
-parser.add_argument('-t', '--threshold',
+    default=23.622047,
+    type=float,
+)
+parser.add_argument(
+    "-t",
+    "--threshold",
     help="Greyscale threshold for burning (default 0.5, negative inverts)",
-    default=0.5, type=float)
+    default=0.5,
+    type=float,
+)
 args = parser.parse_args()
 
 
 import sys
 from PIL import Image
+
 if args.file is None:
     in_file = Image.open(sys.stdin.buffer)
 else:
@@ -78,10 +125,12 @@ else:
 import numpy as np
 import scipy
 import scipy.interpolate
+
+
 def raster_render(job, cal, in_file, out_file, args):
     width = in_file.size[0] / args.scale
     height = in_file.size[1] / args.scale
-    x0,y0 = args.xoffs, args.yoffs
+    x0, y0 = args.xoffs, args.yoffs
 
     invert = False
     threshold = args.threshold
@@ -90,84 +139,89 @@ def raster_render(job, cal, in_file, out_file, args):
         threshold *= -1.0
     dither = 0
     # approximate scale for speeds
-    #ap_x_scale = cal.interpolate(10.0, 10.0)[0] - cal.interpolate(-10.0, -10.0)[0]
-    #ap_y_scale = cal.interpolate(10.0, 10.0)[1] - cal.interpolate(-10.0, -10.0)[1]
-    #ap_scale = (ap_x_scale+ap_y_scale)/20.0
-    #print ("Approximate scale", ap_scale, "units/mm", file=sys.stderr)
-    travel_speed = int(round(args.travel_speed / 2.0)) # units are 2mm/sec
+    # ap_x_scale = cal.interpolate(10.0, 10.0)[0] - cal.interpolate(-10.0, -10.0)[0]
+    # ap_y_scale = cal.interpolate(10.0, 10.0)[1] - cal.interpolate(-10.0, -10.0)[1]
+    # ap_scale = (ap_x_scale+ap_y_scale)/20.0
+    # print ("Approximate scale", ap_scale, "units/mm", file=sys.stderr)
+    travel_speed = int(round(args.travel_speed / 2.0))  # units are 2mm/sec
     cut_speed = int(round(args.cut_speed / 2.0))
     laser_power = int(round(args.laser_power * 40.95))
-    q_switch_period = int(round(1.0/(args.q_switch_frequency*1e3) / 50e-9))
-    print ("Image size: %.2f mm x %.2f mm"%(width,height), file=sys.stderr)
-    print ("Travel speed 0x%04X"%travel_speed, file=sys.stderr)
-    print ("Cut speed 0x%04X"%cut_speed, file=sys.stderr)
-    print ("Q switch period 0x%04X"%q_switch_period, file=sys.stderr)
-    print ("Laser power 0x%04X"%laser_power, file=sys.stderr)
+    q_switch_period = int(round(1.0 / (args.q_switch_frequency * 1e3) / 50e-9))
+    print("Image size: %.2f mm x %.2f mm" % (width, height), file=sys.stderr)
+    print("Travel speed 0x%04X" % travel_speed, file=sys.stderr)
+    print("Cut speed 0x%04X" % cut_speed, file=sys.stderr)
+    print("Q switch period 0x%04X" % q_switch_period, file=sys.stderr)
+    print("Laser power 0x%04X" % laser_power, file=sys.stderr)
 
     job.cal = cal
 
     img = scipy.interpolate.RectBivariateSpline(
-            np.linspace(y0, y0+height, in_file.size[1]),
-            np.linspace(x0, x0+width, in_file.size[0]),
-            np.asarray(in_file))
+        np.linspace(y0, y0 + height, in_file.size[1]),
+        np.linspace(x0, x0 + width, in_file.size[0]),
+        np.asarray(in_file),
+    )
 
-    if args.operation == 'light':
-        job.add_light_prefix(travel_speed = travel_speed)
+    if args.operation == "light":
+        job.add_light_prefix(travel_speed=travel_speed)
         for _ in range(32):
             job.line(x0, y0, x0 + width, y0, Op=balor.MSBF.OpJumpTo)
             job.line(x0 + width, y0, x0 + width, y0 + height, Op=balor.MSBF.OpJumpTo)
             job.line(x0 + width, y0 + height, x0, y0 + height, Op=balor.MSBF.OpJumpTo)
             job.line(x0, y0 + height, x0, y0, Op=balor.MSBF.OpJumpTo)
-    else: # mark
+    else:  # mark
         dither = 0
-        job.add_mark_prefix(travel_speed = travel_speed,
-                            laser_power=laser_power,
-                            q_switch_period = q_switch_period,
-                            cut_speed = cut_speed)
+        job.add_mark_prefix(
+            travel_speed=travel_speed,
+            laser_power=laser_power,
+            q_switch_period=q_switch_period,
+            cut_speed=cut_speed,
+        )
         y = y0
         count = 0
         burning = False
-        while y < y0+height:
+        while y < y0 + height:
             x = x0
             job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x, y)))
-            while x < x0+width:
-                
-                px = img(y,x)
-                if invert: px = 1.0 - px
-                if px+dither > threshold:
+            while x < x0 + width:
+
+                px = img(y, x)
+                if invert:
+                    px = 1.0 - px
+                if px + dither > threshold:
                     if not burning:
-                        job.laser_control(True) # laser turn on
+                        job.laser_control(True)  # laser turn on
                     job.append(balor.MSBF.OpMarkTo(*cal.interpolate(x, y)))
-                    burning=True
+                    burning = True
                     dither = 0.0
                 else:
                     if burning:
                         # laser turn off
                         job.laser_control(False)
                     job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x, y)))
-                    dither += abs(px+dither-threshold)*args.dither
-                    burning=False
+                    dither += abs(px + dither - threshold) * args.dither
+                    burning = False
 
                 x += args.raster_x_res
             if burning:
                 # laser turn off
                 job.laser_control(False)
-                burning=False
+                burning = False
 
             y += args.raster_y_res
             count += 1
-            if not (count % 20): print ("\ty = %.3f"%y, file=sys.stderr)
-
-
+            if not (count % 20):
+                print("\ty = %.3f" % y, file=sys.stderr)
 
     job.calculate_distances()
+
 
 if args.output is None:
     out_file = sys.stdout.buffer
 else:
-    out_file = open(args.output, 'wb')
+    out_file = open(args.output, "wb")
 
 import balor.MSBF, balor.Cal
+
 cal = balor.Cal.Cal(args.calfile)
 job = balor.MSBF.JobFactory(args.machine)
 raster_render(job, cal, in_file, out_file, args)
