@@ -228,9 +228,9 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
         if self.mock:
             print("Mock Connecting")
             return True
-        devices = usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
-        self.device = list(devices)
+        devices = list(usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899))
         if self.device:
+            self.device = list(devices)[0]
             self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
             self.product = usb.util.get_string(self.device, self.device.iProduct)
             self.device.set_configuration()  # It only has one.
