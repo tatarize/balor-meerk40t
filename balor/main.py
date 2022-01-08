@@ -276,10 +276,9 @@ class BalorDriver:
         print("Serializing Job.")
         data = self.job.serialize()
         self.connected_machine = balor.BJJCZ_LMCV4_FIBER_M.BJJCZ_LMCV4_FIBER_M()
-        if self.service.operation == "mark":
-            self.connected_machine.mark(data)
-        else:
-            self.connected_machine.light(data)
+
+        # I believe mark data is correct for light as well, and only prefix dependent.
+        self.connected_machine.mark(data)
 
         if not self.service.output:
             sys.stdout.buffer.write(data)
