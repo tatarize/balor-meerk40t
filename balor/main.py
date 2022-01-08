@@ -219,12 +219,12 @@ class BalorDevice(Service):
 
     def cutcode_to_job(self, queue):
         job = balor.MSBF.Job()
-        job.cal = balor.Cal.Cal(self.service.calfile)
-        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
-        cut_speed = int(round(self.service.cut_speed / 2.0))
-        laser_power = int(round(self.service.laser_power * 40.95))
+        job.cal = balor.Cal.Cal(self.calfile)
+        travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
+        cut_speed = int(round(self.cut_speed / 2.0))
+        laser_power = int(round(self.laser_power * 40.95))
         q_switch_period = int(
-            round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9)
+            round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9)
         )
 
         job.add_mark_prefix(
@@ -266,11 +266,12 @@ class BalorDevice(Service):
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.line(self.service.current_x, self.service.current_y, x, y)
+                    job.line(self.current_x, self.current_y, x, y)
                     # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
-                self.service.current_x = x
-                self.service.current_y = y
+                self.current_x = x
+                self.current_y = y
         job.laser_control(False)
+        return job
 
 
 class BalorDriver:
