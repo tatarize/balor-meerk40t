@@ -219,11 +219,21 @@ class BalorDevice(Service):
         def light(command, channel, _, data=None, remainder=None, **kwgs):
             cutcode = CutCode()
             settings = LaserSettings()
-            cutcode.append(LineCut(Point(7000, 7000), Point(7000, 9000), settings=settings))
-            cutcode.append(LineCut(Point(7000, 9000), Point(9000, 9000), settings=settings))
-            cutcode.append(LineCut(Point(9000, 9000), Point(9000, 7000), settings=settings))
-            cutcode.append(LineCut(Point(9000, 7000), Point(7000, 7000), settings=settings))
-            self.controller.loop_job = self.cutcode_to_job(cutcode, light=True).serialize()
+            cutcode.append(
+                LineCut(Point(7000, 7000), Point(7000, 9000), settings=settings)
+            )
+            cutcode.append(
+                LineCut(Point(7000, 9000), Point(9000, 9000), settings=settings)
+            )
+            cutcode.append(
+                LineCut(Point(9000, 9000), Point(9000, 7000), settings=settings)
+            )
+            cutcode.append(
+                LineCut(Point(9000, 7000), Point(7000, 7000), settings=settings)
+            )
+            self.controller.loop_job = self.cutcode_to_job(
+                cutcode, light=True
+            ).serialize()
 
         @self.console_command(
             "nolight",
@@ -235,16 +245,13 @@ class BalorDevice(Service):
         def light(command, channel, _, data=None, remainder=None, **kwgs):
             self.controller.loop_job = None
 
-
     def cutcode_to_job(self, queue, light=False):
         job = balor.MSBF.Job()
         job.cal = balor.Cal.Cal(self.calfile)
         travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
         cut_speed = int(round(self.cut_speed / 2.0))
         laser_power = int(round(self.laser_power * 40.95))
-        q_switch_period = int(
-            round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9)
-        )
+        q_switch_period = int(round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9))
         if light:
             job.add_light_prefix(travel_speed)
         else:
@@ -262,9 +269,7 @@ class BalorDevice(Service):
             job.laser_control(False)
             job.append(
                 balor.MSBF.OpJumpTo(
-                    *job.cal.interpolate(
-                        start[0] / mils_per_mm, start[1] / mils_per_mm
-                    )
+                    *job.cal.interpolate(start[0] / mils_per_mm, start[1] / mils_per_mm)
                 )
             )
             job.laser_control(True)
@@ -279,15 +284,19 @@ class BalorDevice(Service):
                 if on == 0:
                     try:
                         job.laser_control(False)
-                        job.append(
-                            balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y))
-                        )
+                        job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
                         job.laser_control(True)
                         # print("Moving to {x}, {y}".format(x=x, y=y))
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.line(self.current_x, self.current_y, x, y, Op=OpJumpTo if light else OpMarkTo)
+                    job.line(
+                        self.current_x,
+                        self.current_y,
+                        x,
+                        y,
+                        Op=balor.MSBF.OpJumpTo if light else balor.MSBF.OpMarkTo,
+                    )
                     # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
                 self.current_x = x
                 self.current_y = y
