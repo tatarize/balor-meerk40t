@@ -134,15 +134,15 @@ def render_gcode_bounding(gfile, job, cal, args):
         i += 1
 
 
-    job.append(balor.MSBF.OpTravel(*cal.interpolate(0.0,0.0)))
+    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(0.0, 0.0)))
 
     print ("Bounding box: (%.2f, %.2f), (%.2f, %.2f)"%(xmin,ymin,xmax,ymax), file=sys.stderr)
-    job.append(balor.MSBF.OpTravel(*cal.interpolate(xmin,ymin)))
+    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(xmin, ymin)))
     for _ in range(args.repetition):
-        job.append(balor.MSBF.OpTravel(*cal.interpolate(xmax,ymin)))
-        job.append(balor.MSBF.OpTravel(*cal.interpolate(xmax,ymax)))
-        job.append(balor.MSBF.OpTravel(*cal.interpolate(xmin,ymax)))
-        job.append(balor.MSBF.OpTravel(*cal.interpolate(xmin,ymin)))
+        job.append(balor.MSBF.OpJumpTo(*cal.interpolate(xmax, ymin)))
+        job.append(balor.MSBF.OpJumpTo(*cal.interpolate(xmax, ymax)))
+        job.append(balor.MSBF.OpJumpTo(*cal.interpolate(xmin, ymax)))
+        job.append(balor.MSBF.OpJumpTo(*cal.interpolate(xmin, ymin)))
 
 
     job.calculate_distances()
@@ -199,7 +199,7 @@ def render_gcode(gfile, job, cal, args):
                 else:
                     x = params['X'] if 'X' in params else x
                     y = params['Y'] if 'Y' in params else y
-                job.append(balor.MSBF.OpTravel(*cal.interpolate(x,y)))
+                job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x, y)))
                 if burning and x > xmax: xmax=x
                 if burning and x < xmin: xmin=x
                 if burning and y > ymax: ymax=y
@@ -223,7 +223,7 @@ def render_gcode(gfile, job, cal, args):
                 if burning and y < ymin: ymin=y
 
                 # Cut
-                job.append(balor.MSBF.OpCut(*cal.interpolate(x,y)))
+                job.append(balor.MSBF.OpMarkTo(*cal.interpolate(x, y)))
             elif index == 4: #dwell
                 #delay = params['P']
                 # Probably not useful to actually do this
@@ -264,7 +264,7 @@ def render_gcode(gfile, job, cal, args):
         # laser turn off
         job.laser_control(False)
         burning=False
-    job.append(balor.MSBF.OpTravel(*cal.interpolate(0.0,0.0)))
+    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(0.0, 0.0)))
     job.calculate_distances()
 
     if not metric_specified:

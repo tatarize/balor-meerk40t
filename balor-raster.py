@@ -114,10 +114,10 @@ def raster_render(job, cal, in_file, out_file, args):
     if args.operation == 'light':
         job.add_light_prefix(travel_speed = travel_speed)
         for _ in range(32):
-            job.line(x0, y0, x0+width, y0, Op=balor.MSBF.OpTravel)
-            job.line(x0+width, y0, x0+width, y0+height, Op=balor.MSBF.OpTravel)
-            job.line(x0+width, y0+height, x0, y0+height, Op=balor.MSBF.OpTravel)
-            job.line(x0, y0+height, x0, y0, Op=balor.MSBF.OpTravel)
+            job.line(x0, y0, x0 + width, y0, Op=balor.MSBF.OpJumpTo)
+            job.line(x0 + width, y0, x0 + width, y0 + height, Op=balor.MSBF.OpJumpTo)
+            job.line(x0 + width, y0 + height, x0, y0 + height, Op=balor.MSBF.OpJumpTo)
+            job.line(x0, y0 + height, x0, y0, Op=balor.MSBF.OpJumpTo)
     else: # mark
         dither = 0
         job.add_mark_prefix(travel_speed = travel_speed,
@@ -129,7 +129,7 @@ def raster_render(job, cal, in_file, out_file, args):
         burning = False
         while y < y0+height:
             x = x0
-            job.append(balor.MSBF.OpTravel(*cal.interpolate(x,y)))
+            job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x, y)))
             while x < x0+width:
                 
                 px = img(y,x)
@@ -137,14 +137,14 @@ def raster_render(job, cal, in_file, out_file, args):
                 if px+dither > threshold:
                     if not burning:
                         job.laser_control(True) # laser turn on
-                    job.append(balor.MSBF.OpCut(*cal.interpolate(x,y)))
+                    job.append(balor.MSBF.OpMarkTo(*cal.interpolate(x, y)))
                     burning=True
                     dither = 0.0
                 else:
                     if burning:
                         # laser turn off
                         job.laser_control(False)
-                    job.append(balor.MSBF.OpTravel(*cal.interpolate(x,y)))
+                    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x, y)))
                     dither += abs(px+dither-threshold)*args.dither
                     burning=False
 

@@ -97,42 +97,42 @@ class TestPattern:
 
     def add_light_prefix(self):
         self.job.extend([
-                balor.MSBF.OpBeginJob(),
-                balor.MSBF.OpSetTravelSpeed(self.args.travel_speed),
-                balor.MSBF.OpMystery0D(0x0008),
+                balor.MSBF.OpReadyMark(),
+                balor.MSBF.OpJumpSpeed(self.args.travel_speed),
+                balor.MSBF.OpJumpTo2(0x0008),
             ])
 
     def laser_power(self, on):
         if on:
             self.job.extend([
                 balor.MSBF.OpLaserControl(0x0001),
-                balor.MSBF.OpWait(0x0320),
+                balor.MSBF.OpMarkEndDelay(0x0320),
             ])
         else:
             self.job.extend([
-                balor.MSBF.OpWait(0x001E),
+                balor.MSBF.OpMarkEndDelay(0x001E),
                 balor.MSBF.OpLaserControl(0x0000),
             ])
 
 
     def add_mark_prefix(self):
         self.job.extend([
-                balor.MSBF.OpBeginJob(),
+                balor.MSBF.OpReadyMark(),
                 balor.MSBF.OpSetQSwitchPeriod(self.args.q_switch_period),
-                balor.MSBF.OpSetLaserPower(self.args.laser_power),
-                balor.MSBF.OpSetTravelSpeed(self.args.travel_speed),
-                balor.MSBF.OpSetCutSpeed(self.args.cut_speed),
-                balor.MSBF.OpSetLaserOnTimeComp(0x0064, 0x8000),
-                balor.MSBF.OpSetLaserOffTimeComp(0x0064),
-                balor.MSBF.OpSetMystery0F(0x000A),
-                balor.MSBF.OpMystery0D(0x0008),
+                balor.MSBF.MarkPowerRatio(self.args.laser_power),
+                balor.MSBF.OpJumpSpeed(self.args.travel_speed),
+                balor.MSBF.OpMarkSpeed(self.args.cut_speed),
+                balor.MSBF.OpLaserOnDelay(0x0064, 0x8000),
+                balor.MSBF.OpLaserOffDelay(0x0064),
+                balor.MSBF.OpPolygonDelay(0x000A),
+                balor.MSBF.OpJumpTo2(0x0008),
             ])
 
 class OldGridPattern(TestPattern):
     name='oldgrid'
     def render(self):
         marking = args.operation == 'mark'
-        Op = balor.MSBF.OpCut if marking else balor.MSBF.OpTravel
+        Op = balor.MSBF.OpMarkTo if marking else balor.MSBF.OpJumpTo
         xmin, xmax, ymin, ymax = args.xmin, args.xmax, args.ymin, args.ymax
         cell_size = self.args.cell
 
@@ -140,27 +140,27 @@ class OldGridPattern(TestPattern):
             fiducial_size = cell_size // 3
             fiducial_offset = cell_size // 5
             # Make a square marking at 0,0
-            self.job.append(balor.MSBF.OpTravel(ymin + fiducial_offset, xmin + fiducial_offset))
+            self.job.append(balor.MSBF.OpJumpTo(ymin + fiducial_offset, xmin + fiducial_offset))
             self.laser_power(True)
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
-                                             xmin + fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
-                                             xmin + fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
-                                             xmin + fiducial_offset))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
-                                             xmin + fiducial_offset))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset,
+                                                xmin + fiducial_offset + fiducial_size))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset + fiducial_size,
+                                                xmin + fiducial_offset + fiducial_size))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset + fiducial_size,
+                                                xmin + fiducial_offset))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset,
+                                                xmin + fiducial_offset))
             self.laser_power(False)
             # Make a triangle at max X
-            self.job.append(balor.MSBF.OpTravel(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpJumpTo(ymin + fiducial_offset,
                                                 xmax - fiducial_offset))
             self.laser_power(True)
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
-                                             xmax - fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
-                                             xmax - fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
-                                             xmax - fiducial_offset))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset,
+                                                xmax - fiducial_offset + fiducial_size))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset + fiducial_size,
+                                                xmax - fiducial_offset + fiducial_size))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset,
+                                                xmax - fiducial_offset))
             self.laser_power(False)
         # getting rid of either the x or y lines makes it stop working
         # as does using too large a grid size
@@ -169,12 +169,12 @@ class OldGridPattern(TestPattern):
 
         x = xmin
         while x < xmax:
-            self.job.append(balor.MSBF.OpTravel(ymin, x))
+            self.job.append(balor.MSBF.OpJumpTo(ymin, x))
             if marking: self.laser_power(True)
             self.job.append(           Op(ymax-1, x))
             if marking: self.laser_power(False)            
             if x+cell_size >= xmax: break
-            self.job.append(balor.MSBF.OpTravel(ymax-1, x+cell_size))
+            self.job.append(balor.MSBF.OpJumpTo(ymax - 1, x + cell_size))
             if marking: self.laser_power(True)            
             self.job.append(           Op(ymin, x+cell_size))
             if marking: self.laser_power(False)            
@@ -182,12 +182,12 @@ class OldGridPattern(TestPattern):
 
         y = ymin
         while y < ymax:
-            self.job.append(balor.MSBF.OpTravel(y, xmin))
+            self.job.append(balor.MSBF.OpJumpTo(y, xmin))
             if marking: self.laser_power(True)
             self.job.append(           Op(y, xmax-1))
             if marking: self.laser_power(False)
             if y+cell_size >= ymax: break
-            self.job.append(balor.MSBF.OpTravel(y+cell_size, xmax-1))
+            self.job.append(balor.MSBF.OpJumpTo(y + cell_size, xmax - 1))
             if marking: self.laser_power(True)
             self.job.append(           Op(y+cell_size, xmin))
             if marking: self.laser_power(False)
@@ -200,7 +200,7 @@ class CopyGridPattern(TestPattern):
     name='grid'
     def render(self):
         marking = args.operation == 'mark'
-        Op = balor.MSBF.OpCut if marking else balor.MSBF.OpTravel
+        Op = balor.MSBF.OpMarkTo if marking else balor.MSBF.OpJumpTo
         xmin, xmax, ymin, ymax = args.xmin, args.xmax, args.ymin, args.ymax
         cell_size = self.args.cell
 
@@ -208,38 +208,38 @@ class CopyGridPattern(TestPattern):
             fiducial_size = cell_size // 3
             fiducial_offset = cell_size // 5
             # Make a square marking at 0,0
-            self.job.append(balor.MSBF.OpTravel(ymin + fiducial_offset, xmin + fiducial_offset))
+            self.job.append(balor.MSBF.OpJumpTo(ymin + fiducial_offset, xmin + fiducial_offset))
             self.laser_power(True)
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
-                                             xmin + fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
-                                             xmin + fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
-                                             xmin + fiducial_offset))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
-                                             xmin + fiducial_offset))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset,
+                                                xmin + fiducial_offset + fiducial_size))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset + fiducial_size,
+                                                xmin + fiducial_offset + fiducial_size))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset + fiducial_size,
+                                                xmin + fiducial_offset))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset,
+                                                xmin + fiducial_offset))
             self.laser_power(False)
             # Make a triangle at max X
-            self.job.append(balor.MSBF.OpTravel(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpJumpTo(ymin + fiducial_offset,
                                                 xmax - fiducial_offset))
             self.laser_power(True)
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
-                                             xmax - fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
-                                             xmax - fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
-                                             xmax - fiducial_offset))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset,
+                                                xmax - fiducial_offset + fiducial_size))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset + fiducial_size,
+                                                xmax - fiducial_offset + fiducial_size))
+            self.job.append(balor.MSBF.OpMarkTo(ymin + fiducial_offset,
+                                                xmax - fiducial_offset))
             self.laser_power(False)
 
 
         x = xmin
         while x < xmax:
-            self.job.append(balor.MSBF.OpTravel(ymin, x))
+            self.job.append(balor.MSBF.OpJumpTo(ymin, x))
             if marking: self.laser_power(True)
             self.job.append(           Op(ymax-1, x))
             if marking: self.laser_power(False)            
             if x+cell_size >= xmax: break
-            self.job.append(balor.MSBF.OpTravel(ymax-1, x+cell_size))
+            self.job.append(balor.MSBF.OpJumpTo(ymax - 1, x + cell_size))
             if marking: self.laser_power(True)            
             self.job.append(           Op(ymin, x+cell_size))
             if marking: self.laser_power(False)            
@@ -247,12 +247,12 @@ class CopyGridPattern(TestPattern):
 
         y = ymin
         while y < ymax:
-            self.job.append(balor.MSBF.OpTravel(y, xmin))
+            self.job.append(balor.MSBF.OpJumpTo(y, xmin))
             if marking: self.laser_power(True)
             self.job.append(           Op(y, xmax-1))
             if marking: self.laser_power(False)
             if y+cell_size >= ymax: break
-            self.job.append(balor.MSBF.OpTravel(y+cell_size, xmax-1))
+            self.job.append(balor.MSBF.OpJumpTo(y + cell_size, xmax - 1))
             if marking: self.laser_power(True)
             self.job.append(           Op(y+cell_size, xmin))
             if marking: self.laser_power(False)
@@ -266,7 +266,7 @@ class GridPattern(TestPattern):
     name='grid'
     def render(self):
         marking = args.operation == 'mark'
-        Op = balor.MSBF.OpCut if marking else balor.MSBF.OpTravel
+        Op = balor.MSBF.OpMarkTo if marking else balor.MSBF.OpJumpTo
         cell_size = 6144
 
         xmin = 6144
@@ -275,14 +275,14 @@ class GridPattern(TestPattern):
         ymax = 2**16-6144
 
         # x lines
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
         for n in range(-4,5):
-            self.job.append(balor.MSBF.OpTravel(0x8000+n*cell_size, xmin))
+            self.job.append(balor.MSBF.OpJumpTo(0x8000 + n * cell_size, xmin))
             if marking: self.laser_power(True)
             self.job.append(                 Op(0x8000+n*cell_size, 0x8000-cell_size))
             if not n:
                 if marking: self.laser_power(False)
-                self.job.append(balor.MSBF.OpTravel(0x8000+n*cell_size, 0x8000+cell_size))
+                self.job.append(balor.MSBF.OpJumpTo(0x8000 + n * cell_size, 0x8000 + cell_size))
                 if marking: self.laser_power(True)
             else:
                 self.job.append(             Op(0x8000+n*cell_size, 0x8000+cell_size))
@@ -290,41 +290,41 @@ class GridPattern(TestPattern):
             if marking: self.laser_power(False)
         
         # y lines
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
         for n in range(-4,5):
-            self.job.append(balor.MSBF.OpTravel(xmin, 0x8000+n*cell_size))
+            self.job.append(balor.MSBF.OpJumpTo(xmin, 0x8000 + n * cell_size))
             if marking: self.laser_power(True)
             self.job.append(                 Op(0x8000-cell_size, 0x8000+n*cell_size))
             if not n:
                 if marking: self.laser_power(False)
-                self.job.append(balor.MSBF.OpTravel(0x8000+cell_size, 0x8000+n*cell_size))
+                self.job.append(balor.MSBF.OpJumpTo(0x8000 + cell_size, 0x8000 + n * cell_size))
                 if marking: self.laser_power(True)
             else:
                 self.job.append(             Op(0x8000+cell_size, 0x8000+n*cell_size))
             self.job.append(                 Op(ymax, 0x8000+n*cell_size))
             if marking: self.laser_power(False)
 
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
 
         
-        self.job.append(balor.MSBF.OpTravel(0x8000-cell_size, 0x8000-cell_size))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000 - cell_size, 0x8000 - cell_size))
         if marking: self.laser_power(True)
         self.job.append(                 Op(0x8000+cell_size, 0x8000+cell_size))
         if marking: self.laser_power(False)
-        self.job.append(balor.MSBF.OpTravel(0x8000+cell_size, 0x8000-cell_size))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000 + cell_size, 0x8000 - cell_size))
         if marking: self.laser_power(True)
         self.job.append(                 Op(0x8000-cell_size, 0x8000+cell_size))
         if marking: self.laser_power(False)
 
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
-        self.job.append(balor.MSBF.OpTravel(ymax-5*cell_size//6, xmax-5*cell_size//6))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(ymax - 5 * cell_size // 6, xmax - 5 * cell_size // 6))
         if marking: self.laser_power(True)
         self.job.append(                 Op(ymax-5*cell_size//6, xmax-3*cell_size//6))
         self.job.append(                 Op(ymax-3*cell_size//6, xmax-3*cell_size//6))
         self.job.append(                 Op(ymax-5*cell_size//6, xmax-5*cell_size//6))
         if marking: self.laser_power(False)
 
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
 
         #x = xmin
         #while x < xmax:
@@ -340,10 +340,10 @@ class GridPattern(TestPattern):
         #    x += cell_size*2
 
         for _ in range(200):
-            self.job.append(balor.MSBF.OpWait(0x100))
+            self.job.append(balor.MSBF.OpMarkEndDelay(0x100))
 
-        self.job.append(balor.MSBF.OpMystery0D(0x0008))
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo2(0x0008))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
 
         self.job.calculate_distances()
 
@@ -365,7 +365,7 @@ class CalPattern(TestPattern):
 
         for n in range(segs):
             #print ("*", xs[n], ys[n], file=sys.stderr)
-            self.job.append(balor.MSBF.OpCut(*self.cal.interpolate(xs[n], ys[n] )))
+            self.job.append(balor.MSBF.OpMarkTo(*self.cal.interpolate(xs[n], ys[n])))
 
     def render(self):
         marking = self.args.operation == 'mark'
@@ -374,41 +374,41 @@ class CalPattern(TestPattern):
         self.cal = cal
 
         # make squares
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
         for nx in range(-4,4):
             for ny in range(-4,4):
-                self.job.append(balor.MSBF.OpTravel(*cal.interpolate(nx*15.0+2.5, ny*15.0+2.5)))
+                self.job.append(balor.MSBF.OpJumpTo(*cal.interpolate(nx * 15.0 + 2.5, ny * 15.0 + 2.5)))
                 if marking: self.laser_power(True)
                 self.square(nx*15.0+2.5, ny*15.0+2.5, 10.0, 10.0)
                 if marking: self.laser_power(False)
 
 
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
 
         # make the X
-        self.job.append(balor.MSBF.OpTravel(*cal.interpolate(-60, -60)))
+        self.job.append(balor.MSBF.OpJumpTo(*cal.interpolate(-60, -60)))
         if marking: self.laser_power(True)
         self.line(-60,-60,  60,60)
         if marking: self.laser_power(False)
-        self.job.append(balor.MSBF.OpTravel(*cal.interpolate(60,-60)))
+        self.job.append(balor.MSBF.OpJumpTo(*cal.interpolate(60, -60)))
         if marking: self.laser_power(True)
         self.line(60,-60,  -60,60)
         if marking: self.laser_power(False)
 
         # make the cross
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
-        self.job.append(balor.MSBF.OpTravel(*cal.interpolate(-60,0)))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(*cal.interpolate(-60, 0)))
         if marking: self.laser_power(True)
         self.line(-60,0,  60,0)
         if marking: self.laser_power(False)
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
-        self.job.append(balor.MSBF.OpTravel(*cal.interpolate(0,-60)))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo(*cal.interpolate(0, -60)))
         if marking: self.laser_power(True)
         self.line(0,-60,  0,60)
         if marking: self.laser_power(False)
 
         # Make the big square
-        self.job.append(balor.MSBF.OpTravel(*cal.interpolate(60,60)))
+        self.job.append(balor.MSBF.OpJumpTo(*cal.interpolate(60, 60)))
         if marking: self.laser_power(True)
         self.line(60,   60,      60,  -60)
         self.line(60,  -60,     -60,  -60)
@@ -417,7 +417,7 @@ class CalPattern(TestPattern):
         if marking: self.laser_power(False)
         
         # make the +x +y triangle
-        self.job.append(balor.MSBF.OpTravel(*cal.interpolate(55,55)))
+        self.job.append(balor.MSBF.OpJumpTo(*cal.interpolate(55, 55)))
         if marking: self.laser_power(True)
         self.line(55,   55,      50,  55)
         self.line(50,   55,      50,  50)
@@ -426,10 +426,10 @@ class CalPattern(TestPattern):
 
 
         for _ in range(200):
-            self.job.append(balor.MSBF.OpWait(0x100))
+            self.job.append(balor.MSBF.OpMarkEndDelay(0x100))
 
-        self.job.append(balor.MSBF.OpMystery0D(0x0008))
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+        self.job.append(balor.MSBF.OpJumpTo2(0x0008))
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
 
         self.job.calculate_distances()
 

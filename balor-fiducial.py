@@ -79,32 +79,32 @@ def render_fiducial(job, cal, args):
                             laser_power=laser_power,
                             q_switch_period = q_switch_period,
                             cut_speed=cut_speed)
-    job.append(balor.MSBF.OpTravel(*cal.interpolate(args.x,args.y)))
+    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(args.x, args.y)))
 
     xmin,ymin = cal.interpolate(args.x - args.size*1e-3/2,args.y - args.size*1e-3/2)
     xmax,ymax = cal.interpolate(args.x + args.size*1e-3/2,args.y + args.size*1e-3/2)
     # Cut the X line
-    job.append(balor.MSBF.OpTravel(xmin,ymin))
+    job.append(balor.MSBF.OpJumpTo(xmin, ymin))
     for _ in range(args.groups):
         job.laser_control(True)
         for __ in range(args.repetition):
-            job.append(balor.MSBF.OpCut(xmin,ymax,0x8000))
-            job.append(balor.MSBF.OpCut(xmax,ymax,0x8000))
-            job.append(balor.MSBF.OpCut(xmax,ymin,0x8000))
-            job.append(balor.MSBF.OpCut(xmin,ymin,0x8000))
+            job.append(balor.MSBF.OpMarkTo(xmin, ymax, 0x8000))
+            job.append(balor.MSBF.OpMarkTo(xmax, ymax, 0x8000))
+            job.append(balor.MSBF.OpMarkTo(xmax, ymin, 0x8000))
+            job.append(balor.MSBF.OpMarkTo(xmin, ymin, 0x8000))
         job.laser_control(False)
-        job.append(balor.MSBF.OpWait(wait_time))
-    job.append(balor.MSBF.OpMystery0D(0x0008))
-    job.append(balor.MSBF.OpTravel(*cal.interpolate(args.x,args.y)))
+        job.append(balor.MSBF.OpMarkEndDelay(wait_time))
+    job.append(balor.MSBF.OpJumpTo2(0x0008))
+    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(args.x, args.y)))
     
 
        
 
-    job.append(balor.MSBF.OpTravel(*cal.interpolate(0.0,0.0)))
+    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(0.0, 0.0)))
     
-    for _ in range(200): job.append(balor.MSBF.OpWait(0x100))
-    job.append(balor.MSBF.OpMystery0D(0x0008))
-    job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+    for _ in range(200): job.append(balor.MSBF.OpMarkEndDelay(0x100))
+    job.append(balor.MSBF.OpJumpTo2(0x0008))
+    job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
     job.calculate_distances()
 
 

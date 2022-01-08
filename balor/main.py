@@ -270,7 +270,7 @@ class BalorDriver:
                                      cut_speed=cut_speed)
         else:
             self.job.add_light_prefix(travel_speed=travel_speed)
-        self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000)) #centerize?
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000)) #centerize?
 
     def send_laser(self):
         print("Serializing Job.")
@@ -532,7 +532,7 @@ class BalorDriver:
         mils_per_mm = 39.3701
         start = plot.start()
         self.job.laser_control(False)
-        self.job.append(balor.MSBF.OpTravel(*self.job.cal.interpolate(start[0] / mils_per_mm, start[1] / mils_per_mm)))
+        self.job.append(balor.MSBF.OpJumpTo(*self.job.cal.interpolate(start[0] / mils_per_mm, start[1] / mils_per_mm)))
         self.job.laser_control(True)
         for e in plot.generator():
             on = 1
@@ -545,7 +545,7 @@ class BalorDriver:
             if on == 0:
                 try:
                     self.job.laser_control(False)
-                    self.job.append(balor.MSBF.OpTravel(*self.job.cal.interpolate(x, y)))
+                    self.job.append(balor.MSBF.OpJumpTo(*self.job.cal.interpolate(x, y)))
                     self.job.laser_control(True)
                     print("Moving to {x}, {y}".format(x=x, y=y))
                 except ValueError:

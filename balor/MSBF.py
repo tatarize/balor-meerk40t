@@ -128,13 +128,13 @@ class Operation:
     def get_xy(self):
         return self.params[self.x], self.params[self.y]
 
-class OpNo(Operation):
+class OpEndOfList(Operation):
     name = "NO OPERATION ()"
     opcode = 0x8002
     def text_decode(self):
         return "No operation"
 
-class OpTravel(Operation):
+class OpJumpTo(Operation):
     name = "TRAVEL (y, x, angle, distance)"
     opcode = 0x8001
     x = 1
@@ -151,13 +151,13 @@ class OpTravel(Operation):
     def simulate(self, sim):
         sim.travel(self.params[self.x], self.params[self.y])
 
-class OpWait(Operation):
+class OpMarkEndDelay(Operation):
     name = "WAIT (time)"
     opcode = 0x8004
     def text_decode(self):
         return "Wait %d microseconds"%(self.params[0]*10)
 
-class OpCut(Operation):
+class OpMarkTo(Operation):
     name = "CUT (y, x, angle, distance)"
     opcode = 0x8005
     x = 1
@@ -176,25 +176,28 @@ class OpCut(Operation):
         sim.cut(self.params[self.x], self.params[self.y])
 
 
-class OpSetTravelSpeed(Operation):
+class OpJumpSpeed(Operation):
     name = "SET TRAVEL SPEED (speed)"
     opcode = 0x8006
     def text_decode(self):
         return "Set travel speed = %.2f mm/s"%(self.params[0]*1.9656)
 
-class OpSetLaserOnTimeComp(Operation):
+class OpLaserOnDelay(Operation):
     name = "SET ON TIME COMPENSATION (time)"
     opcode = 0x8007
     def text_decode(self):
         return "Set on time compensation = %d us"%(self.params[0])
 
-class OpSetLaserOffTimeComp(Operation):
+class OpLaserOffDelay(Operation):
     name = "SET OFF TIME COMPENSATION (time)"
     opcode = 0x8008
     def text_decode(self):
         return "Set off time compensation = %d us"%(self.params[0])
 
-class OpSetCutSpeed(Operation):
+# TODO: 0x800A Mark Frequency (use differs by machine)
+# TODO: 0x800B Mark Pulse Width (use differs by machine
+
+class OpMarkSpeed(Operation):
     name = "SET CUTTING SPEED (speed)"
     opcode = 0x800C
     def text_decode(self):
@@ -202,7 +205,10 @@ class OpSetCutSpeed(Operation):
     def simulate(self, sim):
         sim.cut_speed = self.params[0]*1.9656
 
-class OpMystery0D(Operation):
+class OpJumpTo2(Operation):
+    """
+    This command was listed as Mystery Operation it is only called in listJumpTo as 0x8001 is called.
+    """
     name = "Alternate travel (0x800D)"
     opcode = 0x800D
     def text_decode(self):
@@ -217,16 +223,17 @@ class OpMystery0D(Operation):
         return "Alt travel to x=%s y=%s angle=%04X dist=%s"%(
                 x,y,self.params[2],
                 d)
-OpAltTravel = OpMystery0D
+OpAltTravel = OpJumpTo2
 
-class OpSetMystery0F(Operation):
+class OpPolygonDelay(Operation):
     name = "POLYGON DELAY"
     opcode = 0x800F
     def text_decode(self):
         return "Set polygon delay, param=%d"%self.params[0]
-OpPolygonDelay = OpSetMystery0F
 
-class OpSetLaserPower(Operation):
+# TODO: 0x8011 listWritrPort
+
+class MarkPowerRatio(Operation):
     name = "SET LASER POWER (power)"
     opcode = 0x8012
     def text_decode(self):
@@ -234,7 +241,12 @@ class OpSetLaserPower(Operation):
     def simulate(self, sim):
         sim.laser_power = self.params[0]/40.960
 
+# TODO: 0x801A FlyEnable
+
 class OpSetQSwitchPeriod(Operation):
+    """
+    Only called for some machines, from Mark Frequency
+    """
     name = "SET Q SWITCH PERIOD (period)"
     opcode = 0x801B
     def text_decode(self):
@@ -244,6 +256,14 @@ class OpSetQSwitchPeriod(Operation):
     def simulate(self, sim):
         sim.q_switch_period = self.params[0]*50.0
 
+# TODO: 0x801C Direct Laser Switch
+
+# TODO: 0x801D Fly Delay
+
+# TODO: 0x801E SetCo2FPK
+
+# TODO: 0x801F Fly Wait Input
+
 class OpLaserControl(Operation):
     name = "LASER CONTROL (on)"
     opcode = 0x8021
@@ -252,17 +272,29 @@ class OpLaserControl(Operation):
     def simulate(self, sim):
         sim.laser_on = bool(self.params[0])
 
-class OpBeginJob(Operation):
+# TODO: 0x8023 CHANGE MARK COUNT
+
+# TODO: 0x8024: SetWeldPowerWave
+
+# TODO: 0x8025 Enable Weld Power Wave
+
+# TODO: 0x8026 IPGYLPMPulseWidth, SetConfigExtend
+
+# TODO: 0x8028 Fly Encoder Count
+
+# TODO: 0x8029: SetDaZWord
+
+class OpReadyMark(Operation):
     name = "BEGIN JOB"
     opcode = 0x8051
     def text_decode(self):
         return "Begin job"
 
-all_operations = [OpBeginJob, OpLaserControl, OpSetQSwitchPeriod, OpCut,
-        OpSetLaserPower, OpSetMystery0F, OpMystery0D, OpSetCutSpeed,
-        OpSetLaserOffTimeComp, OpSetLaserOnTimeComp, OpSetTravelSpeed,
-        OpWait, OpNo, OpTravel
-        ]
+all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpMarkTo,
+                  MarkPowerRatio, OpPolygonDelay, OpJumpTo2, OpMarkSpeed,
+                  OpLaserOffDelay, OpLaserOnDelay, OpJumpSpeed,
+                  OpMarkEndDelay, OpEndOfList, OpJumpTo
+                  ]
 
 operations_by_opcode = {OpClass.opcode: OpClass for OpClass in all_operations}
 
@@ -294,12 +326,12 @@ class Job:
         return iter(self.operations)
 
     def add_light_prefix(self, travel_speed):
-        self.extend([OpBeginJob(),
-                OpSetTravelSpeed(travel_speed),
-                #OpMystery0D(0x0008)
-                ])
+        self.extend([OpReadyMark(),
+                     OpJumpSpeed(travel_speed),
+                     #OpMystery0D(0x0008)
+                     ])
 
-    def line(self, x0, y0, x1, y1, seg_size=5, Op=OpCut):
+    def line(self, x0, y0, x1, y1, seg_size=5, Op=OpMarkTo):
         length = ((x0-x1)**2 + (y0-y1)**2)**0.5
         segs = max(2,int(round(length / seg_size)))
         #print ("**", x0, y0, x1, y1, length, segs, file=sys.stderr)
@@ -313,8 +345,8 @@ class Job:
     def change_settings(self, q_switch_period, laser_power, cut_speed):
         self.extend([
                 OpSetQSwitchPeriod(q_switch_period),
-                OpSetLaserPower(laser_power),
-                OpSetCutSpeed(cut_speed),
+                MarkPowerRatio(laser_power),
+                OpMarkSpeed(cut_speed),
                 #OpMystery0D(0x0008),
             ])
 #self.settings[color] = (q_switch_period, laser_power, cut_speed, hatch_angle,
@@ -323,25 +355,25 @@ class Job:
     def add_mark_prefix(self, travel_speed, q_switch_period,
             laser_power, cut_speed):
         self.extend([
-                OpBeginJob(),
+                OpReadyMark(),
                 OpSetQSwitchPeriod(q_switch_period),
-                OpSetLaserPower(laser_power),
-                OpSetTravelSpeed(travel_speed),
-                OpSetCutSpeed(cut_speed),
-                OpSetLaserOnTimeComp(0x0064, 0x8000),
-                OpSetLaserOffTimeComp(0x0064),
-                OpSetMystery0F(0x000A),
+                MarkPowerRatio(laser_power),
+                OpJumpSpeed(travel_speed),
+                OpMarkSpeed(cut_speed),
+                OpLaserOnDelay(0x0064, 0x8000),
+                OpLaserOffDelay(0x0064),
+                OpPolygonDelay(0x000A),
                 #OpMystery0D(0x0008),
             ])
     def laser_control(self, on):
         if on:
             self.extend([
                 OpLaserControl(0x0001),
-                OpWait(0x0320),
+                OpMarkEndDelay(0x0320),
             ])
         else:
             self.extend([
-                OpWait(0x001E),
+                OpMarkEndDelay(0x001E),
                 OpLaserControl(0x0000),
             ])
     def plot(self, draw, resolution=2048):

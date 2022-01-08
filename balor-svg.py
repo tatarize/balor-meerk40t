@@ -131,7 +131,7 @@ def render_fill(path, job, cal, settings, args, fill_color):
         intersects.sort()
 
         for (x0,y0), (x1,y1) in zip(intersects[::2], intersects[1::2]):
-            job.append(balor.MSBF.OpTravel(*cal.interpolate(x0,y0)))
+            job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x0, y0)))
             job.laser_control(True)
             job.line(x0,y0,x1,y1)
             job.laser_control(False)
@@ -158,14 +158,14 @@ def render_stroke(path, job, cal, settings, args, stroke_color):
         job.laser_control(True)
         ix,iy,_ = points[0]
         try:
-            job.append(balor.MSBF.OpTravel(*cal.interpolate(ix,iy)))
+            job.append(balor.MSBF.OpJumpTo(*cal.interpolate(ix, iy)))
         except ValueError:
             print ("Not including this stroke path:", path, file=sys.stderr)
             break
         for x,y, discon in points[1:]:
             if discon:
                 job.laser_control(False)
-                job.append(balor.MSBF.OpTravel(*cal.interpolate(x,y)))
+                job.append(balor.MSBF.OpJumpTo(*cal.interpolate(x, y)))
                 job.laser_control(True)
             else:
                 job.line(ix,iy, x,y)
@@ -180,9 +180,9 @@ def render_stroke_light(path, job, cal, settings, args, stroke_color):
     
     
     ix,iy = points[0]
-    job.append(balor.MSBF.OpTravel(*cal.interpolate(*points[0])))
+    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(*points[0])))
     for x,y in points[1:]:
-        job.line(ix,iy, x,y, Op=balor.MSBF.OpTravel)
+        job.line(ix, iy, x, y, Op=balor.MSBF.OpJumpTo)
         ix,iy = x,y
 
 
@@ -201,7 +201,7 @@ def render_svg(svg, job, cal, args, settings):
                             cut_speed = cut_speed)
     else:
         job.add_light_prefix(travel_speed = travel_speed)
-    job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
+    job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
     begin = job.get_position()
     for path, attribute in zip(paths, attributes):
         print ("begin", attribute.get('id', 'no id'), file=sys.stderr)
@@ -237,7 +237,7 @@ def render_svg(svg, job, cal, args, settings):
         print ("Adding %d repetitions %d:%d"%(args.repetition, begin, end+1), file=sys.stderr)
         if args.repetition > 1: job.duplicate(begin,end+1,args.repetition-1)
         print ("Length of operations", len(job.operations), file=sys.stderr)
-    job.append(balor.MSBF.OpTravel(*cal.interpolate(0.0,0.0)))
+    job.append(balor.MSBF.OpJumpTo(*cal.interpolate(0.0, 0.0)))
     job.calculate_distances()
 
 class MachineSettings:
