@@ -10,9 +10,9 @@ import balor
 
 
 def plugin(kernel, lifecycle):
-    if lifecycle == 'register':
+    if lifecycle == "register":
         kernel.register("provider/device/balor", BalorDevice)
-    elif lifecycle == 'preboot':
+    elif lifecycle == "preboot":
         suffix = "balor"
         for d in kernel.settings.derivable(suffix):
             kernel.root(
@@ -104,9 +104,7 @@ class BalorDevice(Service):
                 "default": None,
                 "type": str,
                 "label": _("Calibration File"),
-                "tip": _(
-                    "Provide a calibration file for the machine"
-                ),
+                "tip": _("Provide a calibration file for the machine"),
             },
             {
                 "attr": "machine",
@@ -114,9 +112,7 @@ class BalorDevice(Service):
                 "default": "BJJCZ_LMCV4_FIBER_M",
                 "type": str,
                 "label": _("Machine Type"),
-                "tip": _(
-                    "What type of machine are we controlling?"
-                ),
+                "tip": _("What type of machine are we controlling?"),
             },
             {
                 "attr": "travel_speed",
@@ -124,9 +120,7 @@ class BalorDevice(Service):
                 "default": 2000.0,
                 "type": float,
                 "label": _("Travel Speed"),
-                "tip": _(
-                    "How fast do we travel when not cutting?"
-                ),
+                "tip": _("How fast do we travel when not cutting?"),
             },
             {
                 "attr": "laser_power",
@@ -134,9 +128,7 @@ class BalorDevice(Service):
                 "default": 50.0,
                 "type": float,
                 "label": _("Laser Power"),
-                "tip": _(
-                    "How what power level do we cut at?"
-                ),
+                "tip": _("How what power level do we cut at?"),
             },
             {
                 "attr": "cut_speed",
@@ -144,9 +136,7 @@ class BalorDevice(Service):
                 "default": 100.0,
                 "type": float,
                 "label": _("Cut Speed"),
-                "tip": _(
-                    "How fast do we cut?"
-                ),
+                "tip": _("How fast do we cut?"),
             },
             {
                 "attr": "q_switch_frequency",
@@ -154,9 +144,7 @@ class BalorDevice(Service):
                 "default": 30.0,
                 "type": float,
                 "label": _("Q Switch Frequency"),
-                "tip": _(
-                    "Frequency of the Q Switch (full disclosure, no clue)"
-                ),
+                "tip": _("Frequency of the Q Switch (full disclosure, no clue)"),
             },
             {
                 "attr": "output",
@@ -164,19 +152,24 @@ class BalorDevice(Service):
                 "default": None,
                 "type": str,
                 "label": _("Output File"),
-                "tip": _(
-                    "Additional save to file option for a job."
-                ),
+                "tip": _("Additional save to file option for a job."),
             },
         ]
         self.register_choices("balor", choices)
 
         @self.console_argument("machine_type", type=str, help="machine specified")
-        @self.console_command("machine", help=_("Specify which machine interface to use."))
+        @self.console_command(
+            "machine", help=_("Specify which machine interface to use.")
+        )
         def set_machine_type(command, channel, _, machine_type, **kwargs):
             if machine_type is None:
-                channel("Current machine is set to: {machine}".format(machine=self.machine))
-                channel("Valid machines: " + ', '.join([x.__name__ for x in balor.all_known_machines]))
+                channel(
+                    "Current machine is set to: {machine}".format(machine=self.machine)
+                )
+                channel(
+                    "Valid machines: "
+                    + ", ".join([x.__name__ for x in balor.all_known_machines])
+                )
             else:
                 self.machine = machine_type
 
@@ -261,16 +254,20 @@ class BalorDriver:
         travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
         cut_speed = int(round(self.service.cut_speed / 2.0))
         laser_power = int(round(self.service.laser_power * 40.95))
-        q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
+        q_switch_period = int(
+            round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9)
+        )
 
-        if self.service.operation == 'mark':
-            self.job.add_mark_prefix(travel_speed=travel_speed,
-                                     laser_power=laser_power,
-                                     q_switch_period=q_switch_period,
-                                     cut_speed=cut_speed)
+        if self.service.operation == "mark":
+            self.job.add_mark_prefix(
+                travel_speed=travel_speed,
+                laser_power=laser_power,
+                q_switch_period=q_switch_period,
+                cut_speed=cut_speed,
+            )
         else:
             self.job.add_light_prefix(travel_speed=travel_speed)
-        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000)) #centerize?
+        self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
 
     def send_laser(self):
         print("Serializing Job.")
@@ -283,7 +280,7 @@ class BalorDriver:
         if not self.service.output:
             sys.stdout.buffer.write(data)
         else:
-            with open(self.service.output, 'wb') as e:
+            with open(self.service.output, "wb") as e:
                 e.write(data)
         self.laser_initialized = False
 
@@ -532,7 +529,13 @@ class BalorDriver:
         mils_per_mm = 39.3701
         start = plot.start()
         self.job.laser_control(False)
-        self.job.append(balor.MSBF.OpJumpTo(*self.job.cal.interpolate(start[0] / mils_per_mm, start[1] / mils_per_mm)))
+        self.job.append(
+            balor.MSBF.OpJumpTo(
+                *self.job.cal.interpolate(
+                    start[0] / mils_per_mm, start[1] / mils_per_mm
+                )
+            )
+        )
         self.job.laser_control(True)
         for e in plot.generator():
             on = 1
@@ -545,7 +548,9 @@ class BalorDriver:
             if on == 0:
                 try:
                     self.job.laser_control(False)
-                    self.job.append(balor.MSBF.OpJumpTo(*self.job.cal.interpolate(x, y)))
+                    self.job.append(
+                        balor.MSBF.OpJumpTo(*self.job.cal.interpolate(x, y))
+                    )
                     self.job.laser_control(True)
                     print("Moving to {x}, {y}".format(x=x, y=y))
                 except ValueError:

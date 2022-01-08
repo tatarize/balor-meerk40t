@@ -1,4 +1,3 @@
-
 import wx
 
 from meerk40t.gui.icons import icons8_administrative_tools_50
@@ -41,4 +40,3 @@ class BalorConfiguration(MWindow):
 
     def window_preserve(self):
         return False
-
