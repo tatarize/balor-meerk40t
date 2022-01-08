@@ -2,6 +2,8 @@ from meerk40t.gui.icons import (
     icons8_computer_support_50,
     icons8_connected_50,
     icons8_emergency_stop_button_50,
+    icons8_light_off_50,
+    icons8_light_on_50,
     icons8_pause_50,
 )
 from meerk40t.kernel import signal_listener
@@ -43,6 +45,26 @@ def plugin(service, lifecycle):
                 "action": lambda v: service("window toggle Configuration\n"),
             },
         )
+
+        service.register(
+            "button/control/Light_On",
+            {
+                "label": _("Galvo Light"),
+                "icon": icons8_light_on_50,
+                "tip": _("Turn light on."),
+                "action": lambda v: service("light\n"),
+            },
+        )
+        service.register(
+            "button/control/Light_Off",
+            {
+                "label": _("No Galvo Light"),
+                "icon": icons8_light_off_50,
+                "tip": _("Turn light off"),
+                "action": lambda v: service("nolight\n"),
+            },
+        )
+
         service.add_service_delegate(BalorGui(service))
 
 

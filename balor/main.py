@@ -3,12 +3,17 @@ import sys
 import threading
 import time
 
-from meerk40t.core.cutcode import LaserSettings
+from meerk40t.core.cutcode import LaserSettings, CutCode, LineCut
 from meerk40t.core.spoolers import Spooler
 from meerk40t.device.lasercommandconstants import *
 from meerk40t.kernel import Service
 import balor
 from balor.MSBF import Job
+from PIL import Image, ImageDraw
+
+from meerk40t.core.cutcode import LaserSettings, LineCut, CutCode, QuadCut, RasterCut
+from meerk40t.core.elements import LaserOperation
+from meerk40t.svgelements import Point, Path, SVGImage
 
 
 def plugin(kernel, lifecycle):
@@ -209,13 +214,27 @@ class BalorDevice(Service):
 
         @self.console_command(
             "light",
-            help=_("spool <command>"),
+            help=_("Turn redlight on."),
+        )
+        def light(command, channel, _, data=None, remainder=None, **kwgs):
+            cutcode = CutCode()
+            settings = LaserSettings()
+            cutcode.append(LineCut(Point(7000, 7000), Point(7000, 9000), settings=settings))
+            cutcode.append(LineCut(Point(7000, 9000), Point(9000, 9000), settings=settings))
+            cutcode.append(LineCut(Point(9000, 9000), Point(9000, 7000), settings=settings))
+            cutcode.append(LineCut(Point(9000, 7000), Point(7000, 7000), settings=settings))
+            self.controller.loop_job = self.cutcode_to_job(cutcode).serialize()
+
+        @self.console_command(
+            "nolight",
+            help=_("turn light off"),
             regex=True,
             input_type=(None, "elements"),
             output_type="spooler",
         )
-        def spool(command, channel, _, data=None, remainder=None, **kwgs):
-            pass
+        def light(command, channel, _, data=None, remainder=None, **kwgs):
+            self.controller.loop_job = None
+
 
     def cutcode_to_job(self, queue):
         job = balor.MSBF.Job()
