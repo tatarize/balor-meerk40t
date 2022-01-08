@@ -205,7 +205,7 @@ class OpMarkSpeed(Operation):
     def simulate(self, sim):
         sim.cut_speed = self.params[0]*1.9656
 
-class OpJumpTo2(Operation):
+class OpAltTravel(Operation):
     """
     This command was listed as Mystery Operation it is only called in listJumpTo as 0x8001 is called.
     """
@@ -223,7 +223,6 @@ class OpJumpTo2(Operation):
         return "Alt travel to x=%s y=%s angle=%04X dist=%s"%(
                 x,y,self.params[2],
                 d)
-OpAltTravel = OpJumpTo2
 
 class OpPolygonDelay(Operation):
     name = "POLYGON DELAY"
@@ -291,7 +290,7 @@ class OpReadyMark(Operation):
         return "Begin job"
 
 all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpMarkTo,
-                  MarkPowerRatio, OpPolygonDelay, OpJumpTo2, OpMarkSpeed,
+                  MarkPowerRatio, OpPolygonDelay, OpAltTravel, OpMarkSpeed,
                   OpLaserOffDelay, OpLaserOnDelay, OpJumpSpeed,
                   OpMarkEndDelay, OpEndOfList, OpJumpTo
                   ]

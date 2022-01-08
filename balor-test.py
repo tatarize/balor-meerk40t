@@ -99,7 +99,7 @@ class TestPattern:
         self.job.extend([
                 balor.MSBF.OpReadyMark(),
                 balor.MSBF.OpJumpSpeed(self.args.travel_speed),
-                balor.MSBF.OpJumpTo2(0x0008),
+                balor.MSBF.OpAltTravel(0x0008),
             ])
 
     def laser_power(self, on):
@@ -125,7 +125,7 @@ class TestPattern:
                 balor.MSBF.OpLaserOnDelay(0x0064, 0x8000),
                 balor.MSBF.OpLaserOffDelay(0x0064),
                 balor.MSBF.OpPolygonDelay(0x000A),
-                balor.MSBF.OpJumpTo2(0x0008),
+                balor.MSBF.OpAltTravel(0x0008),
             ])
 
 class OldGridPattern(TestPattern):
@@ -342,7 +342,7 @@ class GridPattern(TestPattern):
         for _ in range(200):
             self.job.append(balor.MSBF.OpMarkEndDelay(0x100))
 
-        self.job.append(balor.MSBF.OpJumpTo2(0x0008))
+        self.job.append(balor.MSBF.OpAltTravel(0x0008))
         self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
 
         self.job.calculate_distances()
@@ -428,7 +428,7 @@ class CalPattern(TestPattern):
         for _ in range(200):
             self.job.append(balor.MSBF.OpMarkEndDelay(0x100))
 
-        self.job.append(balor.MSBF.OpJumpTo2(0x0008))
+        self.job.append(balor.MSBF.OpAltTravel(0x0008))
         self.job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))
 
         self.job.calculate_distances()
