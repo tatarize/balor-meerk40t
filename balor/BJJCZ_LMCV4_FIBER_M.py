@@ -33,26 +33,26 @@ class BJJCZ_LMCV4_FIBER_M_LightingHelper:
     def send_pattern(self, packet):
 
         # one of these does the resetting (or some combination does)
-        self.machine.send_query_status(0x0021, 0x0100)
+        self.machine.send_query_status(0x0021, 0x0100) # Write Port
         reply = self.machine.get_status_report()
         #print ("21 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
-        self.machine.send_query_status(0x0007, 0x0100)
+        self.machine.send_query_status(0x0007, 0x0100) # Get Version
         reply = self.machine.get_status_report()
         #print ("07-1 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
-        self.machine.send_query_status(0x0012)
+        self.machine.send_query_status(0x0012)  # Reset List
         reply = self.machine.get_status_report()
         #print ("12 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
-        self.machine.send_query_status(0x000C)
+        self.machine.send_query_status(0x000C)  # Get PositionXY
         reply = self.machine.get_status_report()
         #print ("0C REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
         
         # Seems to do the travel
-        #self.machine.send_query_status(0x000D, 0x8001, 0x8001)
+        #self.machine.send_query_status(0x000D, 0x8001, 0x8001) # GOTOXY, 0, 0
         #reply = self.machine.get_status_report()
         #print ("0D REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
 
         #for _ in range(52):
-        #    self.machine.send_query_status(0x0025)
+        #    self.machine.send_query_status(0x0025) # Read Port.
         #    reply = self.machine.get_status_report()
 
 
@@ -199,7 +199,7 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
     # Then read 19,16 (0aa4-aab) # End of List, Control Mode.
 
     # Then read 0x07 0x00 0x01 until 6 goes from 24 to 20
-    # 0x07 Get Version, 0x06,  PwmPulseWidth, 0x24: Write Analog Port X. 0x20 Stop List
+    # 0x07: Get Version, 0x06:  PwmPulseWidth, 0x24: Write Analog Port X. 0x20: Stop List
     # then c220-c243
     #./pickle2py.py mark_prefix.pickle:mark_prefix mark_suffix.pickle:mark_suffix >>
     # ../../balor/BJJCZ_LMCV4_FIBER_M_blobs.py 
