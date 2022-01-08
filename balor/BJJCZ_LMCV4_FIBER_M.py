@@ -6,6 +6,53 @@ import time
 import sys
 
 import threading
+
+EnableLaser = 0x04
+ExecuteList = 0x05
+SetPwmPulseWidth = 0x06
+GetVersion = 0x07
+GetSerialNo = 0x09
+GetListStatus = 0x0a
+GetPositionXY = 0x0c
+GotoXY = 0x0d
+LaserSignalOff = 0x0e
+LaserSignalOn = 0x0f
+ResetList = 0x12
+RestartList = 0x13
+WriteCorTable = 0x15
+SetControlMode = 0x16
+SetDelayMode = 0x17
+SetMaxPolyDelay = 0x18
+SetEndOfList = 0x19
+SetFirstPulseKiller = 0x1a
+SetLaserMode = 0x1b
+SetTiming = 0x1c
+SetStandby = 0x1d
+SetPwmHalfPeriod = 0x1e
+StopExecute = 0x1f
+DisableLaser = 0x2
+StopList = 0x20
+WritePort = 0x21
+WriteAnalogPort1 = 0x22
+WriteAnalogPort2 = 0x23
+WriteAnalogPortX = 0x24
+ReadPort = 0x25
+SetAxisMotionParam = 0x26
+SetAxisOriginParam = 0x27
+AxisGoOrigin = 0x28
+MoveAxisTo = 0x29
+GetAxisPos = 0x2a
+GetFlyWaitCount = 0x2b
+GetMarkCount = 0x2d
+SetFpkParam2 = 0x2e
+IPG_OpemMO = 0x33
+IPG_GETStMO_AP = 0x34
+ENABLEZ = 0x3a
+SETZDATA = 0x3b
+SetSPISimmerCurrent = 0x3c
+SetFpkParam = 0x62
+
+
 class BJJCZ_LMCV4_FIBER_M_LightingHelper:
     def __init__(self, machine):
         self.machine = machine
@@ -33,34 +80,34 @@ class BJJCZ_LMCV4_FIBER_M_LightingHelper:
     def send_pattern(self, packet):
 
         # one of these does the resetting (or some combination does)
-        self.machine.send_query_status(0x0021, 0x0100) # Write Port
+        self.machine.send_query_status(WritePort, 0x0100)
         reply = self.machine.get_status_report()
         #print ("21 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
-        self.machine.send_query_status(0x0007, 0x0100) # Get Version
+        self.machine.send_query_status(GetVersion, 0x0100)
         reply = self.machine.get_status_report()
         #print ("07-1 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
-        self.machine.send_query_status(0x0012)  # Reset List
+        self.machine.send_query_status(ResetList)
         reply = self.machine.get_status_report()
         #print ("12 REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
-        self.machine.send_query_status(0x000C)  # Get PositionXY
+        self.machine.send_query_status(GetPositionXY)
         reply = self.machine.get_status_report()
         #print ("0C REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
         
         # Seems to do the travel
-        #self.machine.send_query_status(0x000D, 0x8001, 0x8001) # GOTOXY, 0, 0
+        #self.machine.send_query_status(GOTOXY, 0x8001, 0x8001) # the x,y here are 0,0
         #reply = self.machine.get_status_report()
         #print ("0D REPLY:", ' '.join(['%02X'%x for x in reply]), file=sys.stderr)
 
         #for _ in range(52):
-        #    self.machine.send_query_status(0x0025) # Read Port.
+        #    self.machine.send_query_status(ReadPort) # Read Port.
         #    reply = self.machine.get_status_report()
 
 
         #print ("**Sending pattern of len", len(packet), ":", ' '.join(['%02X'%x for x in packet]), file=sys.stderr)
         self.machine.send_raw(packet)
-        self.machine.send_query_status(0x19) # Set-End-of-List
+        self.machine.send_query_status(SetEndOfList)
         self.last_19_status_report = self.machine.get_status_report()
-        self.machine.wait_for_rv_bits(query=0x25, wait_high=0x20) # 0x25, ReadPort, 0x20, Stop List
+        self.machine.wait_for_rv_bits(query=ReadPort, wait_high=StopList)
 
         # Probably this means "run program."
         self.machine.send_query_status(0x0005) # this thing was the last added and was def necessary
@@ -73,17 +120,17 @@ class BJJCZ_LMCV4_FIBER_M_LightingHelper:
     def loop(self):
         while 1:
             self.machine.lock.acquire()
-            self.machine.send_query_status(0x25)  # Read Port
+            self.machine.send_query_status(ReadPort)  # Read Port
             last_status_report = self.machine.get_status_report()
             self.machine.lock.release()
 
             self.machine.lock.acquire()
-            self.machine.send_query_status(0x07)  # 0x07 Get Version.
+            self.machine.send_query_status(GetVersion)  # 0x07 Get Version.
             last_07_status_report = self.machine.get_status_report()
             self.machine.lock.release()
 
-            ready = last_07_status_report[6]&0x20 # 0x20 STOP LIST,
-            running = last_07_status_report[6]&4  # 0x04 Enable Laser
+            ready = last_07_status_report[6] & 0x20
+            running = last_07_status_report[6] & 0x04
 
             if ready and not running and self.pattern:
                 self.send_pattern(self.pattern)
@@ -121,7 +168,7 @@ class BJJCZ_LMCV4_FIBER_M(Machine.Machine):
         # We sacrifice this time at the altar of the Unknown Race Condition.
         time.sleep(0.1)
 
-    def send_query_status(self, query_code=0x0025, parameter=0x0000, parameter2=0x0000):  # 0x25 Read Port
+    def send_query_status(self, query_code=ReadPort, parameter=0x0000, parameter2=0x0000):  # 0x25 Read Port
         query = bytearray([0]*12)
         query[0] = query_code&0xFF
         query[1] = query_code>>8
