@@ -287,7 +287,7 @@ class BalorDevice(Service):
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.line(self.current_x, self.current_y, x, y)
+                    job.line(self.current_x, self.current_y, x, y, Op=OpJumpTo if light else OpMarkTo)
                     # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
                 self.current_x = x
                 self.current_y = y
