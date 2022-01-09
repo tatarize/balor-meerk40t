@@ -49,7 +49,7 @@ class GalvoUsb:
         device = list(devices)[0]
         self.manufacturer = usb.util.get_string(device, device.iManufacturer)
         self.product = usb.util.get_string(device, device.iProduct)
-        device.set_configuration() # It only has one.
+        device.set_configuration()  # It only has one.
         if 0:
             print ("Connected to", self.manufacturer, self.product)
         device.reset()

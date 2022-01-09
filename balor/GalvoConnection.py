@@ -116,6 +116,8 @@ class GalvoConnection:
             # We sacrifice this time at the altar of the Unknown Race Condition.
             time.sleep(0.1)
             self.connected = True
+            return True
+        return False
 
     def close(self):
         self._send_canned_sequence(QUIT_BLOB_SEQUENCE)
