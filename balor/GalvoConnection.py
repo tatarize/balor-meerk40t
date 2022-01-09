@@ -133,12 +133,14 @@ class GalvoConnection:
         """
         count = 0
         state = None
-        while state is None or (state & wait_low) or not (state & wait_high):
+        while True:
             state = self.send_command(query)
+            state = state[6]
             count += 1
+            if state is None or (state & wait_low) or not (state & wait_high):
+                return count
             # Might want to add a delay I guess
             time.sleep(0.06)
-        return count
 
     def _send_canned_sequence(self, sequence):
         if self.channel:
