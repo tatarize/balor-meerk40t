@@ -53,14 +53,14 @@ class GalvoUsb:
             self.devices[index] = device
             self.set_config(device)
 
-            self.manufacturer = usb.util.get_string(device, device.iManufacturer)
-            self.product = usb.util.get_string(device, device.iProduct)
-            if self.channel:
-                self.channel(
-                    "Connected to {manufacturer}: {product}".format(
-                        manufacturer=self.manufacturer, product=self.product
-                    )
-                )
+            # self.manufacturer = usb.util.get_string(device, device.iManufacturer)
+            # self.product = usb.util.get_string(device, device.iProduct)
+            # if self.channel:
+            #     self.channel(
+            #         "Connected to {manufacturer}: {product}".format(
+            #             manufacturer=self.manufacturer, product=self.product
+            #         )
+            #     )
             interface = self.get_active_config(device)
             self.interface[index] = interface
 
