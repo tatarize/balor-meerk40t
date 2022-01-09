@@ -61,16 +61,20 @@ class GalvoUsb:
             #             manufacturer=self.manufacturer, product=self.product
             #         )
             #     )
-            interface = self.get_active_config(device)
-            self.interface[index] = interface
-
-            self.detach_kernel(device, interface)
-            try:
-                self.claim_interface(device, interface)
-            except ConnectionRefusedError:
-                # Attempting interface cycle.
-                self.unclaim_interface(device, interface)
-                self.claim_interface(device, interface)
+            # interface = self.get_active_config(device)
+            # self.interface[index] = interface
+            #
+            # self.detach_kernel(device, interface)
+            # try:
+            #     self.claim_interface(device, interface)
+            # except ConnectionRefusedError:
+            #     # Attempting interface cycle.
+            #     self.unclaim_interface(device, interface)
+            #     self.claim_interface(device, interface)
+            #             self.device.set_configuration()  # It only has one.
+            #             if self.verbosity:
+            #                 print("Connected to", self.manufacturer, self.product)
+            device.reset()
             if self.channel:
                 self.channel("USB Connected.")
             return index
@@ -91,8 +95,8 @@ class GalvoUsb:
             self.channel("Attempting disconnection from USB.")
         if device is not None:
             try:
-                self.disconnect_detach(device, interface)
-                self.unclaim_interface(device, interface)
+                # self.disconnect_detach(device, interface)
+                # self.unclaim_interface(device, interface)
                 self.disconnect_dispose(device)
                 self.disconnect_reset(device)
                 if self.channel:
