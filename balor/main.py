@@ -308,7 +308,7 @@ class BalorDevice(Service):
             height += offset_y * 2
             job = balor.MSBF.Job()
             job.cal = balor.Cal.Cal(self.calfile)
-            job.add_light_prefix(travel_speed=self.travel_speed)
+            job.add_light_prefix(travel_speed=int(self.travel_speed))
             job.line(int(x0), int(y0), int(x0 + width), int(y0), Op=balor.MSBF.OpJumpTo)
             job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), Op=balor.MSBF.OpJumpTo)
             job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), Op=balor.MSBF.OpJumpTo)
