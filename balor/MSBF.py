@@ -520,6 +520,11 @@ class Job:
             if op.has_xy():
                 last_xy = op.get_xy()
 
+    def serialize_to_file(self, file):
+        with open(file, "wb") as out_file:
+            out_file.write(self.serialize())
+
+
 
 def JobFactory(machine_name):
     # This is currently just a stub since we don't support any
