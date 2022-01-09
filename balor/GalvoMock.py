@@ -26,7 +26,7 @@ class GalvoMock:
         assert (self.connected)
         assert (isinstance(packet, (bytearray, bytes)))
         assert (len(packet) == 0xC00)
-        self.channel(str(packet))
+        self.channel("{packet}... {size}".format(packet=str(packet[:20]), size=len(packet)))
         time.sleep(0.2)
 
     def canned_read(self, *args):
