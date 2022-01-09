@@ -17,6 +17,9 @@ class BalorLooper:
         self.connecting = False
         self.restart()
 
+    def service_detach(self):
+        self.shutdown()
+
     def restart(self):
         self.service.signal("pipe;usb_status", "Restarting...")
         self._shutdown = False

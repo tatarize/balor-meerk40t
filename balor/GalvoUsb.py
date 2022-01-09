@@ -45,15 +45,17 @@ class GalvoUsb:
         device.write(*args)
 
     def connect(self):
+        if self.channel:
+            self.channel("Connecting...")
         devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
         device = list(devices)[0]
         self.manufacturer = usb.util.get_string(device, device.iManufacturer)
         self.product = usb.util.get_string(device, device.iProduct)
         device.set_configuration()  # It only has one.
-        if 0:
-            print ("Connected to", self.manufacturer, self.product)
         device.reset()
         self.device = device
+        if self.channel:
+            self.channel("Connected...")
         return device
 
     def disconnect(self):
