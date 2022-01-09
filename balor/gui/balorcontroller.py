@@ -100,5 +100,34 @@ class BalorController(MWindow):
         if status is not None:
             self.text_status.SetValue(str(status))
 
+    @signal_listener("pipe;usb_status")
+    def on_usb_update(self,origin=None, *args):
+        try:
+            connected = self.context.device.controller.connection.connected
+        except AttributeError:
+            return
+        if connected:
+            self.button_device_connect.SetBackgroundColour("#00ff00")
+            self.button_device_connect.SetLabel(_("Disconnect"))
+            self.button_device_connect.SetBitmap(
+                icons8_connected_50.GetBitmap(use_theme=False)
+            )
+            self.button_device_connect.Enable()
+        else:
+            self.button_device_connect.SetBackgroundColour("#dfdf00")
+            origin, usb_status = self.context.last_signal("pipe;usb_status")
+            self.button_device_connect.SetLabel(_("Connect Failed"))
+            self.button_device_connect.SetBitmap(
+                icons8_disconnected_50.GetBitmap(use_theme=False)
+            )
+            self.button_device_connect.Enable()
+
     def on_button_start_connection(self, event):  # wxGlade: Controller.<event_handler>
-        pass
+        try:
+            connected = self.context.device.controller.connection.connected
+        except AttributeError:
+            return
+        if connected:
+            self.context("usb_disconnect\n")
+        else:
+            self.context("usb_connect\n")
