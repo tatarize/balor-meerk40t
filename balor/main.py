@@ -214,22 +214,27 @@ class BalorDevice(Service):
         def light(command, channel, _, data=None, remainder=None, **kwgs):
             self.controller.loop_job = None
 
-
         @self.console_command(
             "usb_connect",
             help=_("connect usb"),
         )
         def usb_connect(command, channel, _, data=None, remainder=None, **kwgs):
             if self.controller.connecting:
-                self.controller._shutdown = True
+                self.controller.shutdown()
                 return
             if self.controller.connected:
-                self.controller._shutdown = True
+                self.controller.shutdown()
                 return
             if self.controller._shutdown:
                 self.controller.restart()
                 return
 
+        @self.console_command(
+            "usb_disconnect",
+            help=_("connect usb"),
+        )
+        def usb_connect(command, channel, _, data=None, remainder=None, **kwgs):
+            self.controller.shutdown()
 
     def cutcode_to_light_job(self, queue):
         """
