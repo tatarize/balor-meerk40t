@@ -62,7 +62,6 @@ class GalvoConnection:
         self.service = service
         self.channel = service.channel("galvo-connect")
         self.usb = GalvoUsb(service.channel("galvo-usb"))
-        self.index = 0  # We connect to only one device
         self.connected = False
 
     def send_command(self, query_code, parameter=0x0000, parameter2=0x0000):
@@ -81,7 +80,7 @@ class GalvoConnection:
         query[3] = (parameter & 0xFF00) >> 8
         query[4] = parameter2 & 0xFF
         query[5] = (parameter2 & 0xFF00) >> 8
-        self.usb.write_command(self.index, query)
+        self.usb.write_command(query)
         return self._get_reply()
 
     def _get_reply(self):
@@ -89,7 +88,7 @@ class GalvoConnection:
         Get the reply of the send_command sequence.
         :return:
         """
-        return self.usb.read_reply(self.index)
+        return self.usb.read_reply()
 
     def send_packet(self, packet):
         """
@@ -105,13 +104,13 @@ class GalvoConnection:
         self.send_command(GetPositionXY)
         if self.channel:
             self.channel(packet)
-        self.usb.write_block(self.index, packet)
+        self.usb.write_block(packet)
         self.send_command(SetEndOfList)
         self._wait_for_status_bits(query=ReadPort, wait_high=0x20)
         self.send_command(ExecuteList)
 
     def open(self):
-        response = self.usb.connect(self.index)
+        response = self.usb.connect()
         if response:
             self._send_canned_sequence(INIT_BLOB_SEQUENCE)
             # We sacrifice this time at the altar of the Unknown Race Condition.
@@ -141,7 +140,7 @@ class GalvoConnection:
             self.channel("Sending Canned Sequence...")
         for n, (direction, endpoint, data) in enumerate(sequence):
             if direction:  # Read
-                reply = self.usb.canned_read(self.index, endpoint, len(data), 1000)
+                reply = self.usb.canned_read(endpoint, len(data), 1000)
                 if self.channel:
                     if bytes(reply) != bytes(data):
                         self.channel(" REFR:", " ".join(["%02X" % x for x in data]))
@@ -156,4 +155,4 @@ class GalvoConnection:
             else:
                 if self.channel:
                     self.channel(" HOST:", " ".join(["%02X" % x for x in data]))
-                self.usb.canned_write(self.index, endpoint, data, 1000) == len(data)
+                self.usb.canned_write(endpoint, data, 1000)
