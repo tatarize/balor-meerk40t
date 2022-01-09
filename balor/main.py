@@ -210,9 +210,7 @@ class BalorDevice(Service):
         @self.console_command(
             "nolight",
             help=_("turn light off"),
-            regex=True,
-            input_type=(None, "elements"),
-            output_type="spooler",
+            input_type=(None),
         )
         def light(command, channel, _, data=None, remainder=None, **kwgs):
             self.controller.loop_job = None
@@ -249,7 +247,7 @@ class BalorDevice(Service):
             for d in data:
                 print(d)
 
-        @self.console_argument("filename", type=str)
+        @self.console_argument("filename", type=str, default="balor.bin")
         @self.console_command(
             "save",
             help=_("print balor info about generated job"),
@@ -260,11 +258,21 @@ class BalorDevice(Service):
             with open(filename, "wb") as f:
                 for d in data:
                     f.write(d)
+            channel("Saved file {filename} to disk.".format(filename=filename))
 
-        @self.console_argument("x_offset", type=Length, help=_("x offset."))
-        @self.console_argument("y_offset", type=Length, help=_("y offset"))
         @self.console_command(
-            "selection_box",
+            "loop",
+            help=_("loop the selected job forever"),
+            input_type="balor",
+            output_type="balor"
+        )
+        def balor_loop(command, channel, _, data=None,  remainder=None, **kwgs):
+            self.controller.loop_job = data
+
+        @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
+        @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
+        @self.console_command(
+            "lightbox",
             help=_("outline the current selected elements"),
             output_type="balor",
         )
@@ -272,8 +280,8 @@ class BalorDevice(Service):
             command,
             channel,
             _,
-            x_offset=None,
-            y_offset=None,
+            x_offset=Length(0),
+            y_offset=Length(0),
             data=None,
             args=tuple(),
             **kwargs
@@ -317,34 +325,34 @@ class BalorDevice(Service):
             return "balor", [job.serialize()]
 
 
-        @self.console_option('--raster-x-res',
+        @self.console_option('raster-x-res',
                             help="X resolution (in mm) of the laser.",
                             default=0.15, type=float)
-        @self.console_option('--raster-y-res',
+        @self.console_option('raster-y-res',
                             help="X resolution (in mm) of the laser.",
                             default=0.15, type=float)
-        @self.console_option('-x', '--xoffs',
+        @self.console_option('x', 'xoffs',
                             help="Specify an x offset for the image (mm.)",
                             default=0.0, type=float)
-        @self.console_option('-y', '--yoffs',
+        @self.console_option('y', 'yoffs',
                             help="Specify an y offset for the image (mm.)",
                             default=0.0, type=float)
-        @self.console_option('-d', '--dither',
+        @self.console_option('d', 'dither',
                             help="Configure dithering",
                             default=0.1, type=float)
-        @self.console_option('-s', '--scale',
+        @self.console_option('s', 'scale',
                             help="Pixels per mm (default 23.62 px/mm - 600 DPI)",
                             default=23.622047, type=float)
-        @self.console_option('-t', '--threshold',
+        @self.console_option('t', 'threshold',
                             help="Greyscale threshold for burning (default 0.5, negative inverts)",
                             default=0.5, type=float)
-        @self.console_option('-g', '--grayscale',
+        @self.console_option('g', 'grayscale',
                             help="Greyscale rastering (power, speed, q_switch_frequency, passes)",
                             default=False, type=None)
-        @self.console_option('--grayscale-min',
+        @self.console_option('grayscale-min',
                             help="Minimum (black=1) value of the gray scale",
                             default=None, type=float)
-        @self.console_option('--grayscale-max',
+        @self.console_option('grayscale-max',
                             help="Maximum (white=255) value of the gray scale",
                             default=None, type=float)
         @self.console_command("balor-raster",
