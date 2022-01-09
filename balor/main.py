@@ -7,13 +7,15 @@ from meerk40t.core.cutcode import LaserSettings, CutCode, LineCut
 from meerk40t.core.spoolers import Spooler
 from meerk40t.device.lasercommandconstants import *
 from meerk40t.kernel import Service
-import balor
-from balor.MSBF import Job
+
 from PIL import Image, ImageDraw
 
 from meerk40t.core.cutcode import LaserSettings, LineCut, CutCode, QuadCut, RasterCut
 from meerk40t.core.elements import LaserOperation
 from meerk40t.svgelements import Point, Path, SVGImage
+
+from balor.MSBF import Job
+from balor.BalorLooper import BalorLooper
 
 
 def plugin(kernel, lifecycle):
@@ -86,29 +88,12 @@ class BalorDevice(Service):
                 "tip": _("What is this device called."),
             },
             {
-                "attr": "operation",
-                "object": self,
-                "default": "light",
-                "type": str,
-                "choices": ("light", "mark"),
-                "label": _("Operation type: light or mark"),
-                "tip": _("Mark or light outline"),
-            },
-            {
                 "attr": "calfile",
                 "object": self,
                 "default": None,
                 "type": str,
                 "label": _("Calibration File"),
                 "tip": _("Provide a calibration file for the machine"),
-            },
-            {
-                "attr": "machine",
-                "object": self,
-                "default": "BJJCZ_LMCV4_FIBER_M",
-                "type": str,
-                "label": _("Machine Type"),
-                "tip": _("What type of machine are we controlling?"),
             },
             {
                 "attr": "travel_speed",
@@ -153,21 +138,6 @@ class BalorDevice(Service):
         ]
         self.register_choices("balor", choices)
 
-        @self.console_argument("machine_type", type=str, help="machine specified")
-        @self.console_command(
-            "machine", help=_("Specify which machine interface to use.")
-        )
-        def set_machine_type(command, channel, _, machine_type, **kwargs):
-            if machine_type is None:
-                channel(
-                    "Current machine is set to: {machine}".format(machine=self.machine)
-                )
-                channel(
-                    "Valid machines: "
-                    + ", ".join([x.__name__ for x in balor.all_known_machines])
-                )
-            else:
-                self.machine = machine_type
 
         self.current_x = 0.0
         self.current_y = 0.0
@@ -176,7 +146,7 @@ class BalorDevice(Service):
 
         self.driver = BalorDriver(self)
         self.add_service_delegate(self.driver)
-        self.controller = BalorController(self)
+        self.controller = BalorLooper(self)
         self.add_service_delegate(self.controller)
 
         self.viewbuffer = ""
@@ -661,50 +631,3 @@ class BalorDriver:
     @property
     def type(self):
         return "lhystudios"
-
-
-class BalorController:
-    def __init__(self, service):
-
-        self._shutdown = False
-        self.index = 0
-        self.loop_job = None
-        self.service = service
-        self.service.setting(bool, "mock", False)
-        self.connected_machine = balor.BJJCZ_LMCV4_FIBER_M.BJJCZ_LMCV4_FIBER_M()
-        self.job_queue = []
-        self.lock = threading.Lock()
-
-        self.service.threaded(self.data_sender, thread_name="balor-controller")
-
-    def shutdown(self):
-        self._shutdown = True
-
-    def queue_job(self, job):
-        if isinstance(job, Job):
-            job = job.serialize()
-        with self.lock:
-            self.job_queue.append(job)
-
-    def data_sender(self):
-        print("data_sender")
-        queue = []
-        connected = False
-        while not connected:
-            connected = self.connected_machine.connect_device(self.index)
-            if not connected:
-                print("connection failed")
-                time.sleep(0.5)
-                if self.service.mock:
-                    self.connected_machine.mock = True
-        while not self._shutdown:
-            if self.job_queue:
-                with self.lock:
-                    queue.extend(self.job_queue)
-                    self.job_queue.clear()
-                for q in queue:
-                    self.connected_machine.mark(q)
-                continue
-            if self.loop_job is not None:
-                self.connected_machine.mark(self.loop_job)
-        self.connected_machine.disconnect_device(self.index)
