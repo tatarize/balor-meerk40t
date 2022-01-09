@@ -14,7 +14,7 @@ ep_himo = 0x88  # endpoint for host in, machine out. (receive status reports)
 
 class GalvoUsb:
     def __init__(self, channel=None):
-        self.device - None
+        self.device = None
         self.devices = {}
         self.interface = {}
         self.manufacturer = None
