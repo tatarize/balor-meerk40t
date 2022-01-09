@@ -14,6 +14,7 @@ ep_himo = 0x88  # endpoint for host in, machine out. (receive status reports)
 
 class GalvoUsb:
     def __init__(self, channel=None):
+        self.device - None
         self.devices = {}
         self.interface = {}
         self.manufacturer = None
@@ -49,15 +50,29 @@ class GalvoUsb:
         if self.channel:
             self.channel("Attempting connection to USB.")
         try:
-            self.device = self.find_device(index)
-            self.devices[index] = self.device
+            # self.device = self.find_device(index)
+            # self.devices[index] = self.device
+            #
+            # self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
+            # self.product = usb.util.get_string(self.device, self.device.iProduct)
+            # self.device.set_configuration()  # It only has one.
+            # if self.channel:
+            #     self.channel("Connected to", self.manufacturer, self.product)
+            # self.device.reset()
 
-            self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
-            self.product = usb.util.get_string(self.device, self.device.iProduct)
-            self.device.set_configuration()  # It only has one.
-            if self.channel:
-                self.channel("Connected to", self.manufacturer, self.product)
-            self.device.reset()
+            devices = list(usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899))
+            if devices:
+                self.device = list(devices)[0]
+                self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
+                self.product = usb.util.get_string(self.device, self.device.iProduct)
+                self.device.set_configuration()  # It only has one.
+                # if self.verbosity:
+                #     print("Connected to", self.manufacturer, self.product)
+                self.device.reset()
+                # self.send_sequence(self.sequences.init)
+                # We sacrifice this time at the altar of the Unknown Race Condition.
+                # time.sleep(0.1)
+
             # self.send_sequence(self.sequences.init)
             # # We sacrifice this time at the altar of the Unknown Race Condition.
             # time.sleep(0.1)
@@ -100,8 +115,8 @@ class GalvoUsb:
             return -1
 
     def disconnect(self, index=0):
-        device = self.devices[index]
-        interface = self.interface[index]
+        device = self.device
+        # interface = self.interface[index]
         if self.channel:
             self.channel("Attempting disconnection from USB.")
         if device is not None:
