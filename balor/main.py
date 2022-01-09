@@ -15,6 +15,7 @@ from meerk40t.core.elements import LaserOperation
 from meerk40t.svgelements import Point, Path, SVGImage, Length
 
 import balor
+from balor.GalvoConnection import GotoXY
 from balor.MSBF import Job
 from balor.BalorLooper import BalorLooper
 
@@ -268,6 +269,17 @@ class BalorDevice(Service):
         )
         def balor_loop(command, channel, _, data=None,  remainder=None, **kwgs):
             self.controller.set_loop(data)
+
+        @self.console_argument("x", type=float, default=0.0)
+        @self.console_argument("y", type=float, default=0.0)
+        @self.console_command(
+            "redlight",
+            help=_("send laser as a goto"),
+        )
+        def balor_goto(command, channel, _, x=0, y=0,  remainder=None, **kwgs):
+            rx = int(0x8000 + x) & 0xFFFF
+            ry = int(0x8000 + y) & 0xFFFF
+            self.controller.connection.send_command(GotoXY, rx, ry)
 
         @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
         @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
