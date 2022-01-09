@@ -205,7 +205,7 @@ class BalorDevice(Service):
                 LineCut(Point(0x9000, 0x7000), Point(0x7000, 0x7000), settings=settings)
             )
             job = self.cutcode_to_light_job(cutcode)
-            self.controller.loop_job = job.serialize()
+            self.controller.set_loop(job.serialize())
 
         @self.console_command(
             "nolight",
@@ -213,7 +213,7 @@ class BalorDevice(Service):
             input_type=(None),
         )
         def light(command, channel, _, data=None, remainder=None, **kwgs):
-            self.controller.loop_job = None
+            self.controller.unset_loop()
 
         @self.console_command(
             "usb_connect",
@@ -267,7 +267,7 @@ class BalorDevice(Service):
             output_type="balor"
         )
         def balor_loop(command, channel, _, data=None,  remainder=None, **kwgs):
-            self.controller.loop_job = data
+            self.controller.set_loop(data)
 
         @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
         @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
