@@ -58,7 +58,7 @@ class GalvoUsb:
 
     def connect(self, index):
         self.device = self._connect_device(index)
-
+        return self.device
         # if self.channel:
         #     self.channel("Attempting connection to USB.")
         # try:

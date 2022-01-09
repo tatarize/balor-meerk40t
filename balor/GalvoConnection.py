@@ -112,12 +112,11 @@ class GalvoConnection:
 
     def open(self):
         response = self.usb.connect(self.index)
-        if response < 0:
-            return 0
-        self._send_canned_sequence(INIT_BLOB_SEQUENCE)
-        # We sacrifice this time at the altar of the Unknown Race Condition.
-        time.sleep(0.1)
-        self.connected = True
+        if response:
+            self._send_canned_sequence(INIT_BLOB_SEQUENCE)
+            # We sacrifice this time at the altar of the Unknown Race Condition.
+            time.sleep(0.1)
+            self.connected = True
 
     def close(self):
         self._send_canned_sequence(QUIT_BLOB_SEQUENCE)
@@ -131,14 +130,7 @@ class GalvoConnection:
         count = 0
         state = None
         while state is None or (state & wait_low) or not (state & wait_high):
-            assert (
-                self.device.write(
-                    self.ep_homi, bytearray([query, 0x00, 0x01] + 9 * [0]), 1000
-                )
-                == 12
-            )
-            reply = self.device.read(self.ep_himo, 8, 1000)
-            state = reply[6]
+            state = self.usb.write_command(query)
             count += 1
             # Might want to add a delay I guess
             time.sleep(0.06)
