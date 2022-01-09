@@ -63,6 +63,7 @@ class GalvoConnection:
         self.channel = service.channel("galvo-connect")
         self.usb = GalvoUsb(service.channel("galvo-usb"))
         self.index = 0  # We connect to only one device
+        self.connected = False
 
     def send_command(
         self, query_code, parameter=0x0000, parameter2=0x0000
@@ -118,10 +119,12 @@ class GalvoConnection:
         self._send_canned_sequence(INIT_BLOB_SEQUENCE)
         # We sacrifice this time at the altar of the Unknown Race Condition.
         time.sleep(0.1)
+        self.connected = True
 
     def close(self):
         self._send_canned_sequence(QUIT_BLOB_SEQUENCE)
         self.usb.disconnect()
+        self.connected = False
 
 
     def _wait_for_status_bits(self, query, wait_high, wait_low=0):
