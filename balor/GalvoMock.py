@@ -11,6 +11,7 @@ class GalvoMock:
     def __init__(self, channel=None):
         self.channel = channel
         self.connected = False
+        self.count = 0
 
     def write_command(self, query):
         assert (self.connected)
@@ -20,7 +21,10 @@ class GalvoMock:
         time.sleep(0.05)
 
     def read_reply(self):
-        return b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF'
+        if self.count % 1:
+            return b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF'
+        else:
+            return b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
     def write_block(self, packet):
         assert (self.connected)

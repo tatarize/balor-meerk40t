@@ -29,7 +29,7 @@ class BalorLooper:
         if isinstance(job, Job):
             job = job.serialize()
         assert(isinstance(job, (bytearray, bytes)))
-        self.loop_job = [job]
+        self.loop_job = job
 
     def unset_loop(self):
         self.loop_job = None
@@ -59,10 +59,11 @@ class BalorLooper:
         self.connecting = False
         self.service.signal("pipe;usb_status", "Connected")
         while not self._shutdown:
-            with self.lock:
-                data = self._queue
-                self._queue = bytearray()
-            self.connection.send_data(data)
+            if len(self._queue) > 0:
+                with self.lock:
+                    data = self._queue
+                    self._queue = bytearray()
+                self.connection.send_data(data)
             if self.loop_job is not None:
                 data = self.loop_job
                 self.connection.send_data(data)
