@@ -49,9 +49,20 @@ class GalvoUsb:
         if self.channel:
             self.channel("Attempting connection to USB.")
         try:
-            device = self.find_device(index)
-            self.devices[index] = device
-            self.set_config(device)
+            self.device = self.find_device(index)
+            self.devices[index] = self.device
+
+            self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
+            self.product = usb.util.get_string(self.device, self.device.iProduct)
+            self.device.set_configuration()  # It only has one.
+            if self.channel:
+                self.channel("Connected to", self.manufacturer, self.product)
+            self.device.reset()
+            # self.send_sequence(self.sequences.init)
+            # # We sacrifice this time at the altar of the Unknown Race Condition.
+            # time.sleep(0.1)
+
+            # self.set_config(device)
 
             # self.manufacturer = usb.util.get_string(device, device.iManufacturer)
             # self.product = usb.util.get_string(device, device.iProduct)
@@ -74,7 +85,7 @@ class GalvoUsb:
             #             self.device.set_configuration()  # It only has one.
             #             if self.verbosity:
             #                 print("Connected to", self.manufacturer, self.product)
-            device.reset()
+            # device.reset()
             if self.channel:
                 self.channel("USB Connected.")
             return index
