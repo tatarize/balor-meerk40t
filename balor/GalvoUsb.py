@@ -11,6 +11,7 @@ ep_hido = 0x81  # fortunately it turns out that we can ignore it completely.
 ep_homi = 0x02  # endpoint for host out, machine in. (query status, send ops)
 ep_himo = 0x88  # endpoint for host in, machine out. (receive status reports)
 
+
 class GalvoUsb:
     def __init__(self, channel=None):
         self.devices = {}
@@ -55,8 +56,11 @@ class GalvoUsb:
             self.manufacturer = usb.util.get_string(device, device.iManufacturer)
             self.product = usb.util.get_string(device, device.iProduct)
             if self.channel:
-                self.channel("Connected to {manufacturer}: {product}".format(manufacturer=self.manufacturer,
-                                                                             product=self.product))
+                self.channel(
+                    "Connected to {manufacturer}: {product}".format(
+                        manufacturer=self.manufacturer, product=self.product
+                    )
+                )
             interface = self.get_active_config(device)
             self.interface[index] = interface
 
@@ -106,11 +110,7 @@ class GalvoUsb:
         if self.channel:
             self.channel("Finding devices.")
         try:
-            devices = list(
-                usb.core.find(
-                    idVendor=VID, idProduct=PID, find_all=True
-                )
-            )
+            devices = list(usb.core.find(idVendor=VID, idProduct=PID, find_all=True))
         except usb.core.USBError as e:
             self.backend_error_code = e.backend_error_code
             if self.channel:
@@ -134,10 +134,14 @@ class GalvoUsb:
                 raise PermissionError
             elif self.backend_error_code == LIBUSB_ERROR_NOT_FOUND:
                 if self.channel:
-                    self.channel("Devices were found. But something else was connected to them.")
+                    self.channel(
+                        "Devices were found. But something else was connected to them."
+                    )
             else:
                 if self.channel:
-                    self.channel("Devices were found but they were rejected for unknown reasons")
+                    self.channel(
+                        "Devices were found but they were rejected for unknown reasons"
+                    )
             raise ConnectionRefusedError
         return device
 
@@ -188,7 +192,9 @@ class GalvoUsb:
             self.backend_error_code = e.backend_error_code
             if self.channel:
                 self.channel(str(e))
-                self.channel("Config Set: Fail\n(Hint: may recover if you change where the USB is plugged in.)")
+                self.channel(
+                    "Config Set: Fail\n(Hint: may recover if you change where the USB is plugged in.)"
+                )
 
     def claim_interface(self, device, interface):
         try:

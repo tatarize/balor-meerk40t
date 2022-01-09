@@ -69,9 +69,7 @@ class BalorController(MWindow):
         self.context.channel("galvo-usb", buffer_size=500).watch(self.update_text)
 
     def window_close(self):
-        self.context.channel("galvo-usb").unwatch(
-            self.update_text
-        )
+        self.context.channel("galvo-usb").unwatch(self.update_text)
 
     def update_text(self, text):
         if not wx.IsMainThread():

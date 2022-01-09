@@ -65,9 +65,7 @@ class GalvoConnection:
         self.index = 0  # We connect to only one device
         self.connected = False
 
-    def send_command(
-        self, query_code, parameter=0x0000, parameter2=0x0000
-    ):
+    def send_command(self, query_code, parameter=0x0000, parameter2=0x0000):
         """
         Send command sends a command to the galvo. See the list if predetermined USB commands.
 
@@ -125,7 +123,6 @@ class GalvoConnection:
         self._send_canned_sequence(QUIT_BLOB_SEQUENCE)
         self.usb.disconnect()
         self.connected = False
-
 
     def _wait_for_status_bits(self, query, wait_high, wait_low=0):
         """

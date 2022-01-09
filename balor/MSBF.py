@@ -525,7 +525,6 @@ class Job:
             out_file.write(self.serialize())
 
 
-
 def JobFactory(machine_name):
     # This is currently just a stub since we don't support any
     # incompatible machines

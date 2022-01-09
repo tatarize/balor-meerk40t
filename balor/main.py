@@ -255,11 +255,7 @@ class BalorDevice(Service):
         for plot in queue:
             start = plot.start()
             # job.laser_control(False)
-            job.append(
-                balor.MSBF.OpJumpTo(
-                    *job.cal.interpolate(start[0], start[1])
-                )
-            )
+            job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
             # job.laser_control(True)
             for e in plot.generator():
                 on = 1
@@ -301,11 +297,7 @@ class BalorDevice(Service):
         job.laser_control(True)
         for plot in queue:
             start = plot.start()
-            job.append(
-                balor.MSBF.OpJumpTo(
-                    *job.cal.interpolate(start[0], start[1])
-                )
-            )
+            job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
 
             for e in plot.generator():
                 on = 1
