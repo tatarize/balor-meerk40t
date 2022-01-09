@@ -291,7 +291,6 @@ class BalorDevice(Service):
         job.calculate_distances()
         return job
 
-
     def cutcode_to_mark_job(self, queue):
         job = balor.MSBF.Job()
         job.cal = balor.Cal.Cal(self.calfile)
@@ -299,15 +298,12 @@ class BalorDevice(Service):
         cut_speed = int(round(self.cut_speed / 2.0))
         laser_power = int(round(self.laser_power * 40.95))
         q_switch_period = int(round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9))
-        if light:
-            job.add_light_prefix(travel_speed)
-        else:
-            job.add_mark_prefix(
-                travel_speed=travel_speed,
-                laser_power=laser_power,
-                q_switch_period=q_switch_period,
-                cut_speed=cut_speed,
-            )
+        job.add_mark_prefix(
+            travel_speed=travel_speed,
+            laser_power=laser_power,
+            q_switch_period=q_switch_period,
+            cut_speed=cut_speed,
+        )
         job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
 
         job.laser_control(True)
