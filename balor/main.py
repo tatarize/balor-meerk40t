@@ -418,7 +418,8 @@ class BalorDevice(Service):
                 gsmax = (grayscale_max)
                 gsslope = (gsmax - gsmin) / 256.0
             job = balor.MSBF.Job()
-            job.cal = balor.Cal.Cal(self.calfile)
+            cal = balor.Cal.Cal(self.calfile)
+            job.cal = cal
 
             img = scipy.interpolate.RectBivariateSpline(
                 np.linspace(y0, y0 + height, in_file.size[1]),

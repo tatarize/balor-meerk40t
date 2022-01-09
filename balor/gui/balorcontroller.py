@@ -12,6 +12,7 @@ class BalorController(MWindow):
         super().__init__(499, 170, *args, **kwds)
         self.button_device_connect = wx.Button(self, wx.ID_ANY, _("Connection"))
         self.service = self.context.device
+        self.log_append = ""
         self.text_status = wx.TextCtrl(self, wx.ID_ANY, "")
         self.text_usb_log = wx.TextCtrl(
             self, wx.ID_ANY, "", style=wx.TE_MULTILINE | wx.TE_READONLY
@@ -72,15 +73,14 @@ class BalorController(MWindow):
         self.context.channel("galvo-usb").unwatch(self.update_text)
 
     def update_text(self, text):
-        if not wx.IsMainThread():
-            wx.CallAfter(self.update_text_gui, text + "\n")
-        else:
-            self.update_text_gui(text + "\n")
+        self.log_append += text + "\n"
+        self.context.signal("usb_log_update")
 
-    def update_text_gui(self, text):
+    @signal_listener("usb_log_update")
+    def update_text_gui(self, origin):
         try:
-            if self.text_usb_log.IsShown():
-                self.text_usb_log.AppendText(text)
+            self.text_usb_log.AppendText(self.log_append)
+            self.log_append = ""
         except RuntimeError:
             pass
 
