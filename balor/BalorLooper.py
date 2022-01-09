@@ -25,7 +25,10 @@ class BalorLooper:
     def set_loop(self, job):
         if isinstance(job, Job):
             job = job.serialize()
-        self.loop_job = job
+        self.loop_job = [job]
+
+    def unset_loop(self):
+        self.loop_job = None
 
     def shutdown(self):
         self._shutdown = True
