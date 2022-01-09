@@ -53,6 +53,7 @@ class GalvoUsb:
         if 0:
             print ("Connected to", self.manufacturer, self.product)
         device.reset()
+        self.device = device
         return device
 
     def disconnect(self):
