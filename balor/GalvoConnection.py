@@ -110,7 +110,10 @@ class GalvoConnection:
         self.send_command(ExecuteList)
 
     def open(self):
-        response = self.usb.connect()
+        try:
+            response = self.usb.connect()
+        except IndexError:
+            return False
         if response:
             self._send_canned_sequence(INIT_BLOB_SEQUENCE)
             # We sacrifice this time at the altar of the Unknown Race Condition.
