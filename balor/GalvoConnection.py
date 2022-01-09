@@ -1,6 +1,7 @@
 import time
 
 from balor.GalvoUsb import GalvoUsb
+from balor.GalvoMock import GalvoMock
 
 EnableLaser = 0x04
 ExecuteList = 0x05
@@ -61,7 +62,10 @@ class GalvoConnection:
     def __init__(self, service):
         self.service = service
         self.channel = service.channel("galvo-connect")
-        self.usb = GalvoUsb(service.channel("galvo-usb"))
+        if self.service.setting(bool, "mock", False):
+            self.usb = GalvoMock(service.channel("galvo-usb"))
+        else:
+            self.usb = GalvoUsb(service.channel("galvo-usb"))
         self.connected = False
 
     def send_command(self, query_code, parameter=0x0000, parameter2=0x0000):
@@ -90,7 +94,18 @@ class GalvoConnection:
         """
         return self.usb.read_reply()
 
-    def send_packet(self, packet):
+    def send_data(self, data):
+        """
+        Send sliced packets
+        :param data:
+        :return:
+        """
+        while len(data) >= 0xC00:
+            packet = data[:0xC00]
+            data = data[0xC00:]
+            self._send_packet(packet)
+
+    def _send_packet(self, packet):
         """
         Send a packet of 0xC00 size containing bulk list commands.
 
