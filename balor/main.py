@@ -14,6 +14,7 @@ from meerk40t.core.cutcode import LaserSettings, LineCut, CutCode, QuadCut, Rast
 from meerk40t.core.elements import LaserOperation
 from meerk40t.svgelements import Point, Path, SVGImage
 
+import balor
 from balor.MSBF import Job
 from balor.BalorLooper import BalorLooper
 
@@ -138,7 +139,6 @@ class BalorDevice(Service):
         ]
         self.register_choices("balor", choices)
 
-
         self.current_x = 0.0
         self.current_y = 0.0
         self.state = 0
@@ -213,6 +213,23 @@ class BalorDevice(Service):
         )
         def light(command, channel, _, data=None, remainder=None, **kwgs):
             self.controller.loop_job = None
+
+
+        @self.console_command(
+            "usb_connect",
+            help=_("connect usb"),
+        )
+        def usb_connect(command, channel, _, data=None, remainder=None, **kwgs):
+            if self.controller.connecting:
+                self.controller._shutdown = True
+                return
+            if self.controller.connected:
+                self.controller._shutdown = True
+                return
+            if self.controller._shutdown:
+                self.controller.restart()
+                return
+
 
     def cutcode_to_light_job(self, queue):
         """
