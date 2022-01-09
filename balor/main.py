@@ -231,9 +231,7 @@ class BalorDevice(Service):
             cutcode.append(
                 LineCut(Point(0x9000, 0x7000), Point(0x7000, 0x7000), settings=settings)
             )
-            job = self.cutcode_to_job(
-                cutcode, light=True
-            )
+            job = self.cutcode_to_light_job(cutcode)
             self.controller.loop_job = job.serialize()
 
         @self.console_command(
@@ -246,7 +244,62 @@ class BalorDevice(Service):
         def light(command, channel, _, data=None, remainder=None, **kwgs):
             self.controller.loop_job = None
 
-    def cutcode_to_job(self, queue, light=False):
+    def cutcode_to_light_job(self, queue):
+        """
+        Converts a queue of cutcode operations into a light job.
+
+        :param queue:
+        :return:
+        """
+        job = balor.MSBF.Job()
+        job.cal = balor.Cal.Cal(self.calfile)
+        travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
+        cut_speed = int(round(self.cut_speed / 2.0))
+        laser_power = int(round(self.laser_power * 40.95))
+        q_switch_period = int(round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9))
+        job.add_light_prefix(travel_speed)
+        job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
+
+        for plot in queue:
+            start = plot.start()
+            # job.laser_control(False)
+            job.append(
+                balor.MSBF.OpJumpTo(
+                    *job.cal.interpolate(start[0], start[1])
+                )
+            )
+            # job.laser_control(True)
+            for e in plot.generator():
+                on = 1
+                if len(e) == 2:
+                    x, y = e
+                else:
+                    x, y, on = e
+                if on == 0:
+                    try:
+                        # job.laser_control(False)
+                        job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
+                        # job.laser_control(True)
+                        # print("Moving to {x}, {y}".format(x=x, y=y))
+                    except ValueError:
+                        print("Not including this stroke path:", file=sys.stderr)
+                else:
+                    job.line(
+                        self.current_x,
+                        self.current_y,
+                        x,
+                        y,
+                        Op=balor.MSBF.OpJumpTo if light else balor.MSBF.OpMarkTo,
+                    )
+                    # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
+                self.current_x = x
+                self.current_y = y
+        # job.laser_control(False)
+        job.calculate_distances()
+        return job
+
+
+    def cutcode_to_mark_job(self, queue):
         job = balor.MSBF.Job()
         job.cal = balor.Cal.Cal(self.calfile)
         travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
@@ -264,29 +317,24 @@ class BalorDevice(Service):
             )
         job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
 
-        mils_per_mm = 39.3701
+        job.laser_control(True)
         for plot in queue:
             start = plot.start()
-            job.laser_control(False)
             job.append(
                 balor.MSBF.OpJumpTo(
-                    *job.cal.interpolate(start[0] / mils_per_mm, start[1] / mils_per_mm)
+                    *job.cal.interpolate(start[0], start[1])
                 )
             )
-            job.laser_control(True)
+
             for e in plot.generator():
                 on = 1
                 if len(e) == 2:
                     x, y = e
                 else:
                     x, y, on = e
-                x /= mils_per_mm
-                y /= mils_per_mm
                 if on == 0:
                     try:
-                        job.laser_control(False)
                         job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
-                        job.laser_control(True)
                         # print("Moving to {x}, {y}".format(x=x, y=y))
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
@@ -576,7 +624,7 @@ class BalorDriver:
         self.queue.append(plot)
 
     def plot_start(self):
-        self.service.controller.queue_job(self.service.cutcode_to_job(self.queue))
+        self.service.controller.queue_job(self.service.cutcode_to_mark_job(self.queue))
 
     def set_power(self, power=1000.0):
         self.settings.power = power
