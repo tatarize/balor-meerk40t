@@ -289,7 +289,7 @@ class BalorDevice(Service):
                         self.current_y,
                         x,
                         y,
-                        Op=balor.MSBF.OpJumpTo if light else balor.MSBF.OpMarkTo,
+                        Op=balor.MSBF.OpJumpTo,
                     )
                     # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
                 self.current_x = x
@@ -344,7 +344,7 @@ class BalorDevice(Service):
                         self.current_y,
                         x,
                         y,
-                        Op=balor.MSBF.OpJumpTo if light else balor.MSBF.OpMarkTo,
+                        Op=balor.MSBF.OpMarkTo,
                     )
                     # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
                 self.current_x = x
