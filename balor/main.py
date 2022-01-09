@@ -284,14 +284,7 @@ class BalorDevice(Service):
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.line(
-                        self.current_x,
-                        self.current_y,
-                        x,
-                        y,
-                        Op=balor.MSBF.OpJumpTo,
-                    )
-                    # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
+                    job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
                 self.current_x = x
                 self.current_y = y
         # job.laser_control(False)
@@ -339,14 +332,7 @@ class BalorDevice(Service):
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.line(
-                        self.current_x,
-                        self.current_y,
-                        x,
-                        y,
-                        Op=balor.MSBF.OpMarkTo,
-                    )
-                    # print("Cutting {x}, {y} at power {on}".format(x=x, y=y, on=on))
+                    job.append(balor.MSBF.OpMarkTo(*job.cal.interpolate(x, y)))
                 self.current_x = x
                 self.current_y = y
         job.laser_control(False)
