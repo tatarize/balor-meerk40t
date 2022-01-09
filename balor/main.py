@@ -12,12 +12,15 @@ from PIL import Image, ImageDraw
 
 from meerk40t.core.cutcode import LaserSettings, LineCut, CutCode, QuadCut, RasterCut
 from meerk40t.core.elements import LaserOperation
-from meerk40t.svgelements import Point, Path, SVGImage
+from meerk40t.svgelements import Point, Path, SVGImage, Length
 
 import balor
 from balor.MSBF import Job
 from balor.BalorLooper import BalorLooper
 
+import numpy as np
+import scipy
+import scipy.interpolate
 
 def plugin(kernel, lifecycle):
     if lifecycle == "register":
@@ -235,6 +238,251 @@ class BalorDevice(Service):
         )
         def usb_connect(command, channel, _, data=None, remainder=None, **kwgs):
             self.controller.shutdown()
+
+        @self.console_command(
+            "print",
+            help=_("print balor info about generated job"),
+            input_type="balor",
+            output_type="balor"
+        )
+        def balor_print(command, channel, _, data=None, remainder=None, **kwgs):
+            for d in data:
+                print(d)
+
+        @self.console_argument("filename", type=str)
+        @self.console_command(
+            "save",
+            help=_("print balor info about generated job"),
+            input_type="balor",
+            output_type="balor"
+        )
+        def balor_save(command, channel, _, data=None, filename="balor.bin", remainder=None, **kwgs):
+            with open(filename, "wb") as f:
+                for d in data:
+                    f.write(d)
+
+        @self.console_argument("x_offset", type=Length, help=_("x offset."))
+        @self.console_argument("y_offset", type=Length, help=_("y offset"))
+        @self.console_command(
+            "selection_box",
+            help=_("outline the current selected elements"),
+            output_type="balor",
+        )
+        def element_outline(
+            command,
+            channel,
+            _,
+            x_offset=None,
+            y_offset=None,
+            data=None,
+            args=tuple(),
+            **kwargs
+        ):
+            """
+            Draws an outline of the current shape.
+            """
+            if x_offset is None:
+                raise SyntaxError
+            bounds = self.elements.selected_area()
+            if bounds is None:
+                channel(_("Nothing Selected"))
+                return
+            x0 = bounds[0]
+            y0 = bounds[1]
+            width = bounds[2] - bounds[0]
+            height = bounds[3] - bounds[1]
+            offset_x = (
+                y_offset.value(ppi=1000.0, relative_length=width)
+                if len(args) >= 1
+                else 0
+            )
+            offset_y = (
+                x_offset.value(ppi=1000.0, relative_length=height)
+                if len(args) >= 2
+                else offset_x
+            )
+
+            x0 -= offset_x
+            y0 -= offset_y
+            width += offset_x * 2
+            height += offset_y * 2
+            job = balor.MSBF.Job()
+            job.cal = balor.Cal.Cal(self.calfile)
+            job.add_light_prefix(travel_speed=self.travel_speed)
+            job.line(int(x0), int(y0), int(x0 + width), int(y0), Op=balor.MSBF.OpJumpTo)
+            job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), Op=balor.MSBF.OpJumpTo)
+            job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), Op=balor.MSBF.OpJumpTo)
+            job.line(int(x0), int(y0 + height), int(x0), int(y0), Op=balor.MSBF.OpJumpTo)
+            job.calculate_distances()
+            return "balor", [job.serialize()]
+
+
+        @self.console_option('--raster-x-res',
+                            help="X resolution (in mm) of the laser.",
+                            default=0.15, type=float)
+        @self.console_option('--raster-y-res',
+                            help="X resolution (in mm) of the laser.",
+                            default=0.15, type=float)
+        @self.console_option('-x', '--xoffs',
+                            help="Specify an x offset for the image (mm.)",
+                            default=0.0, type=float)
+        @self.console_option('-y', '--yoffs',
+                            help="Specify an y offset for the image (mm.)",
+                            default=0.0, type=float)
+        @self.console_option('-d', '--dither',
+                            help="Configure dithering",
+                            default=0.1, type=float)
+        @self.console_option('-s', '--scale',
+                            help="Pixels per mm (default 23.62 px/mm - 600 DPI)",
+                            default=23.622047, type=float)
+        @self.console_option('-t', '--threshold',
+                            help="Greyscale threshold for burning (default 0.5, negative inverts)",
+                            default=0.5, type=float)
+        @self.console_option('-g', '--grayscale',
+                            help="Greyscale rastering (power, speed, q_switch_frequency, passes)",
+                            default=False, type=None)
+        @self.console_option('--grayscale-min',
+                            help="Minimum (black=1) value of the gray scale",
+                            default=None, type=float)
+        @self.console_option('--grayscale-max',
+                            help="Maximum (white=255) value of the gray scale",
+                            default=None, type=float)
+        @self.console_command("balor-raster",
+                              input_type="image",
+                              output_type="balor")
+        def balor_raster(command, channel, _, data=None,
+                         raster_x_res=0.15,
+                         raster_y_res=0.15,
+                         xoffs=0.0,
+                         yoffs=0.0,
+                         dither=0.1,
+                         scale=23.622047,
+                         threshold=0.5,
+                         grayscale=False,
+                         grayscale_min=None,
+                         grayscale_max=None,
+                         **kwgs):
+            # def raster_render(self, job, cal, in_file, out_file, args):
+            if len(data) == 0:
+                channel("No image selected.")
+                return
+            in_file = data[0].image
+            width = in_file.size[0] / scale
+            height = in_file.size[1] / scale
+            x0, y0 = xoffs, yoffs
+
+            invert = False
+            if threshold < 0:
+                invert = True
+                threshold *= -1.0
+            dither = 0
+            passes = 1
+            # approximate scale for speeds
+            # ap_x_scale = cal.interpolate(10.0, 10.0)[0] - cal.interpolate(-10.0, -10.0)[0]
+            # ap_y_scale = cal.interpolate(10.0, 10.0)[1] - cal.interpolate(-10.0, -10.0)[1]
+            # ap_scale = (ap_x_scale+ap_y_scale)/20.0
+            # print ("Approximate scale", ap_scale, "units/mm", file=sys.stderr)
+            travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
+            cut_speed = int(round(self.cut_speed / 2.0))
+            laser_power = int(round(self.laser_power * 40.95))
+            q_switch_period = int(round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9))
+            print("Image size: %.2f mm x %.2f mm" % (width, height), file=sys.stderr)
+            print("Travel speed 0x%04X" % travel_speed, file=sys.stderr)
+            print("Cut speed 0x%04X" % cut_speed, file=sys.stderr)
+            print("Q switch period 0x%04X" % q_switch_period, file=sys.stderr)
+            print("Laser power 0x%04X" % laser_power, file=sys.stderr)
+
+            if grayscale:
+                gsmin = (grayscale_min)
+                gsmax = (grayscale_max)
+                gsslope = (gsmax - gsmin) / 256.0
+            job = balor.MSBF.Job()
+            job.cal = balor.Cal.Cal(self.calfile)
+
+            img = scipy.interpolate.RectBivariateSpline(
+                np.linspace(y0, y0 + height, in_file.size[1]),
+                np.linspace(x0, x0 + width, in_file.size[0]),
+                np.asarray(in_file))
+
+            dither = 0
+            job.add_mark_prefix(travel_speed=travel_speed,
+                                laser_power=laser_power,
+                                q_switch_period=q_switch_period,
+                                cut_speed=cut_speed)
+            y = y0
+            count = 0
+            burning = False
+            old_y = y0
+            while y < y0 + height:
+                x = x0
+                job.append(balor.MSBF.OpTravel(*cal.interpolate(x, y)))
+                old_x = x0
+                while x < x0 + width:
+                    px = img(y, x)[0][0]
+                    if invert: px = 255.0 - px
+
+                    if grayscale:
+                        if px > 0:
+                            gsval = gsmin + gsslope * px
+                            if grayscale == 'power':
+                                job.change_laser_power(gsval)
+                            elif grayscale == 'speed':
+                                job.change_cut_speed(gsval)
+                            elif grayscale == 'q_switch_frequency':
+                                job.change_q_switch_frequency(gsval)
+                            elif grayscale == 'passes':
+                                passes = int(round(gsval))
+                                # Would probably be better to do this over the course of multiple
+                                # rasters for heat disappation during 2.5D engraving
+                            # pp = int(round((int(px)/255) * args.laser_power * 40.95))
+                            # job.change_settings(q_switch_period, pp, cut_speed)
+
+                            if not burning:
+                                job.laser_control(True)  # laser turn on
+                            i = passes
+                            while i > 1:
+                                job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
+                                job.append(balor.MSBF.OpCut(*cal.interpolate(old_x, old_y)))
+                                i -= 2
+                            job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
+                            burning = True
+
+                        else:
+                            if burning:
+                                # laser turn off
+                                job.laser_control(False)
+                            job.append(balor.MSBF.OpTravel(*cal.interpolate(x, y)))
+                            burning = False
+                    else:
+
+                        if px + dither > threshold:
+                            if not burning:
+                                job.laser_control(True)  # laser turn on
+                            job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
+                            burning = True
+                            dither = 0.0
+                        else:
+                            if burning:
+                                # laser turn off
+                                job.laser_control(False)
+                            job.append(balor.MSBF.OpTravel(*cal.interpolate(x, y)))
+                            dither += abs(px + dither - threshold) * args.dither
+                            burning = False
+                    old_x = x
+                    x += args.raster_x_res
+                if burning:
+                    # laser turn off
+                    job.laser_control(False)
+                    burning = False
+
+                old_y = y
+                y += args.raster_y_res
+                count += 1
+                if not (count % 20): print("\ty = %.3f" % y, file=sys.stderr)
+
+            job.calculate_distances()
+            return "balor", [job.serialize()]
+
 
     def cutcode_to_light_job(self, queue):
         """
