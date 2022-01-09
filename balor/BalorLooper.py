@@ -57,8 +57,8 @@ class BalorLooper:
                 time.sleep(1)
         self.connected = True
         self.connecting = False
+        self.service.signal("pipe;usb_status", "Connected")
         while not self._shutdown:
-            self.service.signal("pipe;usb_status", "Connected")
             with self.lock:
                 data = self._queue
                 self._queue = bytearray()
