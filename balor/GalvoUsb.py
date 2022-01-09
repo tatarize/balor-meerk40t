@@ -61,8 +61,8 @@ class GalvoUsb:
             devices = list(usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899))
             if devices:
                 self.device = list(devices)[0]
-                self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
-                self.product = usb.util.get_string(self.device, self.device.iProduct)
+                # self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
+                # self.product = usb.util.get_string(self.device, self.device.iProduct)
                 self.device.set_configuration()  # It only has one.
                 # if self.verbosity:
                 #     print("Connected to", self.manufacturer, self.product)
