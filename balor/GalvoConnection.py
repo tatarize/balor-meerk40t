@@ -130,7 +130,7 @@ class GalvoConnection:
         count = 0
         state = None
         while state is None or (state & wait_low) or not (state & wait_high):
-            state = self.usb.write_command(0, query)
+            state = self.send_command(query)
             count += 1
             # Might want to add a delay I guess
             time.sleep(0.06)
