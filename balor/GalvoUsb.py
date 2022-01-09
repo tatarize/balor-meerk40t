@@ -15,35 +15,33 @@ ep_himo = 0x88  # endpoint for host in, machine out. (receive status reports)
 class GalvoUsb:
     def __init__(self, channel=None):
         self.device = None
-        self.devices = {}
-        self.interface = {}
         self.manufacturer = None
         self.product = None
         self.channel = channel
         self.backend_error_code = None
 
     def write_command(self, index, query):
-        device = self.devices[index]
+        device = self.device
         length = device.write(ep_homi, query, 100)
         if length != len(query):
             pass  # Perform error check.
 
     def read_reply(self, index):
-        device = self.devices[index]
+        device = self.device
         return device[index].read(ep_himo, 8, 100)
 
     def write_block(self, index, packet):
-        device = self.devices[index]
+        device = self.device
         length = device.write(ep_homi, packet, 100)
         if length != len(packet):
             pass  # Perform error Check
 
     def canned_read(self, index, *args):
-        device = self.devices[index]
+        device = self.device
         return device.read(*args)
 
     def canned_write(self, index, *args):
-        device = self.devices[index]
+        device = self.device
         device.write(*args)
 
     def connect(self, index):
@@ -129,8 +127,6 @@ class GalvoUsb:
                     self.channel("USB Disconnection Successful.")
             except ConnectionError:
                 pass
-        del self.devices[index]
-        del self.interface[index]
 
     ##################
     # USB LOW LEVEL
