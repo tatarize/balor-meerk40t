@@ -44,73 +44,87 @@ class GalvoUsb:
         device = self.device
         device.write(*args)
 
+    def _connect_device(self, index=0):
+        devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
+        device = list(devices)[index]
+        self.manufacturer = usb.util.get_string(device, device.iManufacturer)
+        self.product = usb.util.get_string(device, device.iProduct)
+        device.set_configuration() # It only has one.
+        if 0:
+            print ("Connected to", self.manufacturer, self.product)
+        device.reset()
+        return device
+
+
     def connect(self, index):
-        if self.channel:
-            self.channel("Attempting connection to USB.")
-        try:
-            # self.device = self.find_device(index)
-            # self.devices[index] = self.device
-            #
-            # self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
-            # self.product = usb.util.get_string(self.device, self.device.iProduct)
-            # self.device.set_configuration()  # It only has one.
-            # if self.channel:
-            #     self.channel("Connected to", self.manufacturer, self.product)
-            # self.device.reset()
+        self.device = self._connect_device(index)
 
-            devices = list(usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899))
-            if devices:
-                self.device = list(devices)[0]
-                # self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
-                # self.product = usb.util.get_string(self.device, self.device.iProduct)
-                self.device.set_configuration()  # It only has one.
-                # if self.verbosity:
-                #     print("Connected to", self.manufacturer, self.product)
-                self.device.reset()
-                # self.send_sequence(self.sequences.init)
-                # We sacrifice this time at the altar of the Unknown Race Condition.
-                # time.sleep(0.1)
-
-            # self.send_sequence(self.sequences.init)
-            # # We sacrifice this time at the altar of the Unknown Race Condition.
-            # time.sleep(0.1)
-
-            # self.set_config(device)
-
-            # self.manufacturer = usb.util.get_string(device, device.iManufacturer)
-            # self.product = usb.util.get_string(device, device.iProduct)
-            # if self.channel:
-            #     self.channel(
-            #         "Connected to {manufacturer}: {product}".format(
-            #             manufacturer=self.manufacturer, product=self.product
-            #         )
-            #     )
-            # interface = self.get_active_config(device)
-            # self.interface[index] = interface
-            #
-            # self.detach_kernel(device, interface)
-            # try:
-            #     self.claim_interface(device, interface)
-            # except ConnectionRefusedError:
-            #     # Attempting interface cycle.
-            #     self.unclaim_interface(device, interface)
-            #     self.claim_interface(device, interface)
-            #             self.device.set_configuration()  # It only has one.
-            #             if self.verbosity:
-            #                 print("Connected to", self.manufacturer, self.product)
-            # device.reset()
-            if self.channel:
-                self.channel("USB Connected.")
-            return index
-        except usb.core.NoBackendError as e:
-            if self.channel:
-                self.channel(str(e))
-                self.channel("PyUsb detected no backend LibUSB driver.")
-            return -2
-        except ConnectionRefusedError:
-            if self.channel:
-                self.channel("Connection to USB failed.")
-            return -1
+        # if self.channel:
+        #     self.channel("Attempting connection to USB.")
+        # try:
+        #     # self.device = self.find_device(index)
+        #     # self.devices[index] = self.device
+        #     #
+        #     # self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
+        #     # self.product = usb.util.get_string(self.device, self.device.iProduct)
+        #     # self.device.set_configuration()  # It only has one.
+        #     # if self.channel:
+        #     #     self.channel("Connected to", self.manufacturer, self.product)
+        #     # self.device.reset()
+        #
+        #     devices = list(usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899))
+        #     if devices:
+        #         self.device = list(devices)[0]
+        #         # self.manufacturer = usb.util.get_string(self.device, self.device.iManufacturer)
+        #         # self.product = usb.util.get_string(self.device, self.device.iProduct)
+        #         self.device.set_configuration()  # It only has one.
+        #         # if self.verbosity:
+        #         #     print("Connected to", self.manufacturer, self.product)
+        #         self.device.reset()
+        #         # self.send_sequence(self.sequences.init)
+        #         # We sacrifice this time at the altar of the Unknown Race Condition.
+        #         # time.sleep(0.1)
+        #
+        #     # self.send_sequence(self.sequences.init)
+        #     # # We sacrifice this time at the altar of the Unknown Race Condition.
+        #     # time.sleep(0.1)
+        #
+        #     # self.set_config(device)
+        #
+        #     # self.manufacturer = usb.util.get_string(device, device.iManufacturer)
+        #     # self.product = usb.util.get_string(device, device.iProduct)
+        #     # if self.channel:
+        #     #     self.channel(
+        #     #         "Connected to {manufacturer}: {product}".format(
+        #     #             manufacturer=self.manufacturer, product=self.product
+        #     #         )
+        #     #     )
+        #     # interface = self.get_active_config(device)
+        #     # self.interface[index] = interface
+        #     #
+        #     # self.detach_kernel(device, interface)
+        #     # try:
+        #     #     self.claim_interface(device, interface)
+        #     # except ConnectionRefusedError:
+        #     #     # Attempting interface cycle.
+        #     #     self.unclaim_interface(device, interface)
+        #     #     self.claim_interface(device, interface)
+        #     #             self.device.set_configuration()  # It only has one.
+        #     #             if self.verbosity:
+        #     #                 print("Connected to", self.manufacturer, self.product)
+        #     # device.reset()
+        #     if self.channel:
+        #         self.channel("USB Connected.")
+        #     return index
+        # except usb.core.NoBackendError as e:
+        #     if self.channel:
+        #         self.channel(str(e))
+        #         self.channel("PyUsb detected no backend LibUSB driver.")
+        #     return -2
+        # except ConnectionRefusedError:
+        #     if self.channel:
+        #         self.channel("Connection to USB failed.")
+        #     return -1
 
     def disconnect(self, index=0):
         device = self.device
