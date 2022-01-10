@@ -290,7 +290,7 @@ class BalorDevice(Service):
             if x is not None and y is not None:
                 rx = int(0x8000 + x) & 0xFFFF
                 ry = int(0x8000 + y) & 0xFFFF
-                self.controller.connection.send_command(GotoXY, rx, ry)
+                self.controller.connection.GotoXY(rx, ry)
 
         @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
         @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
