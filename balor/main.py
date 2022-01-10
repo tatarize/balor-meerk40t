@@ -321,7 +321,7 @@ class BalorDevice(Service):
                     from os.path import exists
                     if exists(calfile):
                         channel("Calibration file exists!")
-                        cal = balor.Cal(calfile)
+                        cal = balor.Cal.Cal(calfile)
                         if cal.enabled:
                             channel("Calibration file successfully loads.")
                         else:
