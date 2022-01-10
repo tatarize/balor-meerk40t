@@ -9,12 +9,13 @@ class BalorLooper:
         self._shutdown = False
         self.service = service
         self.connection = GalvoConnection(service)
-        self._program_queue = []
 
+        self._program_queue = []
         self.abort_working_program = False
-        self.current_program = None
+
         self.idle_program = None
-        self._iter_idle = None
+
+        self.process_checks = None
 
         self.lock = threading.Lock()
         self.connected = False
@@ -86,6 +87,12 @@ class BalorLooper:
                         self.connection.send_data(data)
                     self.abort_working_program = True
                 continue
+            if self.process_checks is not None:
+                # Run process_check function if it exists. If returns
+                if self.process_checks():
+                    # If function returns something truthy, we don't check for work and do not idle.
+                    continue
+
             if self.idle_program is not None:
                 for data in self.idle_program:
                     if len(self._program_queue):
