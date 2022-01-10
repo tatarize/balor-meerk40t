@@ -336,6 +336,36 @@ class BalorDevice(Service):
                     channel("Calibration file not set.")
                     channel("The file at {filename} does not exist.".format(filename=os.path.realpath(filename)))
 
+        @self.console_command(
+            "position",
+            help=_("give the galvo position of the selection"),
+        )
+        def galvo_pos(
+                command,
+                channel,
+                _,
+                data=None,
+                args=tuple(),
+                **kwargs
+        ):
+            """
+            Draws an outline of the current shape.
+            """
+            bounds = self.elements.selected_area()
+            if bounds is None:
+                channel(_("Nothing Selected"))
+                return
+            cal = balor.Cal.Cal(self.calfile)
+
+            x0 = bounds[0]
+            y0 = bounds[1]
+            width = bounds[2] - bounds[0]
+            height = bounds[3] - bounds[1]
+            cx, cy = cal.interpolate(x0, y0)
+            mx, my = cal.interpolate(bounds[2], bounds[3])
+
+            channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cy, cy=cy, mx=mx, my=my))
+
         @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
         @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
         @self.console_command(
