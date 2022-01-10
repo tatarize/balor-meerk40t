@@ -291,6 +291,7 @@ class BalorDevice(Service):
             #print ("Saving trace")
             #open("/home/bryce/Projects/Balor/meerk40t-log.bin", 'wb').write(data)
 
+            # The light_data command will end up being called on the current BalorDriver repeatedly.
             self.spooler.set_idle(("light_data", data))
 
         @self.console_argument("x", type=float, default=0.0)
@@ -335,7 +336,7 @@ class BalorDevice(Service):
                 else:
                     channel("The file at {filename} does not exist.".format(filename=os.path.realpath(filename)))
                     channel("Calibration file set to None.")
-                    self.calfile = None
+                    self.calfile = "0"
 
         @self.console_command(
             "position",
