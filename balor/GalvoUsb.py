@@ -13,6 +13,14 @@ ep_himo = 0x88  # endpoint for host in, machine out. (receive status reports)
 
 
 class GalvoUsb:
+    """
+    GalvoUSB performs all the USB interactions and functions with the USB device.
+
+    This class should not have any information about what it's sending other than commands like write_command being
+    12 bytes long and write_block being 0xC00.
+
+    It's apparently fickle and trying to provide more robust support lead to failures to connect.
+    """
     def __init__(self, channel=None):
         self.device = None
         self.manufacturer = None
@@ -51,6 +59,10 @@ class GalvoUsb:
         device.write(*args)
 
     def connect(self):
+        """
+        This is exactly the original code sequence because it would fail to connect sometimes. Fragile.
+        :return:
+        """
         if self.channel:
             self.channel("Connecting...")
         devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
