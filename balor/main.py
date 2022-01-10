@@ -272,10 +272,10 @@ class BalorDevice(Service):
             # Maybe each should be run in sequence instead?
             if isinstance(data, list): data = data[0]
 
-            print ("Saving trace")
-            open("/home/bryce/Projects/Balor/meerk40t-log.bin", 'wb').write(data)
+            #print ("Saving trace")
+            #open("/home/bryce/Projects/Balor/meerk40t-log.bin", 'wb').write(data)
 
-            #self.controller.set_loop(data)
+            self.controller.set_loop(data)
 
         @self.console_argument("x", type=float, default=0.0)
         @self.console_argument("y", type=float, default=0.0)
