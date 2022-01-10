@@ -306,6 +306,21 @@ class BalorDevice(Service):
                 ry = int(0x8000 + y) & 0xFFFF
                 self.driver.connection.GotoXY(rx, ry)
 
+        @self.console_command(
+            "laser_on",
+            help=_("sends enable laser."),
+        )
+        def balor_on(command, channel, _, remainder=None, **kwgs):
+            self.driver.connection.EnableLaser()
+
+
+        @self.console_command(
+            "laser_off",
+            help=_("sends disable laser."),
+        )
+        def balor_on(command, channel, _, remainder=None, **kwgs):
+            self.driver.connection.DisableLaser()
+
 
         @self.console_argument("filename", type=str, default=None)
         @self.console_command(
