@@ -366,6 +366,30 @@ class BalorDevice(Service):
 
             channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cx, cy=cy, mx=mx, my=my))
 
+
+        @self.console_argument("lens_size", type=Length, default=None)
+        @self.console_command(
+            "lens",
+            help=_("give the galvo position of the selection"),
+        )
+        def galvo_lens(
+                command,
+                channel,
+                _,
+                data=None,
+                lens_size=None,
+                args=tuple(),
+                **kwargs
+        ):
+            """
+            Sets lens size.
+            """
+            self.scale_x = (lens_size / (float((0xFFFF)))).value(ppi=1000)
+            self.scale_y = (lens_size / (float((0xFFFF)))).value(ppi=1000)
+            channel("Scale Factor set to : ({sx}, {sy}).".format(sx=self.scale_x, sy=self.scale_y))
+            self.signal("bed_size")
+
+
         @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
         @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
         @self.console_command(
