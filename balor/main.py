@@ -503,7 +503,7 @@ class BalorDevice(Service):
             width += offset_x * 2
             height += offset_y * 2
             job = balor.MSBF.Job()
-            job.cal = balor.Cal.Cal(self.service.calibration_file)
+            job.cal = balor.Cal.Cal(self.calibration_file)
             job.add_light_prefix(travel_speed=int(self.travel_speed))
 
             for _ in range(200):
