@@ -301,7 +301,7 @@ class BalorDevice(Service):
             #open("/home/bryce/Projects/Balor/meerk40t-log.bin", 'wb').write(data)
 
             # The light_data command will end up being called on the current BalorDriver repeatedly.
-            self.spooler.set_idle(("light_data", data))
+            self.spooler.set_idle(("light", data))
 
         @self.console_argument("x", type=float, default=0.0)
         @self.console_argument("y", type=float, default=0.0)
@@ -505,14 +505,12 @@ class BalorDevice(Service):
             job = balor.MSBF.Job()
             job.cal = balor.Cal.Cal(self.calibration_file)
             job.add_light_prefix(travel_speed=int(self.travel_speed))
-
-            for _ in range(200):
-                job.line(int(x0), int(y0), int(x0 + width), int(y0), seg_size=500, Op=balor.MSBF.OpJumpTo)
-                job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), seg_size=500, Op=balor.MSBF.OpJumpTo)
-                job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), seg_size=500, Op=balor.MSBF.OpJumpTo)
-                job.line(int(x0), int(y0 + height), int(x0), int(y0), seg_size=500, Op=balor.MSBF.OpJumpTo)
-                job.calculate_distances()
-            return "balor", [job.serialize()]
+            job.line(int(x0), int(y0), int(x0 + width), int(y0), seg_size=500, Op=balor.MSBF.OpJumpTo)
+            job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), seg_size=500, Op=balor.MSBF.OpJumpTo)
+            job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), seg_size=500, Op=balor.MSBF.OpJumpTo)
+            job.line(int(x0), int(y0 + height), int(x0), int(y0), seg_size=500, Op=balor.MSBF.OpJumpTo)
+            job.calculate_distances()
+            return "balor", [job]
 
         @self.console_option(
             "raster-x-res",
