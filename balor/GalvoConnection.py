@@ -46,7 +46,7 @@ IPG_GETStMO_AP = 0x34
 ENABLEZ = 0x3A
 SETZDATA = 0x3B
 SetSPISimmerCurrent = 0x3C
-SetFpkParam = 0x62
+SetFpkParam = 0x62 # Probably "first pulse killer" = fpk
 
 # These are used during the Open and Close procedures. In the interest of rocking the boat as little as possible they
 # are preserved. These should be replaced.
@@ -100,10 +100,19 @@ class GalvoConnection:
         :param data:
         :return:
         """
+
+        self.send_command(WritePort)  
+        self.send_command(ResetList) 
+        self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
         while len(data) >= 0xC00:
             packet = data[:0xC00]
             data = data[0xC00:]
             self._send_packet(packet)
+        self.send_command(SetEndOfList)
+        self._wait_for_status_bits(query=ReadPort, wait_high=0x20)
+        self.send_command(ExecuteList)
+        # if you want this to block until the laser is done, uncomment next line
+        #self._wait_for_status_bits(query=GetVersion, wait_high=0x20, wait_low=0x04)
 
     def _send_packet(self, packet):
         """
@@ -113,16 +122,13 @@ class GalvoConnection:
         :return:
         """
         # Preserved, but mostly unneeded.
-        self.send_command(WritePort, 0x0100)
-        self.send_command(GetVersion, 0x0100)
-        self.send_command(ResetList)  # only this is needed.
-        self.send_command(GetPositionXY)
+        #self.send_command(WritePort, 0x0100)
+        #self.send_command(GetVersion, 0x0100)
+        #self.send_command(GetPositionXY)
         if self.channel:
             self.channel(packet)
         self.usb.write_block(packet)
-        self.send_command(SetEndOfList)
-        self._wait_for_status_bits(query=ReadPort, wait_high=0x20)
-        self.send_command(ExecuteList)
+        self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
 
     def open(self):
         try:
@@ -152,7 +158,11 @@ class GalvoConnection:
             state = self.send_command(query)
             state = state[6]
             count += 1
-            if state is None or (state & wait_low) or not (state & wait_high):
+            #print ('wait %02X %02x | %02X'%(wait_high, wait_low, state), state&wait_low, state&wait_high, count)
+            if state is None:
+                pass # This is an error
+            # This means we are _done_, not that we need to continue...
+            if not (state & wait_low) and (state & wait_high):
                 return count
             # Might want to add a delay I guess
             time.sleep(0.06)
