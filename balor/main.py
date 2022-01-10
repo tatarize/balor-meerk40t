@@ -322,6 +322,14 @@ class BalorDevice(Service):
             self.driver.connection.DisableLaser()
 
 
+        @self.console_command(
+            "unknown7",
+            help=_("sends unknown command save."),
+        )
+        def balor_on(command, channel, _, remainder=None, **kwgs):
+            reply = self.driver.connection.Unknown0x0700()
+            channel("Command replied: {reply}".format(reply=str(reply)))
+
         @self.console_argument("filename", type=str, default=None)
         @self.console_command(
             "calibrate",
