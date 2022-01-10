@@ -7,6 +7,8 @@ from . import RBFInterpolator
 
 class Cal:
     def __init__(self, cal_file=None):
+        self.enabled = False
+
         if cal_file is None:
             self.enabled = False
             return
