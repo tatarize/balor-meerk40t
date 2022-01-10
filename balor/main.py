@@ -38,6 +38,11 @@ def plugin(kernel, lifecycle):
 
 
 class BalorDevice(Service):
+    """
+    The BalorDevice is a MeerK40t service for the device type. It should be the main method of interacting with
+    the rest of meerk40t. It defines how the scene should look and contains a spooler which meerk40t will give jobs
+    to. This class additionally defines commands which exist as console commands while this service is activated.
+    """
     def __init__(self, kernel, path, *args, **kwargs):
         Service.__init__(self, kernel, path)
         self.name = "balor"
@@ -643,6 +648,10 @@ class BalorDevice(Service):
 
 
 class BalorDriver:
+    """
+    The BalorDriver fetches commands out of the spooler interprets them and sends put them in the into balor for
+    processing.
+    """
     def __init__(self, service, *args, **kwargs):
         self.service = service
         self.name = str(self.service)
