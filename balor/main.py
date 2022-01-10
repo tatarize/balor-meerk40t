@@ -503,7 +503,7 @@ class BalorDevice(Service):
             width += offset_x * 2
             height += offset_y * 2
             job = balor.MSBF.Job()
-            job.cal = balor.Cal.Cal(self.get_calfile())
+            job.cal = balor.Cal.Cal(self.service.get_calfile())
             job.add_light_prefix(travel_speed=int(self.travel_speed))
 
             for _ in range(200):
@@ -723,9 +723,9 @@ class BalorDevice(Service):
             job.calculate_distances()
             return "balor", [job.serialize()]
 
-        def get_calfile(self):
-            if self.calfile_enabled:
-                return self.calfile
-            else:
-                return None
+    def get_calfile(self):
+        if self.calfile_enabled:
+            return self.calfile
+        else:
+            return None
 
