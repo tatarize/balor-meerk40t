@@ -146,6 +146,14 @@ class BalorDevice(Service):
                 "label": _("Output File"),
                 "tip": _("Additional save to file option for a job."),
             },
+            {
+                "attr": "mock",
+                "object": self,
+                "default": False,
+                "type": bool,
+                "label": _("Run mock-usb backend"),
+                "tip": _("This starts connects to fake software laser rather than real one for debugging."),
+            },
         ]
         self.register_choices("balor", choices)
 
@@ -192,24 +200,26 @@ class BalorDevice(Service):
 
             return "spooler", spooler
 
+        @self.console_argument("minimum", type=float, default=0x7000)
+        @self.console_argument("maximum", type=float, default=0x9000)
         @self.console_command(
             "light",
             help=_("Turn redlight on."),
         )
-        def light(command, channel, _, data=None, remainder=None, **kwgs):
+        def light(command, channel, _, minimum=0x7000, maximum=0x9000, data=None, remainder=None, **kwgs):
             cutcode = CutCode()
             settings = LaserSettings()
             cutcode.append(
-                LineCut(Point(0x7000, 0x7000), Point(0x7000, 0x9000), settings=settings)
+                LineCut(Point(minimum, minimum), Point(minimum, maximum), settings=settings)
             )
             cutcode.append(
-                LineCut(Point(0x7000, 0x9000), Point(0x9000, 0x9000), settings=settings)
+                LineCut(Point(minimum, maximum), Point(maximum, maximum), settings=settings)
             )
             cutcode.append(
-                LineCut(Point(0x9000, 0x9000), Point(0x9000, 0x7000), settings=settings)
+                LineCut(Point(maximum, maximum), Point(maximum, minimum), settings=settings)
             )
             cutcode.append(
-                LineCut(Point(0x9000, 0x7000), Point(0x7000, 0x7000), settings=settings)
+                LineCut(Point(maximum, minimum), Point(minimum, minimum), settings=settings)
             )
             job = self.cutcode_to_light_job(cutcode)
             self.controller.set_loop(job.serialize())
