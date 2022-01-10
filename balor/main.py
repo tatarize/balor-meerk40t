@@ -333,8 +333,9 @@ class BalorDevice(Service):
                 if exists(filename):
                     self.calfile = filename
                 else:
-                    channel("Calibration file not set.")
                     channel("The file at {filename} does not exist.".format(filename=os.path.realpath(filename)))
+                    channel("Calibration file set to None.")
+                    self.calfile = None
 
         @self.console_command(
             "position",
