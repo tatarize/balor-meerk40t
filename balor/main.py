@@ -345,7 +345,7 @@ class BalorDevice(Service):
             channel("Command replied: {reply}".format(reply=str(reply)))
 
 
-        @self.console_argument("on", str)
+        @self.console_argument("on", type=str)
         @self.console_command(
             "red",
             help=_("Turns redlight on/off"),
