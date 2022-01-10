@@ -350,7 +350,7 @@ class BalorDevice(Service):
             help=_("sends writeport100 command save."),
         )
         def balor_on(command, channel, _, remainder=None, **kwgs):
-            reply = self.send_command(WritePort, 0x0100)
+            reply = self.driver.connection.WritePort(0x0100)
             channel("Command replied: {reply}".format(reply=str(reply)))
 
 
