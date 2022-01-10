@@ -16,7 +16,7 @@ class Cal:
         if cal_file is not None:
             try:
                 calfile = [h.split() for h in open(cal_file, "r").readlines()]
-            except IOError:
+            except (IOError, OSError):
                 print("Calibration file could not be loaded.")
                 return
 
