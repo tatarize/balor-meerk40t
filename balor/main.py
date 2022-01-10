@@ -420,7 +420,7 @@ class BalorDevice(Service):
             if bounds is None:
                 channel(_("Nothing Selected"))
                 return
-            cal = balor.Cal.Cal(self.get_cal_file())
+            cal = balor.Cal.Cal(self.get_calfile())
 
             x0 = bounds[0]
             y0 = bounds[1]
@@ -503,7 +503,7 @@ class BalorDevice(Service):
             width += offset_x * 2
             height += offset_y * 2
             job = balor.MSBF.Job()
-            job.cal = balor.Cal.Cal(self.get_cal_file())
+            job.cal = balor.Cal.Cal(self.get_calfile())
             job.add_light_prefix(travel_speed=int(self.travel_speed))
 
             for _ in range(200):
@@ -723,9 +723,9 @@ class BalorDevice(Service):
             job.calculate_distances()
             return "balor", [job.serialize()]
 
-    def get_cal_file(self):
-        if self.calfile_enabled:
-            return self.calfile
-        else:
-            return None
+        def get_calfile(self):
+            if self.calfile_enabled:
+                return self.calfile
+            else:
+                return None
 
