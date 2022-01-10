@@ -346,8 +346,8 @@ class BalorDevice(Service):
 
 
         @self.console_command(
-            "writeport100",
-            help=_("sends writeport100 command save."),
+            "red_on",
+            help=_("Turns redlight on."),
         )
         def balor_on(command, channel, _, remainder=None, **kwgs):
             reply = self.driver.connection.WritePort(0x0100)
