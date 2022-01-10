@@ -89,81 +89,94 @@ class GalvoConnection:
     def ExecuteList(self):
         """
         No parameters.
-        :return:
+        :return: value response
         """
         return self.send_command(ExecuteList)
 
-    def SetPwmPulseWidth(self, p1: int, value: int):
+    def SetPwmPulseWidth(self, s1: int, value: int):
         """
         2 Param: Stack, Value
-        :param p1:
+        :param s1:
         :param value:
-        :param int:
-        :return:
+        :return: value response
         """
-        return self.send_command(SetPwmPulseWidth, p1, value)
+        return self.send_command(SetPwmPulseWidth, s1, value)
 
     def GetVersion(self):
         """
         No set parameters but 1 is always sent.
-        :return:
+        :return: value response
         """
-        return self.send_command(GetVersion, 1, 0)
+        return self.send_command(GetVersion, 1)
+
+    def Unknown0x0700(self):
+        """
+        While the 0x07 command was only seen for GetVersion, the value 1 is always the first parameter.
+        :return:  value response
+        """
+        return self.send_command(GetVersion, 0)
 
     def GetSerialNo(self):
         """
         No parameters
+
         Reply is presumably a serial number.
-        :return:
+
+        :return: value response
         """
         return self.send_command(GetSerialNo)
 
     def GetListStatus(self):
+        """
+        No parameters
+        :return:  value response
+        """
         return self.send_command(GetListStatus)
 
     def GetPositionXY(self):
         """
-        No paramters.
+        No parameters
 
         The reply to this is the x, y coords and should be parsed.
-        :return:
+        :return: value response
         """
         return self.send_command(GetPositionXY)
 
     def GotoXY(self, x, y):
         """
         Move to X Y location
+
         :param x:
         :param y:
-        :return:
+        :return: value response
         """
         return self.send_command(GotoXY, int(x), int(y))
 
     def LaserSignalOff(self):
         """
         No parameters
-        :return:
+        :return: value response
         """
         return self.send_command(LaserSignalOff)
 
     def LaserSignalOn(self):
         """
         No parameters
-        :return:
+        :return: value response
         """
         return self.send_command(LaserSignalOn)
 
     def ResetList(self):
         """
         No parameters.
-        :return:
+        :return: value response
         """
         return self.send_command(ResetList)
 
     def RestartList(self):
         """
         No parameters.
-        :return:
+        :return: value response
         """
         return self.send_command(RestartList)
 
@@ -173,232 +186,287 @@ class GalvoConnection:
         for the entire table.
         :param p1:
         :param table:
-        :return:
+        :return: value response
         """
         return self.send_command(WriteCorTable, int(p1))
 
-    def SetControlMode(self, p1: int, value: int):
+    def SetControlMode(self, s1: int, value: int):
         """
-        2 Param: Stack, Value
-        :param p1:
+        2 parameters.
+        stack, value
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(SetControlMode, int(p1), int(value))
+        return self.send_command(SetControlMode, int(s1), int(value))
 
-    def SetDelayMode(self, p1: int, value: int):
+    def SetDelayMode(self, s1: int, value: int):
         """
-        2 Param: Stack, Value
-        :param p1:
+        2 parameters.
+        stack, value
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(SetDelayMode, int(p1), int(value))
+        return self.send_command(SetDelayMode, int(s1), int(value))
 
-    def SetMaxPolyDelay(self, p1: int, value: int):
+    def SetMaxPolyDelay(self, s1: int, value: int):
         """
-        2 Param: Stack, Value
-        :param p1:
+        2 parameters.
+        stack, value
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(SetMaxPolyDelay, int(p1), int(value))
+        return self.send_command(SetMaxPolyDelay, int(s1), int(value))
 
     def SetEndOfList(self):
         """
         No parameters
-        :return:
+        :return: value response
         """
         return self.send_command(SetEndOfList)
 
-    def SetFirstPulseKiller(self, p1: int, value: int):
+    def SetFirstPulseKiller(self, s1: int, value: int):
         """
-        2 Param: Stack, Value
-        :param p1:
+        2 parameters.
+        stack, value
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(SetFirstPulseKiller, p1, value)
+        return self.send_command(SetFirstPulseKiller, s1, value)
 
-    def SetLaserMode(self, p1: int, value: int):
+    def SetLaserMode(self, s1: int, value: int):
         """
-        2 Param: Stack, Value
-        :param p1:
+        2 parameters.
+        stack, value
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(SetLaserMode, p1, value)
+        return self.send_command(SetLaserMode, s1, value)
 
-    def SetTiming(self, p1: int, value: int):
+    def SetTiming(self, s1: int, value: int):
         """
-        2 Param: Stack, Value
-        :param p1:
+        2 parameters.
+        stack, value
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(SetTiming, p1, value)
+        return self.send_command(SetTiming, s1, value)
 
-    def SetStandby(self, v1: int, v2: int, p1: int, value: int):
-        return self.send_command(SetStandby, v1, v2, p1, value)
-
-    def SetPwmHalfPeriod(self, p1: int, value: int):
+    def SetStandby(self, v1: int, v2: int, v3: int, value: int):
         """
-        2 Param: Stack, Value
-        :param p1:
+        4 parameters
+        variable, variable, variable, value
+        :param v1:
+        :param v2:
+        :param v3:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(SetPwmHalfPeriod, p1, value)
+        return self.send_command(SetStandby, v1, v2, v3, value)
+
+    def SetPwmHalfPeriod(self, s1: int, value: int):
+        """
+        2 parameters
+        stack, value
+
+        :param s1:
+        :param value:
+        :return: value response
+        """
+        return self.send_command(SetPwmHalfPeriod, s1, value)
 
     def StopExecute(self):
         """
         No parameters.
-        :return:
+
+        :return: value response
         """
         return self.send_command(StopExecute)
 
     def StopList(self):
         """
         No parameters
-        :return:
+
+        :return: value response
         """
         return self.send_command(StopList)
 
-    def WritePort(self, v1: int = 0, p1: int = 0, value: int = 0):
+    def WritePort(self, v1: int = 0, s1: int = 0, value: int = 0):
         """
-        3 Param
-        Variable, Stack, Variable.
+        3 parameters.
+        variable, stack, value
+
         :param v1:
-        :param p1:
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(WritePort, v1, p1, value)
+        return self.send_command(WritePort, v1, s1, value)
 
-    def WriteAnalogPort1(self, p1: int, value: int):
+    def WriteAnalogPort1(self, s1: int, value: int):
         """
-        2 Param
-        Stack, Value
-        :param p1:
+        2 parameters.
+        stack, value
+
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(WriteAnalogPort1, p1, value)
+        return self.send_command(WriteAnalogPort1, s1, value)
 
-    def WriteAnalogPort2(self, p1: int, value: int):
+    def WriteAnalogPort2(self, s1: int, value: int):
         """
-        3 Param: 0, Stack, Value
+        3 parameters.
         0, stack, value
-        :param p1:
+
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(WriteAnalogPort2, 0, p1, value)
+        return self.send_command(WriteAnalogPort2, 0, s1, value)
 
     def WriteAnalogPortX(self, v1: int, s1: int, value: int):
         """
-        3 Param: variable, stack, value
-        :return:
+        3 parameters.
+        variable, stack, value
+
+        :param v1:
+        :param s1:
+        :param value:
+        :return: value response
         """
         return self.send_command(WriteAnalogPortX, v1, s1, value)
 
     def ReadPort(self):
         """
         No parameters
-        :return:
+
+        :return: Status Information
         """
         return self.send_command(ReadPort)
 
     def SetAxisMotionParam(self, v1: int, s1: int, value: int):
         """
-        3 Param: variable, stack, value
-        :return:
+        3 parameters.
+        variable, stack, value
+
+        :return: value response
         """
         return self.send_command(SetAxisMotionParam, v1, s1, value)
 
     def SetAxisOriginParam(self, v1: int, s1: int, value: int):
         """
-        3 Param: variable, stack, value
-        :return:
+        3 parameters.
+        variable, stack, value
+
+        :return: value response
         """
         return self.send_command(SetAxisOriginParam, v1, s1, value)
 
     def AxisGoOrigin(self, v0: int):
+        """
+        1 parameter
+        variable
+
+        :param v0:
+        :return: value response
+        """
         return self.send_command(AxisGoOrigin, v0)
 
-    def MoveAxisTo(self, value: int):
+    def MoveAxisTo(self, axis, coord):
         """
-        1 Parameter:
-        However, value is divided lower 8 bits, upper 2 bytes.
-        """
-        return self.send_command(MoveAxisTo, value & 0xFF, value >> 16)
+        This typically accepted 1 32 bit int and used bits 1:8 and then 16:24 as parameters.
 
-    def GetAxisPos(self, p1: int, value: int):
+        :param axis: axis being moved
+        :param coord: coordinate being matched
+        :return: value response
         """
-        2 Param
-        Stack, Value
-        :param p1:
+        return self.send_command(MoveAxisTo, axis, coord)
+
+    def GetAxisPos(self, s1: int, value: int):
+        """
+        2 parameters
+
+        stack, value
+
+        :param s1:
         :param value:
-        :return:
+        :return: axis position?
         """
-        return self.send_command(GetAxisPos, p1, value)
+        return self.send_command(GetAxisPos, s1, value)
 
-    def GetFlyWaitCount(self, p1: bool):
+    def GetFlyWaitCount(self, b1: bool):
         """
-        1 param, bool
-        :param p1:
-        :return:
+        1 parameter
+        bool
+
+        :param b1:
+        :return: flywaitcount?
         """
-        return self.send_command(GetFlyWaitCount, int(p1))
+        return self.send_command(GetFlyWaitCount, int(b1))
 
     def GetMarkCount(self, p1: bool):
         """
-        1 param, bool
+        1 parameter
+        bool
+
         :param p1:
-        :return:
+        :return: markcount?
         """
         return self.send_command(GetMarkCount, int(p1))
 
     def SetFpkParam2(self, v1, v2, v3, s1):
         """
-        4 param, variable, variable, variable stack
+        4 parameters
+        variable, variable, variable stack
+
         :param v1:
         :param v2:
         :param v3:
         :param s1:
-        :return:
+        :return:  value response
         """
         return self.send_command(SetFpkParam2, v1, v2, v3, s1)
 
-    def IPG_OpemMO(self, p1: int, value: int):
+    def IPG_OpemMO(self, s1: int, value: int):
         """
-        2 Param
-        Stack, Value
-        :param p1:
+        2 parameters
+        stack, value
+
+        :param s1:
         :param value:
-        :return:
+        :return: value response
         """
-        return self.send_command(IPG_OpemMO, p1, value)
+        return self.send_command(IPG_OpemMO, s1, value)
 
     def IPG_GETStMO_AP(self):
         """
-        No Parameters
-        :return:
+        No parameters
+
+        :return: value response
         """
         return self.send_command(IPG_GETStMO_AP)
 
     def ENABLEZ(self):
         """
-        No Parameters
-        :return:
+        No parameters
+
+        :return: value response
         """
         return self.send_command(ENABLEZ)
 
     def ENABLEZ2(self):
         """
-        No Parameters
+        No parameters
+
         Alternate command. if unknown==0
-        :return:
+
+        :return: value response
         """
         return self.send_command(ENABLEZ2)
 
@@ -411,7 +479,7 @@ class GalvoConnection:
         :param v1:
         :param s1:
         :param v2:
-        :return:
+        :return: value response
         """
         return self.send_command(SETZDATA, v1, s1, v2)
 
@@ -419,22 +487,30 @@ class GalvoConnection:
         """
         2 parameters
         variable, stack
+
         :param v1:
         :param s1:
-        :return:
+        :return: value response
         """
         return self.send_command(SetSPISimmerCurrent, v1, s1)
 
-    def SetFpkParam(self):
+    def SetFpkParam(self, v1, v2, v3, s1):
         """
         Probably "first pulse killer" = fpk
-        :return:
+        4 parameters
+        variable, variable, variable, stack
+
+        :param v1:
+        :param v2:
+        :param v3:
+        :param s1:
+        :return: value response
         """
-        return self.send_command(SetFpkParam)
+        return self.send_command(SetFpkParam, v1, v2, v3, s1)
 
     def send_command(
         self,
-        query_code,
+        command_code,
         parameter=0x0000,
         parameter2=0x0000,
         parameter3=0x0000,
@@ -444,7 +520,7 @@ class GalvoConnection:
         """
         Send command code, and five additional 16 bit values.
 
-        :param query_code:
+        :param command_code:
         :param parameter:
         :param parameter2:
         :param parameter3:
@@ -453,8 +529,8 @@ class GalvoConnection:
         :return:
         """
         query = bytearray([0] * 12)
-        query[0] = query_code & 0xFF
-        query[1] = query_code >> 8
+        query[0] = command_code & 0xFF
+        query[1] = command_code >> 8
         query[2] = parameter & 0xFF
         query[3] = (parameter & 0xFF00) >> 8
         query[4] = parameter2 & 0xFF
@@ -504,10 +580,6 @@ class GalvoConnection:
         :param packet:
         :return:
         """
-        # Preserved, but mostly unneeded.
-        # self.send_command(WritePort, 0x0100)
-        # self.send_command(GetVersion, 0x0100)
-        # self.send_command(GetPositionXY)
         if self.channel:
             self.channel(packet)
         self.usb.write_block(packet)
