@@ -305,6 +305,37 @@ class BalorDevice(Service):
                 ry = int(0x8000 + y) & 0xFFFF
                 self.driver.connection.GotoXY(rx, ry)
 
+
+        @self.console_argument("filename", type=str, default=None)
+        @self.console_command(
+            "calibrate",
+            help=_("set the calibration file"),
+        )
+        def set_calfile(command, channel, _, filename=None, remainder=None, **kwgs):
+            if filename is None:
+                calfile = self.calfile
+                if calfile is None:
+                    channel("No calibration file set.")
+                else:
+                    channel("Calibration file is set to: {file}".format(file=self.calfile))
+                    from os.path import exists
+                    if exists(calfile):
+                        channel("Calibration file exists!")
+                        cal = balor.Cal(calfile)
+                        if cal.enabled:
+                            channel("Calibration file successfully loads.")
+                        else:
+                            channel("Calibration file does not load.")
+                    else:
+                        channel("WARNING: Calibration file does not exist.")
+            else:
+                from os.path import exists
+                if exists(filename):
+                    self.calfile = filename
+                else:
+                    channel("Calibration file not set.")
+                    channel("The file at {filename} does not exist.".format(filename=os.path.realpath(filename)))
+
         @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
         @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
         @self.console_command(
