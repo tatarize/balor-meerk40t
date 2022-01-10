@@ -67,6 +67,8 @@ class BalorDriver:
         """
         Converts a queue of cutcode operations into a light job.
 
+        The cutcode objects will have properties like speed. These are currently not being respected.
+
         :param queue:
         :return:
         """
@@ -108,6 +110,12 @@ class BalorDriver:
         return job
 
     def cutcode_to_mark_job(self, queue):
+        """
+        Convert cutcode to a mark job.
+
+        @param queue:
+        @return:
+        """
         import balor
         job = balor.MSBF.Job()
         job.cal = balor.Cal.Cal(self.service.calfile)
@@ -149,9 +157,22 @@ class BalorDriver:
         return job
 
     def hold_work(self):
+        """
+        This is checked by the spooler to see if we should hold any work from being processed from the work queue.
+
+        For example if we pause, we don't want it trying to call some functions. Only priority jobs will execute if
+        we hold the work queue. This is so that "resume" commands can be processed.
+
+        :return:
+        """
         return self.hold()
 
     def hold_idle(self):
+        """
+        This is checked by the spooler to see if we should abort checking if there's any idle job after the work queue
+        was found to be empty.
+        :return:
+        """
         return False
 
     def hold(self):
@@ -159,6 +180,8 @@ class BalorDriver:
         Holds are criteria to use to pause the data interpretation. These halt the production of new data until the
         criteria is met. A hold is constant and will always halt the data while true. A temp_hold will be removed
         as soon as it does not hold the data.
+
+        -- This is generally just a much fancier way to process any holds we might have.
 
         :return: Whether data interpretation should hold.
         """
@@ -180,68 +203,211 @@ class BalorDriver:
         return False
 
     def laser_off(self, *values):
+        """
+        This command expects to stop pulsing the laser in place.
+
+        @param values:
+        @return:
+        """
         self.laser = False
 
     def laser_on(self, *values):
+        """
+        This command expects to start pulsing the laser in place.
+
+        @param values:
+        @return:
+        """
         self.laser = True
-
-    def laser_disable(self, *values):
-        self.settings.laser_enabled = False
-
-    def laser_enable(self, *values):
-        self.settings.laser_enabled = True
 
     def plot(self, plot):
         """
+        This command is called with bits of cutcode as they are processed through the spooler. This should be optimized
+        bits of cutcode data with settings on them from paths etc.
+
         :param plot:
         :return:
         """
         self.queue.append(plot)
 
     def light(self, job):
+        """
+        This is not a typical meerk40t command. But, the light commands in the main balor add this as the idle job.
+
+        self.spooler.set_idle(("light", self.driver.cutcode_to_light_job(cutcode)))
+        That will the spooler's idle job be calling "light" on the driver with the light job. Which is a MSBF.Job class
+        We serialize that and hand it to the send_data routine of the connection.
+
+        @param job:
+        @return:
+        """
         self.connection.send_data(job.serialize())
 
     def plot_start(self):
+        """
+        This is called after all the cutcode objects are sent. This says it shouldn't expect more cutcode for a bit.
+
+        :return:
+        """
         mark_job = self.cutcode_to_mark_job(self.queue)
         self.queue = []
         self.connection.send_data(mark_job.serialize())
 
-    # self.laser_off()
-    # self.laser_on()
-    # self.laser_disable()
-    # self.laser_enable()
-    # self.cut(x, y)
-    # self.move(x, y)
-    # self.move_abs(x, y)
-    # self.move_rel(x, y)
-    # self.home(*values)
-    # self.lock_rail()
-    # self.unlock_rail()
-    # self.plot_plot(values[0])
-    # self.send_blob(values[0], values[1])
-    # self.plot_start()
-    # self.set_speed(values[0])
-    # self.set_power(values[0])
-    # self.set_ppi(values[0])
-    # self.set_pwm(values[0])
-    # self.set_step(values[0])
-    # self.set_overscan(values[0])
-    # self.set_acceleration(values[0])
-    # self.set_d_ratio(values[0])
-    # self.set_directions(values[0], values[1], values[2], values[3])
-    # self.set_incremental()
-    # self.set_absolute()
-    # self.set_position(values[0], values[1])
-    # self.ensure_rapid_mode(*values)
-    # self.ensure_program_mode(*values)
-    # self.ensure_raster_mode(*values)
-    # self.ensure_finished_mode(*values)
-    # self.wait(values[0])
-    # self.wait_finish()
-    # self.function()
-    # self.signal()
-    # # Realtime:
-    # self.pause()
-    # self.resume()
-    # self.reset()
-    # self.status()
+    def move_abs(self, x, y):
+        """
+        This is called with the actual x and y values with units. If without units we should expect to move in native
+        units.
+
+        :param x:
+        :param y:
+        :return:
+        """
+        print("tried to move to", x,y)
+
+    def move_rel(self, dx, dy):
+        """
+        This is called with dx and dy values to move a relative amount.
+
+        :param dx:
+        :param dy:
+        :return:
+        """
+        print("tried to move by", dx, dy)
+
+    def home(self, x=None, y=None):
+        """
+        This is called with x, and y, to set an adjusted home or use whatever home we have.
+        :param x:
+        :param y:
+        :return:
+        """
+        self.move_abs(0,0)
+
+    def unlock_rail(self):
+        """
+        This is called to unlock the gantry so we can move the laser plotting head freely.
+        :return:
+        """
+        #hard
+        pass
+
+    def lock_rail(self):
+        """
+        This is called to lock the gantry so we can move the laser plotting head freely.
+        :return:
+        """
+        pass
+
+    def blob(self, data_type, data):
+        """
+        This is called to give pure data to the backend. Data is assumed to be native data-type as loaded from a file.
+
+        :param data_type:
+        :param data:
+        :return:
+        """
+        if data_type == "balor":
+            self.connection.send_data(data.serialize())
+
+    def set(self, attribute, value):
+        """
+        This is called to set particular attributes. These attributes will be set in the cutcode as well but sometimes
+        there is a need to set these outside that context. This can also set the default values to be used inside
+        the cutcode being processed.
+
+        :param attribute:
+        :param value:
+        :return:
+        """
+        if attribute == "speed":
+            pass
+        print(attribute, value)
+
+
+    def rapid_mode(self):
+        """
+        Expects to be in rapid jogging mode.
+        :return:
+        """
+        pass
+
+    def program_mode(self):
+        """
+        Expects to run jobs at a speed in a programmed mode.
+        :return:
+        """
+        pass
+
+    def raster_mode(self, *args):
+        """
+        Expects to run a raster job. Raster information is set in special modes to stop the laser head from moving
+        too far.
+
+        :return:
+        """
+        pass
+
+    def wait_finished(self):
+        """
+        Expects to be caught up such that the next command will happen immediately rather than get queued.
+
+        :return:
+        """
+        pass
+
+    def function(self, function):
+        function()
+
+    def wait(self, secs):
+        time.sleep(secs)
+
+    def beep(self):
+        """
+        Wants a system beep to be issued.
+
+        :return:
+        """
+        self.service("beep\n")
+
+    def signal(self, signal, *args):
+        """
+        Wants a system signal to be sent.
+
+        :param signal:
+        :param args:
+        :return:
+        """
+        self.service.signal(signal, *args)
+
+    def pause(self):
+        """
+        Wants the driver to pause.
+        :return:
+        """
+        pass # you don't tell me what to do!
+
+    def resume(self):
+        """
+        Wants the driver to resume.
+
+        This typically issues from the realtime queue which means it will call even if we tell work_hold that we should
+        hold the work.
+
+        :return:
+        """
+        pass
+
+    def reset(self):
+        """
+        Wants the job to be aborted and action to be stopped.
+
+        :return:
+        """
+        pass # Dunno how to do this.
+
+    def status(self):
+        """
+        Wants a status report of what the driver is doing.
+        :return:
+        """
+        pass
