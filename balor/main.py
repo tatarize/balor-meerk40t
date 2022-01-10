@@ -364,7 +364,7 @@ class BalorDevice(Service):
             cx, cy = cal.interpolate(x0, y0)
             mx, my = cal.interpolate(bounds[2], bounds[3])
 
-            channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cy, cy=cy, mx=mx, my=my))
+            channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cx, cy=cy, mx=mx, my=my))
 
         @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
         @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
