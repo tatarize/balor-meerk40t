@@ -57,6 +57,9 @@ from .BJJCZ_LMCV4_FIBER_M_blobs import quit as QUIT_BLOB_SEQUENCE
 class GalvoConnection:
     """
     This is a much more meerk40t friendly version of BJJCZ.
+
+    The connection code reports to higher level code about the connection state and slices and organizes specific data
+    structures. It should also allow accesses to the various commands permitted to the laser.
     """
 
     def __init__(self, service):
@@ -90,13 +93,14 @@ class GalvoConnection:
     def _get_reply(self):
         """
         Get the reply of the send_command sequence.
-        :return:
+        :return: reply of usb_read_reply
         """
         return self.usb.read_reply()
 
     def send_data(self, data):
         """
         Send sliced packets
+
         :param data:
         :return:
         """
@@ -131,6 +135,10 @@ class GalvoConnection:
         self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
 
     def open(self):
+        """
+        Opens connection to laser.
+        :return:
+        """
         try:
             response = self.usb.connect()
         except IndexError:
@@ -144,6 +152,10 @@ class GalvoConnection:
         return False
 
     def close(self):
+        """
+        Closes connection to laser
+        :return:
+        """
         self._send_canned_sequence(QUIT_BLOB_SEQUENCE)
         self.usb.disconnect()
         self.connected = False
@@ -168,6 +180,13 @@ class GalvoConnection:
             time.sleep(0.06)
 
     def _send_canned_sequence(self, sequence):
+        """
+        Residual dinosaur code. This should be replaced with actual function calls that set the correct values.
+        Only init and quit are still used.
+
+        :param sequence:
+        :return:
+        """
         if self.channel:
             self.channel("Sending Canned Sequence...")
         for n, (direction, endpoint, data) in enumerate(sequence):
