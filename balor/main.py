@@ -345,12 +345,16 @@ class BalorDevice(Service):
             channel("Command replied: {reply}".format(reply=str(reply)))
 
 
+        @self.console_argument("on", str)
         @self.console_command(
-            "red_on",
-            help=_("Turns redlight on."),
+            "red",
+            help=_("Turns redlight on/off"),
         )
-        def balor_on(command, channel, _, remainder=None, **kwgs):
-            reply = self.driver.connection.WritePort(0x0100)
+        def balor_on(command, channel, _, on=None, remainder=None, **kwgs):
+            if on:
+                reply = self.driver.connection.WritePort(0x0100)
+            else:
+                reply = self.driver.connection.WritePort()
             channel("Command replied: {reply}".format(reply=str(reply)))
 
 
