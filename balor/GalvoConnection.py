@@ -72,7 +72,6 @@ class GalvoConnection:
             self.usb = GalvoUsb(service.channel("galvo-usb"))
         self.connected = False
 
-
     def send_data(self, data):
         """
         Send sliced packets
@@ -180,6 +179,9 @@ class GalvoConnection:
                     self.channel(" HOST:", " ".join(["%02X" % x for x in data]))
                 self.usb.canned_write(endpoint, data, 1000)
 
+    #####################
+    # LMC Interface Commands.
+    #####################
 
     def DisableLaser(self):
         """
