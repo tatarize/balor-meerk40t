@@ -291,7 +291,7 @@ class BalorDevice(Service):
             #print ("Saving trace")
             #open("/home/bryce/Projects/Balor/meerk40t-log.bin", 'wb').write(data)
 
-            self.driver.set_loop(data)
+            self.spooler.set_idle(("light_data", data))
 
         @self.console_argument("x", type=float, default=0.0)
         @self.console_argument("y", type=float, default=0.0)

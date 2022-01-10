@@ -243,6 +243,9 @@ class BalorDriver:
         """
         self.connection.send_data(job.serialize())
 
+    def light_data(self, job):
+        self.connection.send_data(job)
+
     def plot_start(self):
         """
         This is called after all the cutcode objects are sent. This says it shouldn't expect more cutcode for a bit.
