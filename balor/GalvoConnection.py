@@ -72,6 +72,115 @@ class GalvoConnection:
             self.usb = GalvoUsb(service.channel("galvo-usb"))
         self.connected = False
 
+
+    def send_data(self, data):
+        """
+        Send sliced packets
+
+        :param data:
+        :return:
+        """
+
+        self.send_command(WritePort)
+        self.send_command(ResetList)
+        self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
+        while len(data) >= 0xC00:
+            packet = data[:0xC00]
+            data = data[0xC00:]
+            self._send_packet(packet)
+        self.send_command(SetEndOfList)
+        self._wait_for_status_bits(query=ReadPort, wait_high=0x20)
+        self.send_command(ExecuteList)
+        # if you want this to block until the laser is done, uncomment next line
+        # self._wait_for_status_bits(query=GetVersion, wait_high=0x20, wait_low=0x04)
+
+    def _send_packet(self, packet):
+        """
+        Send a packet of 0xC00 size containing bulk list commands.
+
+        :param packet:
+        :return:
+        """
+        if self.channel:
+            self.channel(packet)
+        self.usb.write_block(packet)
+        self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
+
+    def open(self):
+        """
+        Opens connection to laser.
+        :return:
+        """
+        try:
+            response = self.usb.connect()
+        except IndexError:
+            return False
+        if response:
+            self._send_canned_sequence(INIT_BLOB_SEQUENCE)
+            # We sacrifice this time at the altar of the Unknown Race Condition.
+            time.sleep(0.1)
+            self.connected = True
+            return True
+        return False
+
+    def close(self):
+        """
+        Closes connection to laser
+        :return:
+        """
+        self._send_canned_sequence(QUIT_BLOB_SEQUENCE)
+        self.usb.disconnect()
+        self.connected = False
+
+    def _wait_for_status_bits(self, query, wait_high, wait_low=0):
+        """
+        Waits until the laser's status meets the wait high and low requirements.
+        """
+        count = 0
+        state = None
+        while True:
+            state = self.send_command(query)
+            state = state[6]
+            count += 1
+            # print ('wait %02X %02x | %02X'%(wait_high, wait_low, state), state&wait_low, state&wait_high, count)
+            if state is None:
+                pass  # This is an error
+            # This means we are _done_, not that we need to continue...
+            if not (state & wait_low) and (state & wait_high):
+                return count
+            # Might want to add a delay I guess
+            time.sleep(0.06)
+
+    def _send_canned_sequence(self, sequence):
+        """
+        Residual dinosaur code. This should be replaced with actual function calls that set the correct values.
+        Only init and quit are still used.
+
+        :param sequence:
+        :return:
+        """
+        if self.channel:
+            self.channel("Sending Canned Sequence...")
+        for n, (direction, endpoint, data) in enumerate(sequence):
+            if direction:  # Read
+                reply = self.usb.canned_read(endpoint, len(data), 1000)
+                if self.channel:
+                    if bytes(reply) != bytes(data):
+                        self.channel(" REFR:", " ".join(["%02X" % x for x in data]))
+                        self.channel(
+                            "      ",
+                            " ".join(
+                                ["||" if x == y else "XX" for x, y in zip(data, reply)]
+                            ),
+                        )
+                        self.channel("  GOT:", " ".join(["%02X" % x for x in reply]))
+                        self.channel("LASER:", " ".join(["%02X" % x for x in reply]))
+            else:
+                if self.channel:
+                    self.channel(" HOST:", " ".join(["%02X" % x for x in data]))
+                self.usb.canned_write(endpoint, data, 1000)
+
+
     def DisableLaser(self):
         """
         No parameters.
@@ -551,110 +660,3 @@ class GalvoConnection:
         :return: reply of usb_read_reply
         """
         return self.usb.read_reply()
-
-    def send_data(self, data):
-        """
-        Send sliced packets
-
-        :param data:
-        :return:
-        """
-
-        self.send_command(WritePort)
-        self.send_command(ResetList)
-        self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
-        while len(data) >= 0xC00:
-            packet = data[:0xC00]
-            data = data[0xC00:]
-            self._send_packet(packet)
-        self.send_command(SetEndOfList)
-        self._wait_for_status_bits(query=ReadPort, wait_high=0x20)
-        self.send_command(ExecuteList)
-        # if you want this to block until the laser is done, uncomment next line
-        # self._wait_for_status_bits(query=GetVersion, wait_high=0x20, wait_low=0x04)
-
-    def _send_packet(self, packet):
-        """
-        Send a packet of 0xC00 size containing bulk list commands.
-
-        :param packet:
-        :return:
-        """
-        if self.channel:
-            self.channel(packet)
-        self.usb.write_block(packet)
-        self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
-
-    def open(self):
-        """
-        Opens connection to laser.
-        :return:
-        """
-        try:
-            response = self.usb.connect()
-        except IndexError:
-            return False
-        if response:
-            self._send_canned_sequence(INIT_BLOB_SEQUENCE)
-            # We sacrifice this time at the altar of the Unknown Race Condition.
-            time.sleep(0.1)
-            self.connected = True
-            return True
-        return False
-
-    def close(self):
-        """
-        Closes connection to laser
-        :return:
-        """
-        self._send_canned_sequence(QUIT_BLOB_SEQUENCE)
-        self.usb.disconnect()
-        self.connected = False
-
-    def _wait_for_status_bits(self, query, wait_high, wait_low=0):
-        """
-        Waits until the laser's status meets the wait high and low requirements.
-        """
-        count = 0
-        state = None
-        while True:
-            state = self.send_command(query)
-            state = state[6]
-            count += 1
-            # print ('wait %02X %02x | %02X'%(wait_high, wait_low, state), state&wait_low, state&wait_high, count)
-            if state is None:
-                pass  # This is an error
-            # This means we are _done_, not that we need to continue...
-            if not (state & wait_low) and (state & wait_high):
-                return count
-            # Might want to add a delay I guess
-            time.sleep(0.06)
-
-    def _send_canned_sequence(self, sequence):
-        """
-        Residual dinosaur code. This should be replaced with actual function calls that set the correct values.
-        Only init and quit are still used.
-
-        :param sequence:
-        :return:
-        """
-        if self.channel:
-            self.channel("Sending Canned Sequence...")
-        for n, (direction, endpoint, data) in enumerate(sequence):
-            if direction:  # Read
-                reply = self.usb.canned_read(endpoint, len(data), 1000)
-                if self.channel:
-                    if bytes(reply) != bytes(data):
-                        self.channel(" REFR:", " ".join(["%02X" % x for x in data]))
-                        self.channel(
-                            "      ",
-                            " ".join(
-                                ["||" if x == y else "XX" for x, y in zip(data, reply)]
-                            ),
-                        )
-                        self.channel("  GOT:", " ".join(["%02X" % x for x in reply]))
-                        self.channel("LASER:", " ".join(["%02X" % x for x in reply]))
-            else:
-                if self.channel:
-                    self.channel(" HOST:", " ".join(["%02X" % x for x in data]))
-                self.usb.canned_write(endpoint, data, 1000)
