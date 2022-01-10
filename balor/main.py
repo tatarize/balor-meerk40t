@@ -344,6 +344,18 @@ class BalorDevice(Service):
             reply = self.driver.connection.Unknown0x0700()
             channel("Command replied: {reply}".format(reply=str(reply)))
 
+
+        @self.console_command(
+            "writeport100",
+            help=_("sends writeport100 command save."),
+        )
+        def balor_on(command, channel, _, remainder=None, **kwgs):
+            reply = self.send_command(WritePort, 0x0100)
+            channel("Command replied: {reply}".format(reply=str(reply)))
+
+
+
+
         @self.console_argument("filename", type=str, default=None)
         @self.console_command(
             "calibrate",
