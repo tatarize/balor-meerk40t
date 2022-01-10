@@ -23,6 +23,7 @@ import numpy as np
 import scipy
 import scipy.interpolate
 
+
 def plugin(kernel, lifecycle):
     if lifecycle == "register":
         kernel.register("provider/device/balor", BalorDevice)
@@ -242,7 +243,7 @@ class BalorDevice(Service):
             "print",
             help=_("print balor info about generated job"),
             input_type="balor",
-            output_type="balor"
+            output_type="balor",
         )
         def balor_print(command, channel, _, data=None, remainder=None, **kwgs):
             for d in data:
@@ -253,9 +254,11 @@ class BalorDevice(Service):
             "save",
             help=_("print balor info about generated job"),
             input_type="balor",
-            output_type="balor"
+            output_type="balor",
         )
-        def balor_save(command, channel, _, data=None, filename="balor.bin", remainder=None, **kwgs):
+        def balor_save(
+            command, channel, _, data=None, filename="balor.bin", remainder=None, **kwgs
+        ):
             with open(filename, "wb") as f:
                 for d in data:
                     f.write(d)
@@ -265,9 +268,9 @@ class BalorDevice(Service):
             "loop",
             help=_("loop the selected job forever"),
             input_type="balor",
-            output_type="balor"
+            output_type="balor",
         )
-        def balor_loop(command, channel, _, data=None,  remainder=None, **kwgs):
+        def balor_loop(command, channel, _, data=None, remainder=None, **kwgs):
             self.controller.set_loop(data)
 
         @self.console_argument("x", type=float, default=0.0)
@@ -276,7 +279,7 @@ class BalorDevice(Service):
             "redlight",
             help=_("send laser as a goto"),
         )
-        def balor_goto(command, channel, _, x=None, y=None,  remainder=None, **kwgs):
+        def balor_goto(command, channel, _, x=None, y=None, remainder=None, **kwgs):
             if x is not None and y is not None:
                 rx = int(0x8000 + x) & 0xFFFF
                 ry = int(0x8000 + y) & 0xFFFF
@@ -331,58 +334,106 @@ class BalorDevice(Service):
             job.cal = balor.Cal.Cal(self.calfile)
             job.add_light_prefix(travel_speed=int(self.travel_speed))
             job.line(int(x0), int(y0), int(x0 + width), int(y0), Op=balor.MSBF.OpJumpTo)
-            job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), Op=balor.MSBF.OpJumpTo)
-            job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), Op=balor.MSBF.OpJumpTo)
-            job.line(int(x0), int(y0 + height), int(x0), int(y0), Op=balor.MSBF.OpJumpTo)
+            job.line(
+                int(x0 + width),
+                int(y0),
+                int(x0 + width),
+                int(y0 + height),
+                Op=balor.MSBF.OpJumpTo,
+            )
+            job.line(
+                int(x0 + width),
+                int(y0 + height),
+                int(x0),
+                int(y0 + height),
+                Op=balor.MSBF.OpJumpTo,
+            )
+            job.line(
+                int(x0), int(y0 + height), int(x0), int(y0), Op=balor.MSBF.OpJumpTo
+            )
             job.calculate_distances()
             return "balor", [job.serialize()]
 
-
-        @self.console_option('raster-x-res',
-                            help="X resolution (in mm) of the laser.",
-                            default=0.15, type=float)
-        @self.console_option('raster-y-res',
-                            help="X resolution (in mm) of the laser.",
-                            default=0.15, type=float)
-        @self.console_option('x', 'xoffs',
-                            help="Specify an x offset for the image (mm.)",
-                            default=0.0, type=float)
-        @self.console_option('y', 'yoffs',
-                            help="Specify an y offset for the image (mm.)",
-                            default=0.0, type=float)
-        @self.console_option('d', 'dither',
-                            help="Configure dithering",
-                            default=0.1, type=float)
-        @self.console_option('s', 'scale',
-                            help="Pixels per mm (default 23.62 px/mm - 600 DPI)",
-                            default=23.622047, type=float)
-        @self.console_option('t', 'threshold',
-                            help="Greyscale threshold for burning (default 0.5, negative inverts)",
-                            default=0.5, type=float)
-        @self.console_option('g', 'grayscale',
-                            help="Greyscale rastering (power, speed, q_switch_frequency, passes)",
-                            default=False, type=None)
-        @self.console_option('grayscale-min',
-                            help="Minimum (black=1) value of the gray scale",
-                            default=None, type=float)
-        @self.console_option('grayscale-max',
-                            help="Maximum (white=255) value of the gray scale",
-                            default=None, type=float)
-        @self.console_command("balor-raster",
-                              input_type="image",
-                              output_type="balor")
-        def balor_raster(command, channel, _, data=None,
-                         raster_x_res=0.15,
-                         raster_y_res=0.15,
-                         xoffs=0.0,
-                         yoffs=0.0,
-                         dither=0.1,
-                         scale=23.622047,
-                         threshold=0.5,
-                         grayscale=False,
-                         grayscale_min=None,
-                         grayscale_max=None,
-                         **kwgs):
+        @self.console_option(
+            "raster-x-res",
+            help="X resolution (in mm) of the laser.",
+            default=0.15,
+            type=float,
+        )
+        @self.console_option(
+            "raster-y-res",
+            help="X resolution (in mm) of the laser.",
+            default=0.15,
+            type=float,
+        )
+        @self.console_option(
+            "x",
+            "xoffs",
+            help="Specify an x offset for the image (mm.)",
+            default=0.0,
+            type=float,
+        )
+        @self.console_option(
+            "y",
+            "yoffs",
+            help="Specify an y offset for the image (mm.)",
+            default=0.0,
+            type=float,
+        )
+        @self.console_option(
+            "d", "dither", help="Configure dithering", default=0.1, type=float
+        )
+        @self.console_option(
+            "s",
+            "scale",
+            help="Pixels per mm (default 23.62 px/mm - 600 DPI)",
+            default=23.622047,
+            type=float,
+        )
+        @self.console_option(
+            "t",
+            "threshold",
+            help="Greyscale threshold for burning (default 0.5, negative inverts)",
+            default=0.5,
+            type=float,
+        )
+        @self.console_option(
+            "g",
+            "grayscale",
+            help="Greyscale rastering (power, speed, q_switch_frequency, passes)",
+            default=False,
+            type=bool,
+        )
+        @self.console_option(
+            "grayscale-min",
+            help="Minimum (black=1) value of the gray scale",
+            default=None,
+            type=float,
+        )
+        @self.console_option(
+            "grayscale-max",
+            help="Maximum (white=255) value of the gray scale",
+            default=None,
+            type=float,
+        )
+        @self.console_command("balor-raster", input_type="image", output_type="balor")
+        def balor_raster(
+            command,
+            channel,
+            _,
+            data=None,
+            raster_x_res=0.15,
+            raster_y_res=0.15,
+            xoffs=0.0,
+            yoffs=0.0,
+            dither=0.1,
+            scale=23.622047,
+            threshold=0.5,
+            grayscale=False,
+            grayscale_min=None,
+            grayscale_max=None,
+            **kwgs
+        ):
             # def raster_render(self, job, cal, in_file, out_file, args):
             if len(data) == 0:
                 channel("No image selected.")
@@ -414,8 +465,8 @@ class BalorDevice(Service):
             print("Laser power 0x%04X" % laser_power, file=sys.stderr)
 
             if grayscale:
-                gsmin = (grayscale_min)
-                gsmax = (grayscale_max)
+                gsmin = grayscale_min
+                gsmax = grayscale_max
                 gsslope = (gsmax - gsmin) / 256.0
             job = balor.MSBF.Job()
             cal = balor.Cal.Cal(self.calfile)
@@ -424,13 +475,16 @@ class BalorDevice(Service):
             img = scipy.interpolate.RectBivariateSpline(
                 np.linspace(y0, y0 + height, in_file.size[1]),
                 np.linspace(x0, x0 + width, in_file.size[0]),
-                np.asarray(in_file))
+                np.asarray(in_file),
+            )
 
             dither = 0
-            job.add_mark_prefix(travel_speed=travel_speed,
-                                laser_power=laser_power,
-                                q_switch_period=q_switch_period,
-                                cut_speed=cut_speed)
+            job.add_mark_prefix(
+                travel_speed=travel_speed,
+                laser_power=laser_power,
+                q_switch_period=q_switch_period,
+                cut_speed=cut_speed,
+            )
             y = y0
             count = 0
             burning = False
@@ -441,18 +495,19 @@ class BalorDevice(Service):
                 old_x = x0
                 while x < x0 + width:
                     px = img(y, x)[0][0]
-                    if invert: px = 255.0 - px
+                    if invert:
+                        px = 255.0 - px
 
                     if grayscale:
                         if px > 0:
                             gsval = gsmin + gsslope * px
-                            if grayscale == 'power':
+                            if grayscale == "power":
                                 job.change_laser_power(gsval)
-                            elif grayscale == 'speed':
+                            elif grayscale == "speed":
                                 job.change_cut_speed(gsval)
-                            elif grayscale == 'q_switch_frequency':
+                            elif grayscale == "q_switch_frequency":
                                 job.change_q_switch_frequency(gsval)
-                            elif grayscale == 'passes':
+                            elif grayscale == "passes":
                                 passes = int(round(gsval))
                                 # Would probably be better to do this over the course of multiple
                                 # rasters for heat disappation during 2.5D engraving
@@ -464,7 +519,9 @@ class BalorDevice(Service):
                             i = passes
                             while i > 1:
                                 job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
-                                job.append(balor.MSBF.OpCut(*cal.interpolate(old_x, old_y)))
+                                job.append(
+                                    balor.MSBF.OpCut(*cal.interpolate(old_x, old_y))
+                                )
                                 i -= 2
                             job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
                             burning = True
@@ -500,11 +557,11 @@ class BalorDevice(Service):
                 old_y = y
                 y += args.raster_y_res
                 count += 1
-                if not (count % 20): print("\ty = %.3f" % y, file=sys.stderr)
+                if not (count % 20):
+                    print("\ty = %.3f" % y, file=sys.stderr)
 
             job.calculate_distances()
             return "balor", [job.serialize()]
-
 
     def cutcode_to_light_job(self, queue):
         """
