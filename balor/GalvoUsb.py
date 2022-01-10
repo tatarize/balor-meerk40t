@@ -23,18 +23,24 @@ class GalvoUsb:
     def write_command(self, query):
         device = self.device
         length = device.write(ep_homi, query, 100)
+        #print ("usb-sending query", ' '.join(['%02X'%x for x in query]), length ==len(query))
         if length != len(query):
             pass  # Perform error check.
 
     def read_reply(self):
         device = self.device
-        return device.read(ep_himo, 8, 100)
+        reply = device.read(ep_himo, 8, 100)
+        #print ("usb-got reply", ' '.join(['%02X'%x for x in reply]))
+        return reply
 
     def write_block(self, packet):
         device = self.device
+        #print ('usb-attempting block write')
         length = device.write(ep_homi, packet, 100)
+        ##print ('usb-writing block', len(packet), length)
         if length != len(packet):
             pass  # Perform error Check
+        return
 
     def canned_read(self, *args):
         device = self.device

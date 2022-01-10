@@ -270,7 +270,14 @@ class BalorDevice(Service):
             input_type="balor",
             output_type="balor",
         )
-        def balor_loop(command, channel, _, data=None, remainder=None, **kwgs):
+        def balor_loop(command, channel, _, data=None,  remainder=None, **kwgs):
+
+            # Maybe each should be run in sequence instead?
+            if isinstance(data, list): data = data[0]
+
+            #print ("Saving trace")
+            #open("/home/bryce/Projects/Balor/meerk40t-log.bin", 'wb').write(data)
+
             self.controller.set_loop(data)
 
         @self.console_argument("x", type=float, default=0.0)
@@ -325,7 +332,7 @@ class BalorDevice(Service):
                 if len(args) >= 2
                 else offset_x
             )
-
+            #print ("Box parameters", x0, y0, width, height)
             x0 -= offset_x
             y0 -= offset_y
             width += offset_x * 2
@@ -333,25 +340,13 @@ class BalorDevice(Service):
             job = balor.MSBF.Job()
             job.cal = balor.Cal.Cal(self.calfile)
             job.add_light_prefix(travel_speed=int(self.travel_speed))
-            job.line(int(x0), int(y0), int(x0 + width), int(y0), Op=balor.MSBF.OpJumpTo)
-            job.line(
-                int(x0 + width),
-                int(y0),
-                int(x0 + width),
-                int(y0 + height),
-                Op=balor.MSBF.OpJumpTo,
-            )
-            job.line(
-                int(x0 + width),
-                int(y0 + height),
-                int(x0),
-                int(y0 + height),
-                Op=balor.MSBF.OpJumpTo,
-            )
-            job.line(
-                int(x0), int(y0 + height), int(x0), int(y0), Op=balor.MSBF.OpJumpTo
-            )
-            job.calculate_distances()
+
+            for _ in range(200):
+                job.line(int(x0), int(y0), int(x0 + width), int(y0), seg_size=500, Op=balor.MSBF.OpJumpTo)
+                job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), seg_size=500, Op=balor.MSBF.OpJumpTo)
+                job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), seg_size=500, Op=balor.MSBF.OpJumpTo)
+                job.line(int(x0), int(y0 + height), int(x0), int(y0), seg_size=500, Op=balor.MSBF.OpJumpTo)
+                job.calculate_distances()
             return "balor", [job.serialize()]
 
         @self.console_option(

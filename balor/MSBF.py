@@ -415,13 +415,13 @@ class Job:
     def line(self, x0, y0, x1, y1, seg_size=5, Op=OpMarkTo):
         length = ((x0 - x1) ** 2 + (y0 - y1) ** 2) ** 0.5
         segs = max(2, int(round(length / seg_size)))
-        # print ("**", x0, y0, x1, y1, length, segs, file=sys.stderr)
+        #print ("**", x0, y0, x1, y1, length, segs, file=sys.stderr)
 
         xs = np.linspace(x0, x1, segs)
         ys = np.linspace(y0, y1, segs)
 
         for n in range(segs):
-            # print ("*", xs[n], ys[n], file=sys.stderr)
+            #print ("*", xs[n], ys[n], self.cal.interpolate(xs[n], ys[n]), file=sys.stderr)
             self.append(Op(*self.cal.interpolate(xs[n], ys[n])))
 
     def change_settings(self, q_switch_period, laser_power, cut_speed):
