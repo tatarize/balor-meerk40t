@@ -321,6 +321,20 @@ class BalorDevice(Service):
         def balor_on(command, channel, _, remainder=None, **kwgs):
             self.driver.connection.DisableLaser()
 
+        @self.console_command(
+            "signal_on",
+            help=_("sends enable laser."),
+        )
+        def balor_on(command, channel, _, remainder=None, **kwgs):
+            self.driver.connection.LaserSignalOn()
+
+        @self.console_command(
+            "signal_off",
+            help=_("sends disable laser."),
+        )
+        def balor_on(command, channel, _, remainder=None, **kwgs):
+            self.driver.connection.LaserSignalOff()
+
 
         @self.console_command(
             "unknown7",
