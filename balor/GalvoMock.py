@@ -1,49 +1,55 @@
 import time
 
-import usb.core
-import usb.util
-from usb.backend.libusb1 import LIBUSB_ERROR_ACCESS, LIBUSB_ERROR_NOT_FOUND
-
 packet_size = 3072  # 0xC00, 12 x 256
 
 
 class GalvoMock:
+    """
+    The mock sender is a fake USB device to be set in place of GalvoUsb to test for bugs and watch data in the
+    controller.
+
+    in console we would type `set -p balor mock True` to set mock driver. Rather than really connect it just tests
+    the data being sent to it and can provide debug information etc.
+    """
+
     def __init__(self, channel=None):
         self.channel = channel
         self.connected = False
         self.count = 0
 
     def write_command(self, query):
-        assert (self.connected)
-        assert (isinstance(query, (bytearray, bytes)))
-        assert (len(query) == 12)
+        assert self.connected
+        assert isinstance(query, (bytearray, bytes))
+        assert len(query) == 12
         self.channel(str(query))
         time.sleep(0.05)
 
     def read_reply(self):
         if self.count % 1:
-            return b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF'
+            return b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
         else:
-            return b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            return b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 
     def write_block(self, packet):
-        assert (self.connected)
-        assert (isinstance(packet, (bytearray, bytes)))
-        assert (len(packet) == 0xC00)
-        self.channel("{packet}... {size}".format(packet=str(packet[:20]), size=len(packet)))
+        assert self.connected
+        assert isinstance(packet, (bytearray, bytes))
+        assert len(packet) == 0xC00
+        self.channel(
+            "{packet}... {size}".format(packet=str(packet[:20]), size=len(packet))
+        )
         time.sleep(0.2)
 
     def canned_read(self, *args):
-        assert (self.connected)
+        assert self.connected
         self.channel(str(args))
-        return b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF'
+        return b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
 
     def canned_write(self, *args):
-        assert (self.connected)
+        assert self.connected
         self.channel(str(args))
 
     def connect(self):
-        assert (not self.connected)
+        assert not self.connected
         if self.channel:
             self.channel("Connecting...")
         if self.channel:
@@ -54,7 +60,7 @@ class GalvoMock:
         return self
 
     def disconnect(self):
-        assert (self.connected)
+        assert self.connected
         self.connected = False
         if self.channel:
             self.channel("Disconnecting")
