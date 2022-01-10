@@ -250,7 +250,7 @@ class BalorDevice(Service):
             help=_("connect usb"),
         )
         def usb_connect(command, channel, _, data=None, remainder=None, **kwgs):
-            self.driver.shutdown()
+            self.driver.disconnect()
 
         @self.console_command(
             "print",
