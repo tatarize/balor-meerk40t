@@ -931,7 +931,7 @@ class BalorDriver:
         self.queue.append(plot)
 
     def plot_start(self):
-        self.service.controller.queue_job(self.service.cutcode_to_mark_job(self.queue))
+        self.service.controller.queue_program(self.service.cutcode_to_mark_job(self.queue))
 
     def set_power(self, power=1000.0):
         self.settings.power = power
