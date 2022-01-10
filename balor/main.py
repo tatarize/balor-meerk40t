@@ -42,6 +42,7 @@ class BalorDevice(Service):
     the rest of meerk40t. It defines how the scene should look and contains a spooler which meerk40t will give jobs
     to. This class additionally defines commands which exist as console commands while this service is activated.
     """
+
     def __init__(self, kernel, path, *args, **kwargs):
         Service.__init__(self, kernel, path)
         self.name = "balor"
@@ -96,6 +97,14 @@ class BalorDevice(Service):
                 "type": str,
                 "label": _("Label"),
                 "tip": _("What is this device called."),
+            },
+            {
+                "attr": "calfile_enabled",
+                "object": self,
+                "default": False,
+                "type": bool,
+                "label": _("Enable Calibration File"),
+                "tip": _("Use calibration file?"),
             },
             {
                 "attr": "calfile",
@@ -390,8 +399,7 @@ class BalorDevice(Service):
                     self.calfile = filename
                 else:
                     channel("The file at {filename} does not exist.".format(filename=os.path.realpath(filename)))
-                    channel("Calibration file set to None.")
-                    self.calfile = "0"
+                    channel("Calibration file was not set.")
 
         @self.console_command(
             "position",
@@ -412,7 +420,7 @@ class BalorDevice(Service):
             if bounds is None:
                 channel(_("Nothing Selected"))
                 return
-            cal = balor.Cal.Cal(self.calfile)
+            cal = balor.Cal.Cal(self.get_cal_file())
 
             x0 = bounds[0]
             y0 = bounds[1]
@@ -495,7 +503,7 @@ class BalorDevice(Service):
             width += offset_x * 2
             height += offset_y * 2
             job = balor.MSBF.Job()
-            job.cal = balor.Cal.Cal(self.calfile)
+            job.cal = balor.Cal.Cal(self.get_cal_file())
             job.add_light_prefix(travel_speed=int(self.travel_speed))
 
             for _ in range(200):
@@ -621,7 +629,7 @@ class BalorDevice(Service):
                 gsmax = grayscale_max
                 gsslope = (gsmax - gsmin) / 256.0
             job = balor.MSBF.Job()
-            cal = balor.Cal.Cal(self.calfile)
+            cal = balor.Cal.Cal(self.get_calfile())
             job.cal = cal
 
             img = scipy.interpolate.RectBivariateSpline(
@@ -714,3 +722,10 @@ class BalorDevice(Service):
 
             job.calculate_distances()
             return "balor", [job.serialize()]
+
+    def get_cal_file(self):
+        if self.calfile_enabled:
+            return self.calfile
+        else:
+            return None
+
