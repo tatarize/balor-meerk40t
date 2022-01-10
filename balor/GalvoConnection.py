@@ -79,8 +79,6 @@ class GalvoConnection:
         :param data:
         :return:
         """
-
-        self.send_command(WritePort)
         self.send_command(ResetList)
         self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
         while len(data) >= 0xC00:
