@@ -74,7 +74,7 @@ class BalorDriver:
         """
         import balor
         job = balor.MSBF.Job()
-        job.cal = balor.Cal.Cal(self.service.get_calfile())
+        job.cal = balor.Cal.Cal(self.service.calibration_file)
         travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
         cut_speed = int(round(self.service.cut_speed / 2.0))
         laser_power = int(round(self.service.laser_power * 40.95))
@@ -118,7 +118,7 @@ class BalorDriver:
         """
         import balor
         job = balor.MSBF.Job()
-        job.cal = balor.Cal.Cal(self.service.get_calfile())
+        job.cal = balor.Cal.Cal(self.service.calibration_file)
         travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
         cut_speed = int(round(self.service.cut_speed / 2.0))
         laser_power = int(round(self.service.laser_power * 40.95))

@@ -420,7 +420,7 @@ class BalorDevice(Service):
             if bounds is None:
                 channel(_("Nothing Selected"))
                 return
-            cal = balor.Cal.Cal(self.get_calfile())
+            cal = balor.Cal.Cal(self.calibration_file)
 
             x0 = bounds[0]
             y0 = bounds[1]
@@ -503,7 +503,7 @@ class BalorDevice(Service):
             width += offset_x * 2
             height += offset_y * 2
             job = balor.MSBF.Job()
-            job.cal = balor.Cal.Cal(self.service.get_calfile())
+            job.cal = balor.Cal.Cal(self.service.calibration_file)
             job.add_light_prefix(travel_speed=int(self.travel_speed))
 
             for _ in range(200):
@@ -629,7 +629,7 @@ class BalorDevice(Service):
                 gsmax = grayscale_max
                 gsslope = (gsmax - gsmin) / 256.0
             job = balor.MSBF.Job()
-            cal = balor.Cal.Cal(self.get_calfile())
+            cal = balor.Cal.Cal(self.calibration_file)
             job.cal = cal
 
             img = scipy.interpolate.RectBivariateSpline(
@@ -723,7 +723,8 @@ class BalorDevice(Service):
             job.calculate_distances()
             return "balor", [job.serialize()]
 
-    def get_calfile(self):
+    @property
+    def calibration_file(self):
         if self.calfile_enabled:
             return self.calfile
         else:
