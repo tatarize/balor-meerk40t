@@ -8,8 +8,7 @@ class GalvoMock:
     The mock sender is a fake USB device to be set in place of GalvoUsb to test for bugs and watch data in the
     controller.
 
-    in console we would type `set -p balor mock True` to set mock driver. Rather than really connect it just tests
-    the data being sent to it and can provide debug information etc.
+    Rather than really connect it just tests the data being sent to it and can provide debug information etc.
     """
 
     def __init__(self, channel=None):
