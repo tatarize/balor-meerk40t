@@ -24,7 +24,8 @@ class GalvoMock:
         time.sleep(0.05)
 
     def read_reply(self):
-        if self.count % 1:
+        self.count += 1
+        if self.count % 3:
             return b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
         else:
             return b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"

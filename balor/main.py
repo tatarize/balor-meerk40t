@@ -5,7 +5,6 @@ import time
 
 from meerk40t.core.cutcode import LaserSettings, CutCode, LineCut
 from meerk40t.core.spoolers import Spooler
-from meerk40t.device.lasercommandconstants import *
 from meerk40t.kernel import Service
 
 from PIL import Image, ImageDraw
@@ -17,7 +16,7 @@ from meerk40t.svgelements import Point, Path, SVGImage, Length
 import balor
 from balor.GalvoConnection import GotoXY
 from balor.MSBF import Job
-from balor.BalorLooper import BalorLooper
+from balor.BalorDriver import BalorDriver
 
 import numpy as np
 import scipy
@@ -161,9 +160,11 @@ class BalorDevice(Service):
         self.current_y = 0.0
         self.state = 0
         self.spooler = Spooler(self)
+        self.driver = BalorDriver(self)
+        self.spooler.driver = self.driver
 
-        self.controller = BalorLooper(self)
-        self.add_service_delegate(self.controller)
+        # self.add_service_delegate(self.driver)
+        self.add_service_delegate(self.spooler)
 
         self.viewbuffer = ""
 
@@ -219,8 +220,7 @@ class BalorDevice(Service):
             cutcode.append(
                 LineCut(Point(maximum, minimum), Point(minimum, minimum), settings=settings)
             )
-            job = self.cutcode_to_light_job(cutcode)
-            self.controller.set_loop(job.serialize())
+            self.spooler.set_idle(("light", self.driver.cutcode_to_light_job(cutcode)))
 
         @self.console_command(
             "nolight",
@@ -228,21 +228,21 @@ class BalorDevice(Service):
             input_type=(None),
         )
         def light(command, channel, _, data=None, remainder=None, **kwgs):
-            self.controller.unset_loop()
+            self.spooler.set_idle(None)
 
         @self.console_command(
             "usb_connect",
             help=_("connect usb"),
         )
         def usb_connect(command, channel, _, data=None, remainder=None, **kwgs):
-            if self.controller.connecting:
-                self.controller.shutdown()
+            if self.driver.connecting:
+                self.driver.disconnect()
                 return
-            if self.controller.connected:
-                self.controller.shutdown()
+            if self.driver.connected:
+                self.driver.disconnect()
                 return
-            if self.controller._shutdown:
-                self.controller.restart()
+            if self.driver._shutdown:
+                self.driver.restart()
                 return
 
         @self.console_command(
@@ -250,7 +250,7 @@ class BalorDevice(Service):
             help=_("connect usb"),
         )
         def usb_connect(command, channel, _, data=None, remainder=None, **kwgs):
-            self.controller.shutdown()
+            self.driver.shutdown()
 
         @self.console_command(
             "print",
@@ -291,7 +291,7 @@ class BalorDevice(Service):
             #print ("Saving trace")
             #open("/home/bryce/Projects/Balor/meerk40t-log.bin", 'wb').write(data)
 
-            self.controller.set_loop(data)
+            self.driver.set_loop(data)
 
         @self.console_argument("x", type=float, default=0.0)
         @self.console_argument("y", type=float, default=0.0)
@@ -303,7 +303,7 @@ class BalorDevice(Service):
             if x is not None and y is not None:
                 rx = int(0x8000 + x) & 0xFFFF
                 ry = int(0x8000 + y) & 0xFFFF
-                self.controller.connection.GotoXY(rx, ry)
+                self.driver.connection.GotoXY(rx, ry)
 
         @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
         @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
@@ -570,87 +570,3 @@ class BalorDevice(Service):
 
             job.calculate_distances()
             return "balor", [job.serialize()]
-
-    def cutcode_to_light_job(self, queue):
-        """
-        Converts a queue of cutcode operations into a light job.
-
-        :param queue:
-        :return:
-        """
-        job = balor.MSBF.Job()
-        job.cal = balor.Cal.Cal(self.calfile)
-        travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
-        cut_speed = int(round(self.cut_speed / 2.0))
-        laser_power = int(round(self.laser_power * 40.95))
-        q_switch_period = int(round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9))
-        job.add_light_prefix(travel_speed)
-        job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
-
-        for plot in queue:
-            start = plot.start()
-            # job.laser_control(False)
-            job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
-            # job.laser_control(True)
-            for e in plot.generator():
-                on = 1
-                if len(e) == 2:
-                    x, y = e
-                else:
-                    x, y, on = e
-                if on == 0:
-                    try:
-                        # job.laser_control(False)
-                        job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
-                        # job.laser_control(True)
-                        # print("Moving to {x}, {y}".format(x=x, y=y))
-                    except ValueError:
-                        print("Not including this stroke path:", file=sys.stderr)
-                else:
-                    job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
-                self.current_x = x
-                self.current_y = y
-        # job.laser_control(False)
-        job.calculate_distances()
-        return job
-
-    def cutcode_to_mark_job(self, queue):
-        job = balor.MSBF.Job()
-        job.cal = balor.Cal.Cal(self.calfile)
-        travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
-        cut_speed = int(round(self.cut_speed / 2.0))
-        laser_power = int(round(self.laser_power * 40.95))
-        q_switch_period = int(round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9))
-        job.add_mark_prefix(
-            travel_speed=travel_speed,
-            laser_power=laser_power,
-            q_switch_period=q_switch_period,
-            cut_speed=cut_speed,
-        )
-        job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
-
-        job.laser_control(True)
-        for plot in queue:
-            start = plot.start()
-            job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
-
-            for e in plot.generator():
-                on = 1
-                if len(e) == 2:
-                    x, y = e
-                else:
-                    x, y, on = e
-                if on == 0:
-                    try:
-                        job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
-                        # print("Moving to {x}, {y}".format(x=x, y=y))
-                    except ValueError:
-                        print("Not including this stroke path:", file=sys.stderr)
-                else:
-                    job.append(balor.MSBF.OpMarkTo(*job.cal.interpolate(x, y)))
-                self.current_x = x
-                self.current_y = y
-        job.laser_control(False)
-        job.calculate_distances()
-        return job
-

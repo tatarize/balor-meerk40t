@@ -89,7 +89,7 @@ class BalorController(MWindow):
         if status == None:
             status = "Unknown"
         try:
-            connected = self.context.device.controller.connected
+            connected = self.context.device.driver.connected
         except AttributeError:
             return
         self.button_device_connect.SetLabel(status)
@@ -108,7 +108,7 @@ class BalorController(MWindow):
 
     def on_button_start_connection(self, event):  # wxGlade: Controller.<event_handler>
         try:
-            connected = self.context.device.controller.connected
+            connected = self.context.device.driver.connected
         except AttributeError:
             return
         if connected:
