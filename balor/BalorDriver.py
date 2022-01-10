@@ -241,9 +241,11 @@ class BalorDriver:
         @param job:
         @return:
         """
+        self.connection.WritePort(0x100)
         self.connection.send_data(job.serialize())
 
     def light_data(self, job):
+        self.connection.WritePort(0x100)
         self.connection.send_data(job)
 
     def plot_start(self):
