@@ -384,6 +384,8 @@ class BalorDevice(Service):
             """
             Sets lens size.
             """
+            if lens_size is None:
+                raise SyntaxError
             self.scale_x = (lens_size / (float((0xFFFF)))).value(ppi=1000)
             self.scale_y = (lens_size / (float((0xFFFF)))).value(ppi=1000)
             channel("Scale Factor set to : ({sx}, {sy}).".format(sx=self.scale_x, sy=self.scale_y))
