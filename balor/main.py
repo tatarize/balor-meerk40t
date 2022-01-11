@@ -379,6 +379,17 @@ class BalorDevice(Service):
             for index, b in enumerate(reply):
                 channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
 
+        @self.console_command(
+            "lstatus",
+            help=_("Checks the list status."),
+        )
+        def balor_status(command, channel, _, remainder=None, **kwgs):
+            reply = self.driver.connection.GetListStatus()
+            channel("Command replied: {reply}".format(reply=str(reply)))
+            for index, b in enumerate(reply):
+                channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
+
+
         @self.console_argument("filename", type=str, default=None)
         @self.console_command(
             "calibrate",
