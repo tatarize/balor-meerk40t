@@ -63,6 +63,24 @@ class BalorDriver:
         self.connecting = False
         self.service.signal("pipe;usb_status", "Disconnected")
 
+    def group(self, plot):
+        """
+        avoids yielding any place where 0, 1, 2 are in a straight line.
+
+        :return:
+        """
+        plot = list(plot)
+        for i in range(0, len(plot)):
+            try:
+                x0, y0 = plot[i-1]
+                x1, y1 = plot[i]
+                x2, y2 = plot[i+1]
+                if x2 - x1 == x1 - x0 and y2 - y1 == y1 - y0:
+                    continue
+            except IndexError:
+                pass
+            yield plot[i]
+
     def cutcode_to_light_job(self, queue):
         """
         Converts a queue of cutcode operations into a light job.
@@ -72,6 +90,7 @@ class BalorDriver:
         :param queue:
         :return:
         """
+
         import balor
         job = balor.MSBF.Job()
         job.cal = balor.Cal.Cal(self.service.calibration_file)
@@ -87,7 +106,7 @@ class BalorDriver:
             # job.laser_control(False)
             job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
             # job.laser_control(True)
-            for e in plot.generator():
+            for e in self.group(plot.generator()):
                 on = 1
                 if len(e) == 2:
                     x, y = e
@@ -136,7 +155,7 @@ class BalorDriver:
             start = plot.start()
             job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
 
-            for e in plot.generator():
+            for e in self.group(plot.generator()):
                 on = 1
                 if len(e) == 2:
                     x, y = e

@@ -353,7 +353,6 @@ class BalorDevice(Service):
             reply = self.driver.connection.Unknown0x0700()
             channel("Command replied: {reply}".format(reply=str(reply)))
 
-
         @self.console_argument("off", type=str)
         @self.console_command(
             "red",
