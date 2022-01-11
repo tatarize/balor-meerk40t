@@ -111,7 +111,7 @@ class BalorDriver:
         laser_power = int(round(self.service.laser_power * 40.95))
         q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
         job.add_light_prefix(travel_speed)
-        job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
+        # job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
 
         for plot in queue:
             start = plot.start()
@@ -358,7 +358,6 @@ class BalorDriver:
         if attribute == "speed":
             pass
         print(attribute, value)
-
 
     def rapid_mode(self):
         """
