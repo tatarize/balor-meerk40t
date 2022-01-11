@@ -367,8 +367,13 @@ class BalorDevice(Service):
                 reply = self.driver.connection.WritePort(0x0100)
                 channel("Turning on redlight.")
 
-
-
+        @self.console_command(
+            "status",
+            help=_("Sends status check"),
+        )
+        def balor_status(command, channel, _, remainder=None, **kwgs):
+            reply = self.driver.connection.ReadPort()
+            channel("Command replied: {reply}".format(reply=str(reply)))
 
 
         @self.console_argument("filename", type=str, default=None)
