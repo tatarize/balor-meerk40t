@@ -230,6 +230,7 @@ class BalorDevice(Service):
                 LineCut(Point(maximum, minimum), Point(minimum, minimum), settings=settings)
             )
             self.spooler.set_idle(("light", self.driver.cutcode_to_light_job(cutcode)))
+            self.driver.connection.WritePort(0x0100)
 
         @self.console_command(
             "nolight",
@@ -238,6 +239,8 @@ class BalorDevice(Service):
         )
         def light(command, channel, _, data=None, remainder=None, **kwgs):
             self.spooler.set_idle(None)
+            self.driver.connection.WritePort()
+
 
         @self.console_command(
             "usb_connect",
