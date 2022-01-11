@@ -374,7 +374,8 @@ class BalorDevice(Service):
         def balor_status(command, channel, _, remainder=None, **kwgs):
             reply = self.driver.connection.ReadPort()
             channel("Command replied: {reply}".format(reply=str(reply)))
-
+            for index, b in enumerate(reply):
+                channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
 
         @self.console_argument("filename", type=str, default=None)
         @self.console_command(
