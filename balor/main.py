@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw
 
 from meerk40t.core.cutcode import LaserSettings, LineCut, CutCode, QuadCut, RasterCut
 from meerk40t.core.elements import LaserOperation
-from meerk40t.svgelements import Point, Path, SVGImage, Length
+from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon
 
 import balor
 from balor.GalvoConnection import GotoXY
@@ -188,39 +188,36 @@ class BalorDevice(Service, ViewPort):
 
             return "spooler", spooler
 
-        @self.console_argument("minimum", type=float, default=0x7000)
-        @self.console_argument("maximum", type=float, default=0x9000)
         @self.console_command(
-            "light",
-            help=_("Turn redlight on."),
+            "mark",
+            input_type="elements",
+            output_type="balor",
+            help=_("runs mark on path."),
         )
-        def light(command, channel, _, minimum=0x7000, maximum=0x9000, data=None, remainder=None, **kwgs):
-            cutcode = CutCode()
-            settings = LaserSettings()
-            cutcode.append(
-                LineCut(Point(minimum, minimum), Point(minimum, maximum), settings=settings)
-            )
-            cutcode.append(
-                LineCut(Point(minimum, maximum), Point(maximum, maximum), settings=settings)
-            )
-            cutcode.append(
-                LineCut(Point(maximum, maximum), Point(maximum, minimum), settings=settings)
-            )
-            cutcode.append(
-                LineCut(Point(maximum, minimum), Point(minimum, minimum), settings=settings)
-            )
-            self.spooler.set_idle(("light", self.driver.cutcode_to_light_job(cutcode)))
-            self.driver.connection.WritePort(0x0100)
+        def light(command, channel, _, data=None, remainder=None, **kwgs):
+
+            channel("Creating mark job out of elements.")
+            return "balor", self.driver.paths_to_mark_job(data)
 
         @self.console_command(
-            "nolight",
-            help=_("turn light off"),
+            "light",
+            input_type="elements",
+            output_type="balor",
+            help=_("runs light on events."),
+        )
+        def light(command, channel, _, data=None, remainder=None, **kwgs):
+            channel("Creating light job out of elements.")
+            return "balor", self.driver.paths_to_light_job(data)
+
+        @self.console_command(
+            "stop",
+            help=_("stops the idle running job"),
             input_type=(None),
         )
         def light(command, channel, _, data=None, remainder=None, **kwgs):
+            channel("")
             self.spooler.set_idle(None)
             self.driver.connection.WritePort()
-
 
         @self.console_command(
             "usb_connect",
@@ -276,20 +273,15 @@ class BalorDevice(Service, ViewPort):
             output_type="balor",
         )
         def balor_loop(command, channel, _, data=None,  remainder=None, **kwgs):
-
-            # Maybe each should be run in sequence instead?
             if isinstance(data, list): data = data[0]
-
-            #print ("Saving trace")
-            #open("/home/bryce/Projects/Balor/meerk40t-log.bin", 'wb').write(data)
-
-            # The light_data command will end up being called on the current BalorDriver repeatedly.
+            self.driver.connection.WritePort(0x0100)
+            channel("Looping job: {job}".format(job=str(data)))
             self.spooler.set_idle(("light", data))
 
         @self.console_argument("x", type=float, default=0.0)
         @self.console_argument("y", type=float, default=0.0)
         @self.console_command(
-            "redlight",
+            "goto",
             help=_("send laser as a goto"),
         )
         def balor_goto(command, channel, _, x=None, y=None, remainder=None, **kwgs):
@@ -297,44 +289,6 @@ class BalorDevice(Service, ViewPort):
                 rx = int(0x8000 + x) & 0xFFFF
                 ry = int(0x8000 + y) & 0xFFFF
                 self.driver.connection.GotoXY(rx, ry)
-
-        @self.console_command(
-            "laser_on",
-            help=_("sends enable laser."),
-        )
-        def balor_on(command, channel, _, remainder=None, **kwgs):
-            self.driver.connection.EnableLaser()
-
-
-        @self.console_command(
-            "laser_off",
-            help=_("sends disable laser."),
-        )
-        def balor_on(command, channel, _, remainder=None, **kwgs):
-            self.driver.connection.DisableLaser()
-
-        @self.console_command(
-            "signal_on",
-            help=_("sends enable laser."),
-        )
-        def balor_on(command, channel, _, remainder=None, **kwgs):
-            self.driver.connection.LaserSignalOn()
-
-        @self.console_command(
-            "signal_off",
-            help=_("sends disable laser."),
-        )
-        def balor_on(command, channel, _, remainder=None, **kwgs):
-            self.driver.connection.LaserSignalOff()
-
-
-        @self.console_command(
-            "unknown7",
-            help=_("sends unknown command save."),
-        )
-        def balor_on(command, channel, _, remainder=None, **kwgs):
-            reply = self.driver.connection.Unknown0x0700()
-            channel("Command replied: {reply}".format(reply=str(reply)))
 
         @self.console_argument("off", type=str)
         @self.console_command(
@@ -430,7 +384,6 @@ class BalorDevice(Service, ViewPort):
             mx, my = cal.interpolate(x1, y1)
             channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cx, cy=cy, mx=mx, my=my))
 
-
         @self.console_argument("lens_size", type=str, default=None)
         @self.console_command(
             "lens",
@@ -457,20 +410,15 @@ class BalorDevice(Service, ViewPort):
 
             self.signal("bed_size")
 
-
-        @self.console_option("x", "x_offset", type=Length, help=_("x offset."))
-        @self.console_option("y", "y_offset", type=Length, help=_("y offset"))
         @self.console_command(
-            "lightbox",
+            "box",
             help=_("outline the current selected elements"),
-            output_type="balor",
+            output_type="elements",
         )
         def element_outline(
             command,
             channel,
             _,
-            x_offset=Length(0),
-            y_offset=Length(0),
             data=None,
             args=tuple(),
             **kwargs
@@ -478,30 +426,30 @@ class BalorDevice(Service, ViewPort):
             """
             Draws an outline of the current shape.
             """
-            if x_offset is None:
-                raise SyntaxError
             bounds = self.elements.selected_area()
             if bounds is None:
                 channel(_("Nothing Selected"))
                 return
-            x0 = bounds[0] * self.get_native_scale_x
-            y0 = bounds[1] * self.get_native_scale_y
-            x1 = bounds[2] * self.get_native_scale_x
-            y1 = bounds[3] * self.get_native_scale_y
-            width = x1 - x0
-            height = y1 - y0
-            #print ("Box parameters", x0, y0, width, height)
-            # width += offset_x * 2
-            # height += offset_y * 2
-            job = balor.BalorJob.Job()
-            job.cal = balor.Cal.Cal(self.calibration_file)
-            job.add_light_prefix(travel_speed=int(self.travel_speed))
-            job.line(int(x0), int(y0), int(x0 + width), int(y0), seg_size=500, Op=balor.BalorJob.OpJumpTo)
-            job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), seg_size=500, Op=balor.BalorJob.OpJumpTo)
-            job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), seg_size=500, Op=balor.BalorJob.OpJumpTo)
-            job.line(int(x0), int(y0 + height), int(x0), int(y0), seg_size=500, Op=balor.BalorJob.OpJumpTo)
-            job.calculate_distances()
-            return "balor", [job]
+            channel("Element bounds: {bounds}".format(bounds=str(bounds)))
+            return "elements", [Polygon(*bounds)]
+            # x0 = bounds[0] * self.get_native_scale_x
+            # y0 = bounds[1] * self.get_native_scale_y
+            # x1 = bounds[2] * self.get_native_scale_x
+            # y1 = bounds[3] * self.get_native_scale_y
+            # width = x1 - x0
+            # height = y1 - y0
+            # #print ("Box parameters", x0, y0, width, height)
+            # # width += offset_x * 2
+            # # height += offset_y * 2
+            # job = balor.BalorJob.Job()
+            # job.cal = balor.Cal.Cal(self.calibration_file)
+            # job.add_light_prefix(travel_speed=int(self.travel_speed))
+            # job.line(int(x0), int(y0), int(x0 + width), int(y0), seg_size=500, Op=balor.BalorJob.OpJumpTo)
+            # job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), seg_size=500, Op=balor.BalorJob.OpJumpTo)
+            # job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), seg_size=500, Op=balor.BalorJob.OpJumpTo)
+            # job.line(int(x0), int(y0 + height), int(x0), int(y0), seg_size=500, Op=balor.BalorJob.OpJumpTo)
+            # job.calculate_distances()
+            # return "balor", [job]
 
         @self.console_option(
             "raster-x-res",

@@ -187,6 +187,71 @@ class BalorDriver:
         job.calculate_distances()
         return job
 
+    def paths_to_light_job(self, paths, quant=50):
+        """
+        :param queue:
+        :return:
+        """
+        import balor
+        job = balor.BalorJob.Job()
+        job.cal = balor.Cal.Cal(self.service.calibration_file)
+        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
+        cut_speed = int(round(self.service.cut_speed / 2.0))
+        laser_power = int(round(self.service.laser_power * 40.95))
+        q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
+        job.add_light_prefix(travel_speed)
+        # job.append(balor.BalorJob.OpJumpTo(0x8000, 0x8000))  # centerize?
+
+        for e in paths:
+            x, y = e.point(0)
+            x *= self.service.get_native_scale_x
+            y *= self.service.get_native_scale_y
+            job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
+            for i in range(1, quant+1):
+                x, y = e.point(i / float(quant))
+                x *= self.service.get_native_scale_x
+                y *= self.service.get_native_scale_y
+                job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
+        job.calculate_distances()
+        return job
+
+    def paths_to_mark_job(self, paths, quant=50):
+        """
+        Convert path to a mark job.
+
+        @param queue:
+        @return:
+        """
+        import balor
+        job = balor.BalorJob.Job()
+        job.cal = balor.Cal.Cal(self.service.calibration_file)
+        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
+        cut_speed = int(round(self.service.cut_speed / 2.0))
+        laser_power = int(round(self.service.laser_power * 40.95))
+        q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
+        job.add_mark_prefix(
+            travel_speed=travel_speed,
+            laser_power=laser_power,
+            q_switch_period=q_switch_period,
+            cut_speed=cut_speed,
+        )
+        job.append(balor.BalorJob.OpJumpTo(0x8000, 0x8000))  # centerize?
+
+        for e in paths:
+            x, y = e.point(0)
+            x *= self.service.get_native_scale_x
+            y *= self.service.get_native_scale_y
+            job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
+            job.laser_control(True)
+            for i in range(1, quant+1):
+                x, y = e.point(i / float(quant))
+                x *= self.service.get_native_scale_x
+                y *= self.service.get_native_scale_y
+                job.append(balor.BalorJob.OpMarkTo(*job.cal.interpolate(x, y)))
+            job.laser_control(False)
+        job.calculate_distances()
+        return job
+
     def hold_work(self):
         """
         This is checked by the spooler to see if we should hold any work from being processed from the work queue.
