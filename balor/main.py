@@ -422,10 +422,12 @@ class BalorDevice(Service, ViewPort):
 
             x0 = bounds[0] * self.get_native_scale_x
             y0 = bounds[1] * self.get_native_scale_y
+            x1 = bounds[2] * self.get_native_scale_x
+            y1 = bounds[3] * self.get_native_scale_y
             width = (bounds[2] - bounds[0]) * self.get_native_scale_x
             height = (bounds[3] - bounds[1]) * self.get_native_scale_y
             cx, cy = cal.interpolate(x0, y0)
-            mx, my = cal.interpolate(bounds[2] * self.get_native_scale_x, bounds[3] * self.get_native_scale_y)
+            mx, my = cal.interpolate(x1, y1)
             channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cx, cy=cy, mx=mx, my=my))
 
 
@@ -482,23 +484,13 @@ class BalorDevice(Service, ViewPort):
             if bounds is None:
                 channel(_("Nothing Selected"))
                 return
-            x0 = bounds[0]
-            y0 = bounds[1]
-            width = bounds[2] - bounds[0]
-            height = bounds[3] - bounds[1]
-            offset_x = (
-                y_offset.value(ppi=1000.0, relative_length=width)
-                if len(args) >= 1
-                else 0
-            )
-            offset_y = (
-                x_offset.value(ppi=1000.0, relative_length=height)
-                if len(args) >= 2
-                else offset_x
-            )
+            x0 = bounds[0] * self.get_native_scale_x
+            y0 = bounds[1] * self.get_native_scale_y
+            x1 = bounds[2] * self.get_native_scale_x
+            y1 = bounds[3] * self.get_native_scale_y
+            width = x1 - x0
+            height = y1 - x1
             #print ("Box parameters", x0, y0, width, height)
-            x0 -= offset_x
-            y0 -= offset_y
             width += offset_x * 2
             height += offset_y * 2
             job = balor.BalorJob.Job()
@@ -747,7 +739,7 @@ class BalorDevice(Service, ViewPort):
 
     @property
     def get_native_scale_y(self):
-        actual_size_in_nm = self.width
+        actual_size_in_nm = self.height
         galvo_range = 0xFFFF
         nm_per_galvo = actual_size_in_nm / galvo_range
         return 1.0 / nm_per_galvo
