@@ -491,8 +491,8 @@ class BalorDevice(Service, ViewPort):
             width = x1 - x0
             height = y1 - x1
             #print ("Box parameters", x0, y0, width, height)
-            width += offset_x * 2
-            height += offset_y * 2
+            # width += offset_x * 2
+            # height += offset_y * 2
             job = balor.BalorJob.Job()
             job.cal = balor.Cal.Cal(self.calibration_file)
             job.add_light_prefix(travel_speed=int(self.travel_speed))
