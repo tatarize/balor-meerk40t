@@ -82,7 +82,7 @@ class Operation:
                     print(
                         "Parameter overflow", self.name, self.opcode, p, file=sys.stderr
                     )
-                    raise ValueError
+                    raise ValueError("Parameter Overflow")
         else:
             self.opcode = from_binary[0] | (from_binary[1] << 8)
             i = 2

@@ -420,12 +420,12 @@ class BalorDevice(Service, ViewPort):
                 return
             cal = balor.Cal.Cal(self.calibration_file)
 
-            x0 = bounds[0]
-            y0 = bounds[1]
-            width = bounds[2] - bounds[0]
-            height = bounds[3] - bounds[1]
+            x0 = bounds[0] * self.get_native_scale_x
+            y0 = bounds[1] * self.get_native_scale_y
+            width = (bounds[2] - bounds[0]) * self.get_native_scale_x
+            height = (bounds[3] - bounds[1]) * self.get_native_scale_y
             cx, cy = cal.interpolate(x0, y0)
-            mx, my = cal.interpolate(bounds[2], bounds[3])
+            mx, my = cal.interpolate(bounds[2] * self.get_native_scale_x, bounds[3] * self.get_native_scale_y)
             channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cx, cy=cy, mx=mx, my=my))
 
 
@@ -725,7 +725,7 @@ class BalorDevice(Service, ViewPort):
         """
         @return: the location in nm for the current known x value.
         """
-        return float(self.driver.native_x * (0xFFFF / self.width))
+        return float(self.driver.native_x / self.width) * 0xFFF
 
     @property
     def current_y(self):
@@ -736,11 +736,21 @@ class BalorDevice(Service, ViewPort):
 
     @property
     def get_native_scale_x(self):
-        return 1.0 / self.width
+        """
+        Native x goes from 0x0000 to 0xFFFF with 0x8000 being zero.
+        :return:
+        """
+        actual_size_in_nm = self.width
+        galvo_range = 0xFFFF
+        nm_per_galvo = actual_size_in_nm / galvo_range
+        return 1.0 / nm_per_galvo
 
     @property
     def get_native_scale_y(self):
-        return 1.0 / self.height
+        actual_size_in_nm = self.width
+        galvo_range = 0xFFFF
+        nm_per_galvo = actual_size_in_nm / galvo_range
+        return 1.0 / nm_per_galvo
 
     @property
     def calibration_file(self):
