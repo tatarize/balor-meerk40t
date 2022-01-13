@@ -108,19 +108,19 @@ class BalorDriver:
         """
 
         import balor
-        job = balor.MSBF.Job()
+        job = balor.BalorJob.Job()
         job.cal = balor.Cal.Cal(self.service.calibration_file)
         travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
         cut_speed = int(round(self.service.cut_speed / 2.0))
         laser_power = int(round(self.service.laser_power * 40.95))
         q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
         job.add_light_prefix(travel_speed)
-        # job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
+        # job.append(balor.BalorJob.OpJumpTo(0x8000, 0x8000))  # centerize?
 
         for plot in queue:
             start = plot.start()
             # job.laser_control(False)
-            job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
+            job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
             # job.laser_control(True)
             for e in self.group(plot.generator()):
                 on = 1
@@ -131,13 +131,13 @@ class BalorDriver:
                 if on == 0:
                     try:
                         # job.laser_control(False)
-                        job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
+                        job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
                         # job.laser_control(True)
                         # print("Moving to {x}, {y}".format(x=x, y=y))
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
+                    job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
         # job.laser_control(False)
         job.calculate_distances()
         return job
@@ -150,7 +150,7 @@ class BalorDriver:
         @return:
         """
         import balor
-        job = balor.MSBF.Job()
+        job = balor.BalorJob.Job()
         job.cal = balor.Cal.Cal(self.service.calibration_file)
         travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
         cut_speed = int(round(self.service.cut_speed / 2.0))
@@ -162,12 +162,12 @@ class BalorDriver:
             q_switch_period=q_switch_period,
             cut_speed=cut_speed,
         )
-        job.append(balor.MSBF.OpJumpTo(0x8000, 0x8000))  # centerize?
+        job.append(balor.BalorJob.OpJumpTo(0x8000, 0x8000))  # centerize?
 
         job.laser_control(True)
         for plot in queue:
             start = plot.start()
-            job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
+            job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
 
             for e in self.group(plot.generator()):
                 on = 1
@@ -177,12 +177,12 @@ class BalorDriver:
                     x, y, on = e
                 if on == 0:
                     try:
-                        job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
+                        job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
                         # print("Moving to {x}, {y}".format(x=x, y=y))
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.append(balor.MSBF.OpMarkTo(*job.cal.interpolate(x, y)))
+                    job.append(balor.BalorJob.OpMarkTo(*job.cal.interpolate(x, y)))
         job.laser_control(False)
         job.calculate_distances()
         return job
@@ -266,7 +266,7 @@ class BalorDriver:
         This is not a typical meerk40t command. But, the light commands in the main balor add this as the idle job.
 
         self.spooler.set_idle(("light", self.driver.cutcode_to_light_job(cutcode)))
-        That will the spooler's idle job be calling "light" on the driver with the light job. Which is a MSBF.Job class
+        That will the spooler's idle job be calling "light" on the driver with the light job. Which is a BalorJob.Job class
         We serialize that and hand it to the send_data routine of the connection.
 
         @param job:

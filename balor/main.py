@@ -16,7 +16,7 @@ from meerk40t.svgelements import Point, Path, SVGImage, Length
 
 import balor
 from balor.GalvoConnection import GotoXY
-from balor.MSBF import Job
+from balor.BalorJob import Job
 from balor.BalorDriver import BalorDriver
 
 import numpy as np
@@ -501,13 +501,13 @@ class BalorDevice(Service, ViewPort):
             y0 -= offset_y
             width += offset_x * 2
             height += offset_y * 2
-            job = balor.MSBF.Job()
+            job = balor.BalorJob.Job()
             job.cal = balor.Cal.Cal(self.calibration_file)
             job.add_light_prefix(travel_speed=int(self.travel_speed))
-            job.line(int(x0), int(y0), int(x0 + width), int(y0), seg_size=500, Op=balor.MSBF.OpJumpTo)
-            job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), seg_size=500, Op=balor.MSBF.OpJumpTo)
-            job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), seg_size=500, Op=balor.MSBF.OpJumpTo)
-            job.line(int(x0), int(y0 + height), int(x0), int(y0), seg_size=500, Op=balor.MSBF.OpJumpTo)
+            job.line(int(x0), int(y0), int(x0 + width), int(y0), seg_size=500, Op=balor.BalorJob.OpJumpTo)
+            job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), seg_size=500, Op=balor.BalorJob.OpJumpTo)
+            job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), seg_size=500, Op=balor.BalorJob.OpJumpTo)
+            job.line(int(x0), int(y0 + height), int(x0), int(y0), seg_size=500, Op=balor.BalorJob.OpJumpTo)
             job.calculate_distances()
             return "balor", [job]
 
@@ -625,7 +625,7 @@ class BalorDevice(Service, ViewPort):
                 gsmin = grayscale_min
                 gsmax = grayscale_max
                 gsslope = (gsmax - gsmin) / 256.0
-            job = balor.MSBF.Job()
+            job = balor.BalorJob.Job()
             cal = balor.Cal.Cal(self.calibration_file)
             job.cal = cal
 
@@ -648,7 +648,7 @@ class BalorDevice(Service, ViewPort):
             old_y = y0
             while y < y0 + height:
                 x = x0
-                job.append(balor.MSBF.OpTravel(*cal.interpolate(x, y)))
+                job.append(balor.BalorJob.OpTravel(*cal.interpolate(x, y)))
                 old_x = x0
                 while x < x0 + width:
                     px = img(y, x)[0][0]
@@ -675,33 +675,33 @@ class BalorDevice(Service, ViewPort):
                                 job.laser_control(True)  # laser turn on
                             i = passes
                             while i > 1:
-                                job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
+                                job.append(balor.BalorJob.OpCut(*cal.interpolate(x, y)))
                                 job.append(
-                                    balor.MSBF.OpCut(*cal.interpolate(old_x, old_y))
+                                    balor.BalorJob.OpCut(*cal.interpolate(old_x, old_y))
                                 )
                                 i -= 2
-                            job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
+                            job.append(balor.BalorJob.OpCut(*cal.interpolate(x, y)))
                             burning = True
 
                         else:
                             if burning:
                                 # laser turn off
                                 job.laser_control(False)
-                            job.append(balor.MSBF.OpTravel(*cal.interpolate(x, y)))
+                            job.append(balor.BalorJob.OpTravel(*cal.interpolate(x, y)))
                             burning = False
                     else:
 
                         if px + dither > threshold:
                             if not burning:
                                 job.laser_control(True)  # laser turn on
-                            job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
+                            job.append(balor.BalorJob.OpCut(*cal.interpolate(x, y)))
                             burning = True
                             dither = 0.0
                         else:
                             if burning:
                                 # laser turn off
                                 job.laser_control(False)
-                            job.append(balor.MSBF.OpTravel(*cal.interpolate(x, y)))
+                            job.append(balor.BalorJob.OpTravel(*cal.interpolate(x, y)))
                             dither += abs(px + dither - threshold) * args.dither
                             burning = False
                     old_x = x
