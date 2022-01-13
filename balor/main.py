@@ -431,7 +431,7 @@ class BalorDevice(Service, ViewPort):
             channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cx, cy=cy, mx=mx, my=my))
 
 
-        @self.console_argument("lens_size", type=Length, default=None)
+        @self.console_argument("lens_size", type=str, default=None)
         @self.console_command(
             "lens",
             help=_("give the galvo position of the selection"),
@@ -489,7 +489,7 @@ class BalorDevice(Service, ViewPort):
             x1 = bounds[2] * self.get_native_scale_x
             y1 = bounds[3] * self.get_native_scale_y
             width = x1 - x0
-            height = y1 - x1
+            height = y1 - y0
             #print ("Box parameters", x0, y0, width, height)
             # width += offset_x * 2
             # height += offset_y * 2
