@@ -432,24 +432,44 @@ class BalorDevice(Service, ViewPort):
                 return
             channel("Element bounds: {bounds}".format(bounds=str(bounds)))
             return "elements", [Polygon(*bounds)]
-            # x0 = bounds[0] * self.get_native_scale_x
-            # y0 = bounds[1] * self.get_native_scale_y
-            # x1 = bounds[2] * self.get_native_scale_x
-            # y1 = bounds[3] * self.get_native_scale_y
-            # width = x1 - x0
-            # height = y1 - y0
-            # #print ("Box parameters", x0, y0, width, height)
-            # # width += offset_x * 2
-            # # height += offset_y * 2
-            # job = balor.BalorJob.Job()
-            # job.cal = balor.Cal.Cal(self.calibration_file)
-            # job.add_light_prefix(travel_speed=int(self.travel_speed))
-            # job.line(int(x0), int(y0), int(x0 + width), int(y0), seg_size=500, Op=balor.BalorJob.OpJumpTo)
-            # job.line(int(x0 + width), int(y0), int(x0 + width), int(y0 + height), seg_size=500, Op=balor.BalorJob.OpJumpTo)
-            # job.line(int(x0 + width), int(y0 + height), int(x0), int(y0 + height), seg_size=500, Op=balor.BalorJob.OpJumpTo)
-            # job.line(int(x0), int(y0 + height), int(x0), int(y0), seg_size=500, Op=balor.BalorJob.OpJumpTo)
-            # job.calculate_distances()
-            # return "balor", [job]
+
+        @self.console_command(
+            "hull",
+            help=_("convex hull of the current selected elements"),
+            output_type="elements",
+        )
+        def element_outline(
+            command,
+            channel,
+            _,
+            data=None,
+            args=tuple(),
+            **kwargs
+        ):
+            """
+            Draws an outline of the current shape.
+            """
+            data = list(self.elements.elems(emphasized=True))
+            pts = []
+            for obj in data:
+                if isinstance(obj, Path):
+                    epath = abs(obj)
+                    pts += [q for q in epath.as_points()]
+                elif isinstance(obj, SVGImage):
+                    bounds = obj.bbox()
+                    pts += [
+                        (bounds[0], bounds[1]),
+                        (bounds[0], bounds[3]),
+                        (bounds[2], bounds[1]),
+                        (bounds[2], bounds[3]),
+                    ]
+            hull = [p for p in Point.convex_hull(pts)]
+            if len(hull) == 0:
+                channel(_("No elements bounds to trace."))
+                return
+            hull.append(hull[0])  # loop
+            return "elements", [Polygon(*hull)]
+
 
         @self.console_option(
             "raster-x-res",
