@@ -5,6 +5,7 @@ import time
 
 from meerk40t.core.cutcode import LaserSettings, CutCode, LineCut
 from meerk40t.core.spoolers import Spooler
+from meerk40t.core.units import ViewPort
 from meerk40t.kernel import Service
 
 from PIL import Image, ImageDraw
@@ -36,7 +37,7 @@ def plugin(kernel, lifecycle):
             )
 
 
-class BalorDevice(Service):
+class BalorDevice(Service, ViewPort):
     """
     The BalorDevice is a MeerK40t service for the device type. It should be the main method of interacting with
     the rest of meerk40t. It defines how the scene should look and contains a spooler which meerk40t will give jobs
@@ -51,43 +52,24 @@ class BalorDevice(Service):
 
         choices = [
             {
-                "attr": "bedwidth",
+                "attr": "lens_size",
                 "object": self,
-                "default": 0xFFFF,
+                "default": "110mm",
                 "type": float,
                 "label": _("Width"),
-                "tip": _("Width of the laser bed."),
+                "tip": _("Lens Size"),
             },
             {
                 "attr": "bedheight",
                 "object": self,
-                "default": 0xFFFF,
+                "default": "110mm",
                 "type": float,
                 "label": _("Height"),
                 "tip": _("Height of the laser bed."),
             },
-            {
-                "attr": "scale_x",
-                "object": self,
-                "default": 0.06608137,
-                "type": float,
-                "label": _("X Scale Factor"),
-                "tip": _(
-                    "Scale factor for the X-axis. This defines the ratio of mils to steps. This is usually at 1:1 steps/mils but due to functional issues it can deviate and needs to be accounted for"
-                ),
-            },
-            {
-                "attr": "scale_y",
-                "object": self,
-                "default": 0.06608137,
-                "type": float,
-                "label": _("Y Scale Factor"),
-                "tip": _(
-                    "Scale factor for the Y-axis. This defines the ratio of mils to steps. This is usually at 1:1 steps/mils but due to functional issues it can deviate and needs to be accounted for"
-                ),
-            },
         ]
         self.register_choices("bed_dim", choices)
+        ViewPort.__init__(self, 0, 0, self.lens_size, self.lens_size)
 
         choices = [
             {
@@ -165,8 +147,6 @@ class BalorDevice(Service):
         ]
         self.register_choices("balor", choices)
 
-        self.current_x = 0.0
-        self.current_y = 0.0
         self.state = 0
         self.spooler = Spooler(self)
         self.driver = BalorDriver(self)
@@ -389,7 +369,6 @@ class BalorDevice(Service):
             for index, b in enumerate(reply):
                 channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
 
-
         @self.console_argument("filename", type=str, default=None)
         @self.console_command(
             "calibrate",
@@ -447,7 +426,6 @@ class BalorDevice(Service):
             height = bounds[3] - bounds[1]
             cx, cy = cal.interpolate(x0, y0)
             mx, my = cal.interpolate(bounds[2], bounds[3])
-
             channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cx, cy=cy, mx=mx, my=my))
 
 
@@ -470,9 +448,11 @@ class BalorDevice(Service):
             """
             if lens_size is None:
                 raise SyntaxError
-            self.scale_x = (lens_size / (float((0xFFFF)))).value(ppi=1000)
-            self.scale_y = (lens_size / (float((0xFFFF)))).value(ppi=1000)
-            channel("Scale Factor set to : ({sx}, {sy}).".format(sx=self.scale_x, sy=self.scale_y))
+            self.bedwidth = lens_size
+            self.bedheight = lens_size
+
+            channel("Set Bed Size : ({sx}, {sy}).".format(sx=self.bedwidth, sy=self.bedheight))
+
             self.signal("bed_size")
 
 
@@ -739,6 +719,28 @@ class BalorDevice(Service):
 
             job.calculate_distances()
             return "balor", [job.serialize()]
+
+    @property
+    def current_x(self):
+        """
+        @return: the location in nm for the current known x value.
+        """
+        return float(self.driver.native_x * (0xFFFF / self.width))
+
+    @property
+    def current_y(self):
+        """
+        @return: the location in nm for the current known y value.
+        """
+        return float(self.driver.native_y * (0xFFFF / self.height))
+
+    @property
+    def get_native_scale_x(self):
+        return 1.0 / self.width
+
+    @property
+    def get_native_scale_y(self):
+        return 1.0 / self.height
 
     @property
     def calibration_file(self):

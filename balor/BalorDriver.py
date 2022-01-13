@@ -9,6 +9,9 @@ from balor.GalvoConnection import GalvoConnection
 class BalorDriver:
     def __init__(self, service):
         self.service = service
+        self.native_x = 0x8000
+        self.native_y = 0x8000
+
         self.name = str(self.service)
         self.connection = GalvoConnection(service)
         self.connected = False
@@ -27,6 +30,7 @@ class BalorDriver:
         self.queue = []
 
         self.connect()
+
 
     def __repr__(self):
         return "BalorDriver(%s)" % self.name
@@ -134,8 +138,6 @@ class BalorDriver:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
                     job.append(balor.MSBF.OpJumpTo(*job.cal.interpolate(x, y)))
-                self.service.current_x = x
-                self.service.current_y = y
         # job.laser_control(False)
         job.calculate_distances()
         return job
@@ -181,8 +183,6 @@ class BalorDriver:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
                     job.append(balor.MSBF.OpMarkTo(*job.cal.interpolate(x, y)))
-                self.service.current_x = x
-                self.service.current_y = y
         job.laser_control(False)
         job.calculate_distances()
         return job
