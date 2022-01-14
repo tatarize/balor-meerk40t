@@ -142,7 +142,9 @@ class BalorDevice(Service, ViewPort):
                 "default": False,
                 "type": bool,
                 "label": _("Run mock-usb backend"),
-                "tip": _("This starts connects to fake software laser rather than real one for debugging."),
+                "tip": _(
+                    "This starts connects to fake software laser rather than real one for debugging."
+                ),
             },
         ]
         self.register_choices("balor", choices)
@@ -164,7 +166,9 @@ class BalorDevice(Service, ViewPort):
             input_type=(None, "plan", "device", "balor"),
             output_type="spooler",
         )
-        def spool(command, channel, _, data=None, data_type=None, remainder=None, **kwgs):
+        def spool(
+            command, channel, _, data=None, data_type=None, remainder=None, **kwgs
+        ):
             """
             Registers the spool command for the Balor driver.
             """
@@ -197,27 +201,35 @@ class BalorDevice(Service, ViewPort):
             output_type="balor",
             help=_("runs mark on path."),
         )
-        def light(command, channel, _, data=None, remainder=None, **kwgs):
-
+        def mark(command, channel, _, data=None, remainder=None, **kwgs):
             channel("Creating mark job out of elements.")
             return "balor", self.driver.paths_to_mark_job(data)
 
+        @self.console_option(
+            "s",
+            "speed",
+            type=bool,
+            action="store_true",
+            help="Run this light job at slow speed for the parts that would have been cuts.",
+        )
         @self.console_command(
             "light",
             input_type="elements",
             output_type="balor",
             help=_("runs light on events."),
         )
-        def light(command, channel, _, data=None, remainder=None, **kwgs):
+        def light(command, channel, _, speed=False, data=None, remainder=None, **kwgs):
             channel("Creating light job out of elements.")
-            return "balor", self.driver.paths_to_light_job(data)
+            return "balor", self.driver.paths_to_light_job(
+                data, speed=speed
+            )
 
         @self.console_command(
             "stop",
             help=_("stops the idle running job"),
             input_type=(None),
         )
-        def light(command, channel, _, data=None, remainder=None, **kwgs):
+        def stoplight(command, channel, _, data=None, remainder=None, **kwgs):
             channel("Stopping idle job")
             self.spooler.set_idle(None)
             self.driver.connection.WritePort()
@@ -253,6 +265,7 @@ class BalorDevice(Service, ViewPort):
         def balor_print(command, channel, _, data=None, remainder=None, **kwgs):
             for d in data:
                 print(d)
+            return "balor", data
 
         @self.console_argument("filename", type=str, default="balor.bin")
         @self.console_command(
@@ -268,16 +281,22 @@ class BalorDevice(Service, ViewPort):
                 for d in data:
                     f.write(d)
             channel("Saved file {filename} to disk.".format(filename=filename))
+            return "balor", data
 
-        @self.console_argument("count", help="Number of times to duplicate the job")
+        @self.console_argument(
+            "repeats", help="Number of times to duplicate the job", default=1
+        )
         @self.console_command(
             "duplicate",
             help=_("loop the selected job forever"),
             input_type="balor",
             output_type="balor",
         )
-        def balor_dup(command, channel, _, data=None, count=None, remainder=None, **kwgs):
-            channel("Job not duplicated because no super-solid api for that")
+        def balor_dup(
+            command, channel, _, data=None, repeats=1, remainder=None, **kwgs
+        ):
+            data.duplicate(1, None, repeats)
+            channel("Job duplicated")
             return "balor", data
 
         @self.console_command(
@@ -286,8 +305,7 @@ class BalorDevice(Service, ViewPort):
             input_type="balor",
             output_type="balor",
         )
-        def balor_loop(command, channel, _, data=None,  remainder=None, **kwgs):
-            if isinstance(data, list): data = data[0]
+        def balor_loop(command, channel, _, data=None, remainder=None, **kwgs):
             self.driver.connection.WritePort(0x0100)
             channel("Looping job: {job}".format(job=str(data)))
             data.calculate_distances()
@@ -298,7 +316,7 @@ class BalorDevice(Service, ViewPort):
         @self.console_argument("y", type=float, default=0.0)
         @self.console_command(
             "goto",
-            help=_("send laser as a goto"),
+            help=_("send laser a goto command"),
         )
         def balor_goto(command, channel, _, x=None, y=None, remainder=None, **kwgs):
             if x is not None and y is not None:
@@ -327,7 +345,11 @@ class BalorDevice(Service, ViewPort):
             reply = self.driver.connection.ReadPort()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
-                channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
+                channel(
+                    "Bit {index}: {bits}".format(
+                        index="{0:x}".format(index), bits="{0:b}".format(b)
+                    )
+                )
 
         @self.console_command(
             "lstatus",
@@ -337,7 +359,11 @@ class BalorDevice(Service, ViewPort):
             reply = self.driver.connection.GetListStatus()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
-                channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
+                channel(
+                    "Bit {index}: {bits}".format(
+                        index="{0:x}".format(index), bits="{0:b}".format(b)
+                    )
+                )
 
         @self.console_command(
             "serial_number",
@@ -347,8 +373,11 @@ class BalorDevice(Service, ViewPort):
             reply = self.driver.connection.GetSerialNo()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
-                channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
-
+                channel(
+                    "Bit {index}: {bits}".format(
+                        index="{0:x}".format(index), bits="{0:b}".format(b)
+                    )
+                )
 
         @self.console_argument("filename", type=str, default=None)
         @self.console_command(
@@ -361,8 +390,11 @@ class BalorDevice(Service, ViewPort):
                 if calfile is None:
                     channel("No calibration file set.")
                 else:
-                    channel("Calibration file is set to: {file}".format(file=self.calfile))
+                    channel(
+                        "Calibration file is set to: {file}".format(file=self.calfile)
+                    )
                     from os.path import exists
+
                     if exists(calfile):
                         channel("Calibration file exists!")
                         cal = balor.Cal.Cal(calfile)
@@ -374,24 +406,22 @@ class BalorDevice(Service, ViewPort):
                         channel("WARNING: Calibration file does not exist.")
             else:
                 from os.path import exists
+
                 if exists(filename):
                     self.calfile = filename
                 else:
-                    channel("The file at {filename} does not exist.".format(filename=os.path.realpath(filename)))
+                    channel(
+                        "The file at {filename} does not exist.".format(
+                            filename=os.path.realpath(filename)
+                        )
+                    )
                     channel("Calibration file was not set.")
 
         @self.console_command(
             "position",
             help=_("give the galvo position of the selection"),
         )
-        def galvo_pos(
-                command,
-                channel,
-                _,
-                data=None,
-                args=tuple(),
-                **kwargs
-        ):
+        def galvo_pos(command, channel, _, data=None, args=tuple(), **kwargs):
             """
             Draws an outline of the current shape.
             """
@@ -409,7 +439,11 @@ class BalorDevice(Service, ViewPort):
             height = (bounds[3] - bounds[1]) * self.get_native_scale_y
             cx, cy = cal.interpolate(x0, y0)
             mx, my = cal.interpolate(x1, y1)
-            channel("Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(cx=cx, cy=cy, mx=mx, my=my))
+            channel(
+                "Top Right: ({cx}, {cy}). Lower, Left: ({mx},{my})".format(
+                    cx=cx, cy=cy, mx=mx, my=my
+                )
+            )
 
         @self.console_argument("lens_size", type=str, default=None)
         @self.console_command(
@@ -417,13 +451,7 @@ class BalorDevice(Service, ViewPort):
             help=_("give the galvo position of the selection"),
         )
         def galvo_lens(
-                command,
-                channel,
-                _,
-                data=None,
-                lens_size=None,
-                args=tuple(),
-                **kwargs
+            command, channel, _, data=None, lens_size=None, args=tuple(), **kwargs
         ):
             """
             Sets lens size.
@@ -433,7 +461,11 @@ class BalorDevice(Service, ViewPort):
             self.bedwidth = lens_size
             self.bedheight = lens_size
 
-            channel("Set Bed Size : ({sx}, {sy}).".format(sx=self.bedwidth, sy=self.bedheight))
+            channel(
+                "Set Bed Size : ({sx}, {sy}).".format(
+                    sx=self.bedwidth, sy=self.bedheight
+                )
+            )
 
             self.signal("bed_size")
 
@@ -442,14 +474,7 @@ class BalorDevice(Service, ViewPort):
             help=_("outline the current selected elements"),
             output_type="elements",
         )
-        def element_outline(
-            command,
-            channel,
-            _,
-            data=None,
-            args=tuple(),
-            **kwargs
-        ):
+        def element_outline(command, channel, _, data=None, args=tuple(), **kwargs):
             """
             Draws an outline of the current shape.
             """
@@ -463,20 +488,15 @@ class BalorDevice(Service, ViewPort):
         @self.console_command(
             "hull",
             help=_("convex hull of the current selected elements"),
+            input_type=(None, "elements"),
             output_type="elements",
         )
-        def element_outline(
-            command,
-            channel,
-            _,
-            data=None,
-            args=tuple(),
-            **kwargs
-        ):
+        def element_outline(command, channel, _, data=None, args=tuple(), **kwargs):
             """
             Draws an outline of the current shape.
             """
-            data = list(self.elements.elems(emphasized=True))
+            if data is None:
+                data = list(self.elements.elems(emphasized=True))
             pts = []
             for obj in data:
                 if isinstance(obj, Path):
@@ -496,7 +516,6 @@ class BalorDevice(Service, ViewPort):
                 return
             hull.append(hull[0])  # loop
             return "elements", [Polygon(*hull)]
-
 
         @self.console_option(
             "raster-x-res",
@@ -745,4 +764,3 @@ class BalorDevice(Service, ViewPort):
             return self.calfile
         else:
             return None
-
