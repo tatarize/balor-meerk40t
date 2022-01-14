@@ -516,6 +516,17 @@ class BalorDevice(Service, ViewPort):
             hull.append(hull[0])  # loop
             return "elements", [Polygon(*hull)]
 
+        def ant_points(points, steps):
+            forward_steps = steps + 1 + int(steps / 10)
+            pos = 0
+            for cycles in range(100):
+                for f in range(pos, pos + forward_steps, 1):
+                    yield points[f % len(points)]
+                pos += forward_steps
+                for b in range(pos, pos + steps, -1):
+                    yield points[b % len(points)]
+                pos -= steps
+
         @self.console_option("q", "quantization", default=200, help="Number of segments to break each path into.")
         @self.console_command(
             "ants",
@@ -532,34 +543,15 @@ class BalorDevice(Service, ViewPort):
             points_list = []
             points = []
             for e in data:
-                if not isinstance(e,Path):
+                if not isinstance(e, Path):
                     continue
                 e = abs(e)
-                x, y = e.point(0)
-                x *= self.get_native_scale_x
-                y *= self.get_native_scale_y
-                points.append((x,y))
-
-                for i in range(1, quantization + 1):
+                for i in range(0, quantization + 1):
                     x, y = e.point(i / float(quantization))
                     x *= self.get_native_scale_x
                     y *= self.get_native_scale_y
                     points.append((x, y))
-                points.append(points[-1]) # loop
-
-                ants = []
-                forward_steps = int(len(points) / 10)
-                backwards_steps = int(len(points) / 11)
-                pos = 0
-                for cycles in range(100):
-                    for f in range(pos, pos+forward_steps, 1):
-                        ants.append(points[f % len(points)])
-                    pos = pos + forward_steps
-                    for b in range(pos, pos+backwards_steps, -1):
-                        ants.append(points[b % len(points)])
-                    pos = pos - backwards_steps
-                points_list.append(ants)
-                points = []
+                points_list.append(list(ant_points(points, int(quantization/10))))
             return "elements", [Polygon(*p) for p in points_list]
 
         @self.console_option(
