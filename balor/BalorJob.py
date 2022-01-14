@@ -247,7 +247,7 @@ class OpMarkSpeed(Operation):
         sim.cut_speed = self.params[0] * 1.9656
 
 
-class OpAltTravel(Operation):
+class OpJumpCalibration(Operation):
     """
     This command was listed as Mystery Operation it is only called in listJumpTo as 0x8001 is called.
     """
@@ -353,6 +353,15 @@ class OpReadyMark(Operation):
         return "Begin job"
 
 
+OpBeginJob = OpReadyMark
+OpSetLaserPower = MarkPowerRatio
+OpSetTravelSpeed = OpJumpSpeed
+OpSetCutSpeed = OpMarkSpeed
+OpSetLaserOnTimeComp = OpLaserOnDelay
+OpSetLaserOffTimeComp = OpLaserOffDelay
+OpSetMystery0F = OpPolygonDelay
+OpMystery0D = OpJumpCalibration
+
 all_operations = [
     OpReadyMark,
     OpLaserControl,
@@ -360,7 +369,7 @@ all_operations = [
     OpMarkTo,
     MarkPowerRatio,
     OpPolygonDelay,
-    OpAltTravel,
+    OpJumpCalibration,
     OpMarkSpeed,
     OpLaserOffDelay,
     OpLaserOnDelay,
@@ -393,7 +402,7 @@ class Job:
         self._travel_speed = None
         self._frequency = None
         self._power = None
-        self._curve_calibration = None
+        self._jump_calibration = None
         self._laser_control = None
         self._laser_on_delay = None
         self._laser_off_delay = None
@@ -555,6 +564,7 @@ class Job:
         # TODO: WEAK IMPLEMENTATION
         if self._light == on:
             return
+        self.ready()
         # In theory WriterPort(0x100) maybe should turn the light on if it isn't on.
         # More research needed.
         pass
@@ -589,13 +599,12 @@ class Job:
             return
         self.append(OpMarkEndDelay(delay))
 
-    def curve_calibration(self, curve="dummy"):
-        # TODO: WEAK IMPLEMENTATION
-        if self._curve_calibration == curve:
+    def jump_calibration(self, calibration=0x0008):
+        if self._jump_calibration == calibration:
             return
         self.ready()
-        self._curve_calibration = curve
-        # self.append(OpAltTravel(0x0008))
+        self._jump_calibration = calibration
+        self.append(OpJumpCalibration(calibration))
 
     def mark(self, x, y):
         """
@@ -621,43 +630,40 @@ class Job:
         if self._poly_delay is None:
             # raise ValueError("Polygon Delay must be set before a mark(x,y)")
             self.polygon_delay()
-        if self._curve_calibration is None:
-            self.curve_calibration()
         self._last_x = x
         self._last_y = y
         self.append(OpMarkTo(*self.pos(x, y)))
 
-    def light(self, x, y):
+    def light(self, x, y, calibration=None):
         """
         Move to a new location with light enabled.
 
         :param x:
         :param y:
+        :param calibration:
         :return:
         """
-        self.ready()
-        if not self._travel_speed:
-            raise ValueError("Travel speed must be set before a light(x,y)")
-        if not self._light:
-            self.set_light(True)
-        self._last_x = x
-        self._last_y = y
-        self.append(OpJumpTo(*self.pos(x, y)))
+        self.goto(x, y, light=True, calibration=calibration)
 
-    def goto(self, x, y):
+    def goto(self, x, y, light=False, calibration=None):
         """
         Move to a new location without laser or light.
 
         :param x:
         :param y:
+        :param light:
+        :param calibration:
         :return:
         """
-        if not self._ready:
-            self.ready()
+        self.ready()
         if not self._travel_speed:
-            raise ValueError("Travel speed must be set before a goto(x,y)")
+            raise ValueError("Travel speed must be set before a jumping")
         self._last_x = x
         self._last_y = y
+        if light and not self._light:
+            self.set_light(True)
+        if calibration is not None:
+            self.jump_calibration(calibration)
         self.append(OpJumpTo(*self.pos(x, y)))
 
     def init(self, x, y):
@@ -674,8 +680,26 @@ class Job:
         self._start_x = x
         self._start_y = y
 
+    def set_mark_settings(
+        self,
+        travel_speed,
+        frequency,
+        power,
+        cut_speed,
+        laser_on_delay=(0x0064, 0x8000),
+        laser_off_delay=0x0064,
+        polygon_delay=0x000A,
+    ):
+        self.set_frequency(frequency=frequency)
+        self.set_power(power)
+        self.set_travel_speed(travel_speed)
+        self.set_cut_speed(cut_speed)
+        self.laser_on_delay(laser_on_delay)
+        self.laser_off_delay(laser_off_delay)
+        self.polygon_delay(polygon_delay)
+
     ######################
-    # COMMAND DELEGATES
+    # DEBUG FUNCTIONS
     ######################
 
     def add_packet(self, data, tracking=None):
