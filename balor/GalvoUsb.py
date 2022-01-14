@@ -65,12 +65,24 @@ class GalvoUsb:
             return
 
     def canned_read(self, *args):
+        if self.device is None:
+            self.connect()
         device = self.device
-        return device.read(*args)
+        try:
+            return device.read(*args)
+        except usb.core.USBError:
+            self.disconnect()
+            return
 
     def canned_write(self, *args):
+        if self.device is None:
+            self.connect()
         device = self.device
-        device.write(*args)
+        try:
+            device.write(*args)
+        except usb.core.USBError:
+            self.disconnect()
+            return
 
     def connect(self):
         """
