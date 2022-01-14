@@ -516,6 +516,12 @@ class Job:
             i += 12
 
     def serialize(self):
+        """
+        Performs final operations before creating bytearray.
+
+        :return:
+        """
+        self._calculate_distances()
         size = 256 * int(round(math.ceil(len(self.operations) / 256.0)))
         buf = bytearray(([0x02, 0x80] + [0] * 10) * size)  # Create buffer full of NOP
         i = 0
@@ -524,7 +530,7 @@ class Job:
             i += 12
         return buf
 
-    def calculate_distances(self):
+    def _calculate_distances(self):
         last_xy = 0x8000, 0x8000
         for op in self.operations:
             if op.has_d():
