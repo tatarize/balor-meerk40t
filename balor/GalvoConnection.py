@@ -80,6 +80,23 @@ class GalvoConnection:
         :param data:
         :return:
         """
+        for packet in data:
+            self.send_command(ResetList)
+            self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
+            self._send_packet(packet)
+            self.send_command(SetEndOfList)
+            self._wait_for_status_bits(query=ReadPort, wait_high=0x20)
+            self.send_command(ExecuteList)
+        # if you want this to block until the laser is done, uncomment next line
+        self._wait_for_status_bits(query=GetVersion, wait_high=0x20, wait_low=0x04)
+
+    def send_data_old(self, data):
+        """
+        Send sliced packets
+
+        :param data:
+        :return:
+        """
         self.send_command(ResetList)
         self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
         while len(data) >= 0xC00:
