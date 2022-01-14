@@ -380,23 +380,25 @@ def OperationFactory(code, tracking=None, position=0):
 
 
 class Job:
-    def __init__(self, x=0x8000, y=0x8000, machine=None):
+    def __init__(self, machine=None, x=0x8000, y=0x8000, cal=None):
         self.machine = machine
+        self.cal = cal
         self.operations = []
-        self._last_x = self._last_x
-        self._last_y = self._last_y
-        self._start_x = self._start_x
-        self._start_y = self._start_y
+        self._last_x = x
+        self._last_y = y
+        self._start_x = x
+        self._start_y = y
         self._ready = False
         self._cut_speed = None
         self._travel_speed = None
         self._frequency = None
         self._power = None
+        self._curve_calibration = None
         self._laser_control = None
         self._laser_on_delay = None
         self._laser_off_delay = None
         self._poly_delay = None
-        self._markend_delay = None
+        self._mark_end_delay = None
         self._light = None
 
     @property
@@ -429,7 +431,7 @@ class Job:
         :return:
         """
         # Calculate distances.
-        last_xy = start_x, start_y
+        last_xy = self._start_x, self._start_y
         for op in self.operations:
             if op.has_d():
                 nx, ny = op.get_xy()
@@ -515,9 +517,9 @@ class Job:
         # TODO: Does this order matter?
         if control:
             self.append(OpLaserControl(0x0001))
-            self.markend_delay(0x0320)
+            self.mark_end_delay(0x0320)
         else:
-            self.markend_delay(0x001E)
+            self.mark_end_delay(0x001E)
             self.append(OpLaserControl(0x0000))
 
     def set_travel_speed(self, speed):
@@ -542,9 +544,9 @@ class Job:
         self.append(MarkPowerRatio(self.convert_power(power)))
 
     def set_frequency(self, frequency):
-        if self._qswitch == frequency:
+        if self._frequency == frequency:
             return
-        self._qswitch = frequency
+        self._frequency = frequency
         # if self.machine == "something":
         # TODO: use differs by machine: 0x800A Mark Frequency, 0x800B Mark Pulse Width
         self.append(OpSetQSwitchPeriod(self.convert_frequency(frequency)))
@@ -581,9 +583,9 @@ class Job:
         self._poly_delay = delay
         self.append(OpPolygonDelay(0x000A))
 
-    def markend_delay(self, delay):
+    def mark_end_delay(self, delay):
         # TODO: WEAK IMPLEMENTATION
-        if self._markend_delay == delay:
+        if self._mark_end_delay == delay:
             return
         self.append(OpMarkEndDelay(delay))
 
@@ -604,11 +606,11 @@ class Job:
         :return:
         """
         self.ready()
-        if self._qswitch is None:
+        if self._frequency is None:
             raise ValueError("Qswitch frequency must be set before a mark(x,y)")
         if self._power is None:
             raise ValueError("Laser Power must be set before a mark(x,y)")
-        if self._mark_speed is None:
+        if self._cut_speed is None:
             raise ValueError("Mark Speed must be set before a mark(x,y)")
         if self._laser_on_delay is None:
             # raise ValueError("LaserOn Delay must be set before a mark(x,y)")
@@ -618,12 +620,12 @@ class Job:
             self.laser_off_delay()
         if self._poly_delay is None:
             # raise ValueError("Polygon Delay must be set before a mark(x,y)")
-            self.poly_delay()
+            self.polygon_delay()
         if self._curve_calibration is None:
             self.curve_calibration()
         self._last_x = x
         self._last_y = y
-        self.append(balor.BalorJob.OpMarkTo(*self.pos(x, y)))
+        self.append(OpMarkTo(*self.pos(x, y)))
 
     def light(self, x, y):
         """
@@ -640,7 +642,7 @@ class Job:
             self.set_light(True)
         self._last_x = x
         self._last_y = y
-        self.append(balor.BalorJob.OpJumpTo(*self.pos(x, y)))
+        self.append(OpJumpTo(*self.pos(x, y)))
 
     def goto(self, x, y):
         """
@@ -656,7 +658,7 @@ class Job:
             raise ValueError("Travel speed must be set before a goto(x,y)")
         self._last_x = x
         self._last_y = y
-        self.append(balor.BalorJob.OpJumpTo(*self.pos(x, y)))
+        self.append(OpJumpTo(*self.pos(x, y)))
 
     def init(self, x, y):
         """
