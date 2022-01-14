@@ -52,7 +52,7 @@ def plugin(service, lifecycle):
                 "label": _("Galvo Light"),
                 "icon": icons8_light_on_50,
                 "tip": _("Turn light on."),
-                "action": lambda v: service("box light loop\n"),
+                "action": lambda v: service("hull light loop\n"),
             },
         )
         service.register(
