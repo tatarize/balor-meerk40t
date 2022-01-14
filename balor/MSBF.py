@@ -1,12 +1,13 @@
 import math
 
+
 class Simulation:
     def __init__(self, job, machine, draw, resolution):
         self.job = job
         self.machine = machine
         self.draw = draw
         self.resolution = resolution
-        self.scale = float(self.resolution)/0x10000
+        self.scale = float(self.resolution) / 0x10000
         self.segcount = 0
         self.laser_power = 0
         self.laser_on = False
@@ -19,39 +20,42 @@ class Simulation:
         op.simulate(self)
 
     def cut(self, x, y):
-        cm = 128 if self.segcount%2 else 255
+        cm = 128 if self.segcount % 2 else 255
         self.segcount += 1
 
-        if not self.laser_on: 
-            color = (cm,0,0)
+        if not self.laser_on:
+            color = (cm, 0, 0)
         else:
-            color =(
-                    int(cm*((self.q_switch_period - 5000)/50000.0)),
-                    int(round(cm*( 2000-self.cut_speed )/2000.0)),
-                    #cm,)
-                    int(round((cm/100.0)*self.laser_power)))
-        self.draw.line((self.x*self.scale, self.y*self.scale, 
-                    self.scale*x, self.scale*y),
-                    fill=color, 
-                    width=1)
+            color = (
+                int(cm * ((self.q_switch_period - 5000) / 50000.0)),
+                int(round(cm * (2000 - self.cut_speed) / 2000.0)),
+                # cm,)
+                int(round((cm / 100.0) * self.laser_power)))
+        self.draw.line((self.x * self.scale, self.y * self.scale,
+                        self.scale * x, self.scale * y),
+                       fill=color,
+                       width=1)
         self.x, self.y = x, y
 
     def travel(self, x, y):
-        cm = 128 if self.segcount%2 else 255
+        cm = 128 if self.segcount % 2 else 255
         self.segcount += 1
-        #self.draw.line((self.x*self.scale, self.y*self.scale, 
+        # self.draw.line((self.x*self.scale, self.y*self.scale,
         #    self.scale*x, self.scale*y),
         #    fill=(cm//2,cm//2,cm//2, 64), width=1)
         self.x, self.y = x, y
 
+
 import numpy as np
 
 import sys
+
+
 class Operation:
     opcode = 0x8000
     name = 'UNDEFINED OPERATION'
-    x = None # know which is x and which is y,
-    y = None # for adjustment purposes by correction filters
+    x = None  # know which is x and which is y,
+    y = None  # for adjustment purposes by correction filters
     d = None
     a = None
     job = None
@@ -63,76 +67,83 @@ class Operation:
         pass
 
     def __init__(self, *params, from_binary=None, tracking=None, position=0):
-        self.tracking=tracking
+        self.tracking = tracking
         self.position = position
-        self.params = [0]*5
+        self.params = [0] * 5
         if from_binary is None:
-            for n,p in enumerate(params):
+            for n, p in enumerate(params):
                 self.params[n] = p
-                if p > 0xFFFF: 
+                if p > 0xFFFF:
                     print("Parameter overflow", self.name, self.opcode, p, file=sys.stderr)
                     raise ValueError
         else:
-            self.opcode = from_binary[0] | (from_binary[1]<<8)
+            self.opcode = from_binary[0] | (from_binary[1] << 8)
             i = 2
             while i < len(from_binary):
-                self.params[i//2-1] = from_binary[i] | (from_binary[i+1]<<8)
+                self.params[i // 2 - 1] = from_binary[i] | (from_binary[i + 1] << 8)
                 i += 2
 
         self.validate()
 
     def serialize(self):
-        blank = bytearray([0]*12)
+        blank = bytearray([0] * 12)
         blank[0] = self.opcode & 0xFF
         blank[1] = self.opcode >> 8
         i = 2
         for param in self.params:
             blank[i] = param & 0xFF
             try:
-                blank[i+1] = param >> 8
+                blank[i + 1] = param >> 8
             except ValueError:
-                print ("Parameter overflow %x"%param, self.name, self.opcode, self.params, file=sys.stderr)
+                print("Parameter overflow %x" % param, self.name, self.opcode, self.params, file=sys.stderr)
             i += 2
         return blank
 
     def validate(self):
-        for n,param in enumerate(self.params):
+        for n, param in enumerate(self.params):
             if param > 0xFFFF: raise ValueError(
-                    "A parameter can't be greater than 0xFFFF (Op %s, Param %d = 0x%04X"%(self.name,
-                        n, param))
+                "A parameter can't be greater than 0xFFFF (Op %s, Param %d = 0x%04X" % (self.name,
+                                                                                        n, param))
 
     def text_decode(self):
         return self.name
 
     def text_debug(self, show_tracking=False):
-        return (('%s:%03X'%(self.tracking, self.position) if show_tracking else '')
-                +' | %04X | '%self.opcode
-                + ' '.join(['%04X'%x for x in self.params])
-                + ' | '+ self.text_decode())
-
+        return (('%s:%03X' % (self.tracking, self.position) if show_tracking else '')
+                + ' | %04X | ' % self.opcode
+                + ' '.join(['%04X' % x for x in self.params])
+                + ' | ' + self.text_decode())
 
     def has_xy(self):
         return self.x is not None and self.y is not None
+
     def has_d(self):
         return self.d is not None
+
     def set_xy(self, nxy):
         self.params[self.x] = nxy[0]
         self.params[self.y] = nxy[1]
         self.validate()
+
     def set_d(self, d):
         self.params[self.d] = d
         self.validate()
+
     def set_a(self, a):
         self.params[self.a] = a
         self.validate()
+
     def get_xy(self):
         return self.params[self.x], self.params[self.y]
+
 
 class OpNo(Operation):
     name = "NO OPERATION ()"
     opcode = 0x8002
+
     def text_decode(self):
         return "No operation"
+
 
 class OpTravel(Operation):
     name = "TRAVEL (y, x, angle, distance)"
@@ -140,22 +151,27 @@ class OpTravel(Operation):
     x = 1
     y = 0
     d = 3
+
     def text_decode(self):
         xs, ys, unit = self.job.get_scale()
-        x = '%.3f %s'%(self.params[1]*xs, unit) if unit else '%d'%self.params[1]
-        y = '%.3f %s'%(self.params[0]*ys, unit) if unit else '%d'%self.params[0]
-        d = '%.3f %s'%(self.params[3]*xs, unit) if unit else '%d'%self.params[3]
-        return "Travel to x=%s y=%s angle=%04X dist=%s"%(
-                x,y,self.params[2],
-                d)
+        x = '%.3f %s' % (self.params[1] * xs, unit) if unit else '%d' % self.params[1]
+        y = '%.3f %s' % (self.params[0] * ys, unit) if unit else '%d' % self.params[0]
+        d = '%.3f %s' % (self.params[3] * xs, unit) if unit else '%d' % self.params[3]
+        return "Travel to x=%s y=%s angle=%04X dist=%s" % (
+            x, y, self.params[2],
+            d)
+
     def simulate(self, sim):
         sim.travel(self.params[self.x], self.params[self.y])
+
 
 class OpWait(Operation):
     name = "WAIT (time)"
     opcode = 0x8004
+
     def text_decode(self):
-        return "Wait %d microseconds"%(self.params[0]*10)
+        return "Wait %d microseconds" % (self.params[0] * 10)
+
 
 class OpCut(Operation):
     name = "CUT (y, x, angle, distance)"
@@ -164,14 +180,16 @@ class OpCut(Operation):
     y = 0
     d = 3
     a = 2
+
     def text_decode(self):
         xs, ys, unit = self.job.get_scale()
-        x = '%.3f %s'%(self.params[1]*xs, unit) if unit else '%d'%self.params[1]
-        y = '%.3f %s'%(self.params[0]*ys, unit) if unit else '%d'%self.params[0]
-        d = '%.3f %s'%(self.params[3]*xs, unit) if unit else '%d'%self.params[3]
-        return "Cut to x=%s y=%s angle=%04X dist=%s"%(
-                x,y,self.params[2],
-                d)
+        x = '%.3f %s' % (self.params[1] * xs, unit) if unit else '%d' % self.params[1]
+        y = '%.3f %s' % (self.params[0] * ys, unit) if unit else '%d' % self.params[0]
+        d = '%.3f %s' % (self.params[3] * xs, unit) if unit else '%d' % self.params[3]
+        return "Cut to x=%s y=%s angle=%04X dist=%s" % (
+            x, y, self.params[2],
+            d)
+
     def simulate(self, sim):
         sim.cut(self.params[self.x], self.params[self.y])
 
@@ -179,92 +197,123 @@ class OpCut(Operation):
 class OpSetTravelSpeed(Operation):
     name = "SET TRAVEL SPEED (speed)"
     opcode = 0x8006
+
     def text_decode(self):
-        return "Set travel speed = %.2f mm/s"%(self.params[0]*1.9656)
+        return "Set travel speed = %.2f mm/s" % (self.params[0] * 1.9656)
+
 
 class OpSetLaserOnTimeComp(Operation):
     name = "SET ON TIME COMPENSATION (time)"
     opcode = 0x8007
+
     def text_decode(self):
-        return "Set on time compensation = %d us"%(self.params[0])
+        return "Set on time compensation = %d us" % (self.params[0])
+
 
 class OpSetLaserOffTimeComp(Operation):
     name = "SET OFF TIME COMPENSATION (time)"
     opcode = 0x8008
+
     def text_decode(self):
-        return "Set off time compensation = %d us"%(self.params[0])
+        return "Set off time compensation = %d us" % (self.params[0])
+
 
 class OpSetCutSpeed(Operation):
     name = "SET CUTTING SPEED (speed)"
     opcode = 0x800C
+
     def text_decode(self):
-        return "Set cut speed = %.2f mm/s"%(self.params[0]*1.9656)
+        return "Set cut speed = %.2f mm/s" % (self.params[0] * 1.9656)
+
     def simulate(self, sim):
-        sim.cut_speed = self.params[0]*1.9656
+        sim.cut_speed = self.params[0] * 1.9656
+
 
 class OpMystery0D(Operation):
     name = "Alternate travel (0x800D)"
     opcode = 0x800D
+
     def text_decode(self):
-        return "Alternate travel operation 0x800D, param=%d"%self.params[0]
+        return "Alternate travel operation 0x800D, param=%d" % self.params[0]
+
     def simulate(self, sim):
         sim.travel(self.params[self.x], self.params[self.y])
+
     def text_decode(self):
         xs, ys, unit = self.job.get_scale()
-        x = '%.3f %s'%(self.params[1]*xs, unit) if unit else '%d'%self.params[1]
-        y = '%.3f %s'%(self.params[0]*ys, unit) if unit else '%d'%self.params[0]
-        d = '%.3f %s'%(self.params[3]*xs, unit) if unit else '%d'%self.params[3]
-        return "Alt travel to x=%s y=%s angle=%04X dist=%s"%(
-                x,y,self.params[2],
-                d)
+        x = '%.3f %s' % (self.params[1] * xs, unit) if unit else '%d' % self.params[1]
+        y = '%.3f %s' % (self.params[0] * ys, unit) if unit else '%d' % self.params[0]
+        d = '%.3f %s' % (self.params[3] * xs, unit) if unit else '%d' % self.params[3]
+        return "Alt travel to x=%s y=%s angle=%04X dist=%s" % (
+            x, y, self.params[2],
+            d)
+
+
 OpAltTravel = OpMystery0D
+
 
 class OpSetMystery0F(Operation):
     name = "POLYGON DELAY"
     opcode = 0x800F
+
     def text_decode(self):
-        return "Set polygon delay, param=%d"%self.params[0]
+        return "Set polygon delay, param=%d" % self.params[0]
+
+
 OpPolygonDelay = OpSetMystery0F
+
 
 class OpSetLaserPower(Operation):
     name = "SET LASER POWER (power)"
     opcode = 0x8012
+
     def text_decode(self):
-        return "Set laser power = %.1f%%"%(self.params[0]/40.960)
+        return "Set laser power = %.1f%%" % (self.params[0] / 40.960)
+
     def simulate(self, sim):
-        sim.laser_power = self.params[0]/40.960
+        sim.laser_power = self.params[0] / 40.960
+
 
 class OpSetQSwitchPeriod(Operation):
     name = "SET Q SWITCH PERIOD (period)"
     opcode = 0x801B
+
     def text_decode(self):
-        return "Set Q-switch period = %d ns (%.0f kHz)"%(
-                self.params[0]*50,
-                1.0/(1000*self.params[0]*50e-9))
+        return "Set Q-switch period = %d ns (%.0f kHz)" % (
+            self.params[0] * 50,
+            1.0 / (1000 * self.params[0] * 50e-9))
+
     def simulate(self, sim):
-        sim.q_switch_period = self.params[0]*50.0
+        sim.q_switch_period = self.params[0] * 50.0
+
 
 class OpLaserControl(Operation):
     name = "LASER CONTROL (on)"
     opcode = 0x8021
+
     def text_decode(self):
         return "Laser control - turn " + ('ON' if self.params[0] else 'OFF')
+
     def simulate(self, sim):
         sim.laser_on = bool(self.params[0])
+
 
 class OpBeginJob(Operation):
     name = "BEGIN JOB"
     opcode = 0x8051
+
     def text_decode(self):
         return "Begin job"
 
+
 all_operations = [OpBeginJob, OpLaserControl, OpSetQSwitchPeriod, OpCut,
-        OpSetLaserPower, OpSetMystery0F, OpMystery0D, OpSetCutSpeed,
-        OpSetLaserOffTimeComp, OpSetLaserOnTimeComp, OpSetTravelSpeed,
-        OpWait, OpNo, OpTravel
-        ]
+                  OpSetLaserPower, OpSetMystery0F, OpMystery0D, OpSetCutSpeed,
+                  OpSetLaserOffTimeComp, OpSetLaserOnTimeComp, OpSetTravelSpeed,
+                  OpWait, OpNo, OpTravel
+                  ]
 
 operations_by_opcode = {OpClass.opcode: OpClass for OpClass in all_operations}
+
 
 def OperationFactory(code, tracking=None, position=0):
     opcode = code[0] | (code[1] << 8)
@@ -277,14 +326,17 @@ class Job:
         self.machine = machine
         self.x_scale = 1
         self.y_scale = 1
-        self.scale_unit=''
+        self.scale_unit = ''
         self.operations = []
+
     def get_scale(self):
         return self.x_scale, self.y_scale, self.scale_unit
+
     def clear_operations(self):
         self.operations = []
+
     def get_position(self):
-        return len(self.operations)-1
+        return len(self.operations) - 1
 
     def duplicate(self, begin, end, repeats=1):
         for _ in range(repeats):
@@ -295,24 +347,24 @@ class Job:
 
     def add_light_prefix(self, travel_speed):
         self.extend([OpBeginJob(),
-                OpSetTravelSpeed(travel_speed),
-                #OpMystery0D(0x0008)
-                ])
+                     OpSetTravelSpeed(travel_speed),
+                     # OpMystery0D(0x0008)
+                     ])
 
     def line(self, x0, y0, x1, y1, seg_size=5, Op=OpCut):
-        length = ((x0-x1)**2 + (y0-y1)**2)**0.5
-        segs = max(2,int(round(length / seg_size)))
-        #print ("**", x0, y0, x1, y1, length, segs, file=sys.stderr)
+        length = ((x0 - x1) ** 2 + (y0 - y1) ** 2) ** 0.5
+        segs = max(2, int(round(length / seg_size)))
+        # print ("**", x0, y0, x1, y1, length, segs, file=sys.stderr)
 
         xs = np.linspace(x0, x1, segs)
         ys = np.linspace(y0, y1, segs)
 
         for n in range(segs):
-            #print ("*", xs[n], ys[n], file=sys.stderr)
-            self.append(Op(*self.cal.interpolate(xs[n], ys[n] )))
+            # print ("*", xs[n], ys[n], file=sys.stderr)
+            self.append(Op(*self.cal.interpolate(xs[n], ys[n])))
 
     def change_q_switch_frequency(self, q_switch_frequency):
-        q_switch_period = int(round(1.0/(q_switch_frequency*1e3) / 50e-9))
+        q_switch_period = int(round(1.0 / (q_switch_frequency * 1e3) / 50e-9))
         self.append(OpSetQSwitchPeriod(q_switch_period))
 
     def change_laser_power(self, percent_power):
@@ -327,30 +379,31 @@ class Job:
         travel_speed = int(round(speed_mmps / 2.0))
         self.append(OpSetTravelSpeed(travel_speed))
 
-
     def change_settings(self, q_switch_period, laser_power, cut_speed):
         self.extend([
-                OpSetQSwitchPeriod(q_switch_period),
-                OpSetLaserPower(laser_power),
-                OpSetCutSpeed(cut_speed),
-                #OpMystery0D(0x0008),
-            ])
-#self.settings[color] = (q_switch_period, laser_power, cut_speed, hatch_angle,
-#                hatch_spacing, hatch_pattern, repeats)
+            OpSetQSwitchPeriod(q_switch_period),
+            OpSetLaserPower(laser_power),
+            OpSetCutSpeed(cut_speed),
+            # OpMystery0D(0x0008),
+        ])
+
+    # self.settings[color] = (q_switch_period, laser_power, cut_speed, hatch_angle,
+    #                hatch_spacing, hatch_pattern, repeats)
 
     def add_mark_prefix(self, travel_speed, q_switch_period,
-            laser_power, cut_speed):
+                        laser_power, cut_speed):
         self.extend([
-                OpBeginJob(),
-                OpSetQSwitchPeriod(q_switch_period),
-                OpSetLaserPower(laser_power),
-                OpSetTravelSpeed(travel_speed),
-                OpSetCutSpeed(cut_speed),
-                OpSetLaserOnTimeComp(0x0064, 0x8000),
-                OpSetLaserOffTimeComp(0x0064),
-                OpSetMystery0F(0x000A),
-                #OpMystery0D(0x0008),
-            ])
+            OpBeginJob(),
+            OpSetQSwitchPeriod(q_switch_period),
+            OpSetLaserPower(laser_power),
+            OpSetTravelSpeed(travel_speed),
+            OpSetCutSpeed(cut_speed),
+            OpSetLaserOnTimeComp(0x0064, 0x8000),
+            OpSetLaserOffTimeComp(0x0064),
+            OpSetMystery0F(0x000A),
+            # OpMystery0D(0x0008),
+        ])
+
     def laser_control(self, on):
         if on:
             self.extend([
@@ -362,6 +415,7 @@ class Job:
                 OpWait(0x001E),
                 OpLaserControl(0x0000),
             ])
+
     def plot(self, draw, resolution=2048):
         sim = Simulation(self, self.machine, draw, resolution)
         for op in self.operations:
@@ -375,9 +429,11 @@ class Job:
     def append(self, x):
         x.bind(self)
         self.operations.append(x)
+
     def extend(self, x):
         for op in x: op.bind(self)
         self.operations.extend(x)
+
     def get_operations(self):
         return self.operations
 
@@ -385,30 +441,30 @@ class Job:
         # Parse MSBF data and add it as operations
         i = 0
         while i < len(data):
-            command = data[i:i+12]
+            command = data[i:i + 12]
             op = OperationFactory(command, tracking=tracking, position=i)
             op.bind(self)
             self.operations.append(op)
             i += 12
 
-    def serialize(self): 
-        size = 256*int(round(math.ceil(len(self.operations)/256.0)))
-        buf = bytearray(([0x02, 0x80]+[0]*10)*size) # Create buffer full of NOP
+    def serialize(self):
+        size = 256 * int(round(math.ceil(len(self.operations) / 256.0)))
+        buf = bytearray(([0x02, 0x80] + [0] * 10) * size)  # Create buffer full of NOP
         i = 0
         for op in self.operations:
-            buf[i:i+12] = op.serialize()
+            buf[i:i + 12] = op.serialize()
             i += 12
         return buf
-        
+
     def calculate_distances(self):
         last_xy = 0x8000, 0x8000
         for op in self.operations:
-            if op.has_d(): 
-                nx,ny = op.get_xy()
-                x,y = last_xy
-                op.set_d(int(((nx-x)**2+(ny-y)**2)**0.5))
+            if op.has_d():
+                nx, ny = op.get_xy()
+                x, y = last_xy
+                op.set_d(int(((nx - x) ** 2 + (ny - y) ** 2) ** 0.5))
 
-            if op.has_xy(): 
+            if op.has_xy():
                 last_xy = op.get_xy()
 
 
