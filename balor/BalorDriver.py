@@ -138,8 +138,6 @@ class BalorDriver:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
                     job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
-        # job.laser_control(False)
-        job.calculate_distances()
         return job
 
     def cutcode_to_mark_job(self, queue):
@@ -184,7 +182,6 @@ class BalorDriver:
                 else:
                     job.append(balor.BalorJob.OpMarkTo(*job.cal.interpolate(x, y)))
         job.laser_control(False)
-        job.calculate_distances()
         return job
 
     def paths_to_light_job(self, paths, quant=50):
@@ -200,7 +197,6 @@ class BalorDriver:
         laser_power = int(round(self.service.laser_power * 40.95))
         q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
         job.add_light_prefix(travel_speed)
-        # job.append(balor.BalorJob.OpJumpTo(0x8000, 0x8000))  # centerize?
 
         for e in paths:
             x, y = e.point(0)
@@ -297,6 +293,10 @@ class BalorDriver:
             if hold():
                 return True
         return False
+
+    def balor_job(self, job):
+        job.calculate_distances()
+        self.connection.send_data(job.serialize())
 
     def laser_off(self, *values):
         """

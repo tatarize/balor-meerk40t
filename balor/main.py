@@ -161,15 +161,18 @@ class BalorDevice(Service, ViewPort):
             "spool",
             help=_("spool <command>"),
             regex=True,
-            input_type=(None, "plan", "device"),
+            input_type=(None, "plan", "device", "balor"),
             output_type="spooler",
         )
-        def spool(command, channel, _, data=None, remainder=None, **kwgs):
+        def spool(command, channel, _, data=None, data_type=None, remainder=None, **kwgs):
             """
             Registers the spool command for the Balor driver.
             """
             spooler = self.spooler
             if data is not None:
+                if data_type == "balor":
+                    spooler.job(("balor_job", data))
+                    return "spooler", spooler
                 # If plan data is in data, then we copy that and move on to next step.
                 spooler.jobs(data.plan)
                 channel(_("Spooled Plan."))
@@ -215,7 +218,7 @@ class BalorDevice(Service, ViewPort):
             input_type=(None),
         )
         def light(command, channel, _, data=None, remainder=None, **kwgs):
-            channel("")
+            channel("Stopping idle job")
             self.spooler.set_idle(None)
             self.driver.connection.WritePort()
 
@@ -266,6 +269,17 @@ class BalorDevice(Service, ViewPort):
                     f.write(d)
             channel("Saved file {filename} to disk.".format(filename=filename))
 
+        @self.console_argument("count", help="Number of times to duplicate the job")
+        @self.console_command(
+            "duplicate",
+            help=_("loop the selected job forever"),
+            input_type="balor",
+            output_type="balor",
+        )
+        def balor_dup(command, channel, _, data=None, count=None, remainder=None, **kwgs):
+            channel("Job not duplicated because no super-solid api for that")
+            return "balor", data
+
         @self.console_command(
             "loop",
             help=_("loop the selected job forever"),
@@ -276,7 +290,9 @@ class BalorDevice(Service, ViewPort):
             if isinstance(data, list): data = data[0]
             self.driver.connection.WritePort(0x0100)
             channel("Looping job: {job}".format(job=str(data)))
+            data.calculate_distances()
             self.spooler.set_idle(("light", data))
+            return "balor", data
 
         @self.console_argument("x", type=float, default=0.0)
         @self.console_argument("y", type=float, default=0.0)

@@ -25,10 +25,13 @@ class GalvoMock:
 
     def read_reply(self):
         self.count += 1
-        if self.count % 3:
+        if self.count % 3 == 0:
             return b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
-        else:
+        if self.count % 3 == 1:
             return b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        if self.count % 3 == 2:
+            import random
+            return bytes([random.randint(0, 0xFF) for i in range(14)])
 
     def write_block(self, packet):
         assert self.connected
