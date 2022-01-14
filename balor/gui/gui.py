@@ -18,6 +18,7 @@ except ImportError as e:
     raise Mk40tImportAbort("wxpython")
 
 
+
 def plugin(service, lifecycle):
     if lifecycle == "service":
         return "provider/device/balor"
@@ -46,15 +47,41 @@ def plugin(service, lifecycle):
             },
         )
 
+        def light_click(index=None):
+            def light_program(event=None):
+                service.setting(int, "light_default", 0)
+                if index is not None:
+                    service.light_default = index
+                v = service.light_default
+                if v == 0:
+                    service("element* hull light loop\n")
+                if v == 1:
+                    service("box light loop\n")
+                if v == 2:
+                    service("element* ants light loop\n")
+                if v == 3:
+                    service("element* light loop\n")
+                if v == 4:
+                    service("element* light --speed loop\n")
+
+            return light_program
+
         service.register(
             "button/control/Light_On",
             {
                 "label": _("Galvo Light"),
                 "icon": icons8_light_on_50,
-                "tip": _("Turn light on."),
-                "action": lambda v: service("hull light loop\n"),
-            },
-        )
+                "tip": _("Runs outline on selection"),
+                "action": light_click(),
+                "alt-action": (
+                    (_("Hull"), light_click(0)),
+                    (_("Box"), light_click(1)),
+                    (_("Ants"), light_click(2)),
+                    (_("Full"), light_click(3)),
+                    (_("Simulate"), light_click(4)),
+
+              ),
+            })
         service.register(
             "button/control/Light_Off",
             {
@@ -64,7 +91,6 @@ def plugin(service, lifecycle):
                 "action": lambda v: service("stop\n"),
             },
         )
-
         service.add_service_delegate(BalorGui(service))
 
 
