@@ -460,6 +460,7 @@ class CommandList:
                 yield buf
         while i < 0xC00:
             buf[i: i + 12] = eol
+            i += 12
         yield buf
 
     def serialize(self):
