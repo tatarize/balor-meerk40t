@@ -431,7 +431,7 @@ class CommandList:
         return iter(self.operations)
 
     def __bytes__(self):
-        return self.serialize()
+        return bytes(self.serialize())
 
     def serialize(self):
         """
@@ -685,9 +685,9 @@ class CommandList:
         frequency,
         power,
         cut_speed,
-        laser_on_delay=(0x0064, 0x8000),
-        laser_off_delay=0x0064,
-        polygon_delay=0x000A,
+        laser_on_delay,
+        laser_off_delay,
+        polygon_delay,
     ):
         self.set_frequency(frequency)
         self.set_power(power)

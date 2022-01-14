@@ -201,9 +201,12 @@ class BalorDriver:
         job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
         job.set_mark_settings(
             travel_speed=self.service.travel_speed,
-            laser_power=self.service.laser_power,
-            q_switch_period=self.service.q_switch_frequency,
+            power=self.service.laser_power,
+            frequency=self.service.q_switch_frequency,
             cut_speed=self.service.cut_speed,
+            laser_on_delay=100,
+            laser_off_delay=100,
+            polygon_delay=100
         )
         job.goto(0x8000, 0x8000)
         job.laser_control(True)
@@ -266,8 +269,7 @@ class BalorDriver:
         return False
 
     def balor_job(self, job):
-        job.calculate_distances()
-        self.connection.send_data(job.serialize())
+        self.connection.send_data(bytes(job))
 
     def laser_off(self, *values):
         """
