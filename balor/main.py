@@ -339,6 +339,17 @@ class BalorDevice(Service, ViewPort):
             for index, b in enumerate(reply):
                 channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
 
+        @self.console_command(
+            "serial_number",
+            help=_("Checks the serial number."),
+        )
+        def balor_serial(command, channel, _, remainder=None, **kwgs):
+            reply = self.driver.connection.GetSerialNo()
+            channel("Command replied: {reply}".format(reply=str(reply)))
+            for index, b in enumerate(reply):
+                channel("Bit {index}: {bits}".format(index="{0:x}".format(index), bits="{0:b}".format(b)))
+
+
         @self.console_argument("filename", type=str, default=None)
         @self.console_command(
             "calibrate",
