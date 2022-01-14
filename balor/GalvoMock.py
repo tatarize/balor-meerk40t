@@ -1,4 +1,5 @@
 import time
+import random
 
 packet_size = 3072  # 0xC00, 12 x 256
 
@@ -20,32 +21,33 @@ class GalvoMock:
         assert self.connected
         assert isinstance(query, (bytearray, bytes))
         assert len(query) == 12
-        self.channel(str(query))
+        self.channel("<--- " + str(query))
         time.sleep(0.05)
 
     def read_reply(self):
         self.count += 1
         if self.count % 3 == 0:
-            return b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
-        if self.count % 3 == 1:
-            return b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-        if self.count % 3 == 2:
-            import random
-            return bytes([random.randint(0, 0xFF) for i in range(14)])
+            reply = b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
+        elif self.count % 3 == 1:
+            reply = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        else:
+            reply = bytes([random.randint(0, 0xFF) for i in range(14)])
+        self.channel("---> " + str(reply))
+        return reply
 
     def write_block(self, packet):
         assert self.connected
         assert isinstance(packet, (bytearray, bytes))
         assert len(packet) == 0xC00
         self.channel(
-            "{packet}... {size}".format(packet=str(packet[:20]), size=len(packet))
+            "<--- {packet}... {size}".format(packet=str(packet[:24]), size=len(packet))
         )
         time.sleep(0.2)
 
     def canned_read(self, *args):
         assert self.connected
         self.channel(str(args))
-        return b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
+        return self.read_reply()
 
     def canned_write(self, *args):
         assert self.connected
