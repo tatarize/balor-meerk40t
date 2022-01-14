@@ -29,26 +29,40 @@ class GalvoUsb:
         self.backend_error_code = None
 
     def write_command(self, query):
+        if self.device is None:
+            self.connect()
         device = self.device
-        length = device.write(ep_homi, query, 100)
-        #print ("usb-sending query", ' '.join(['%02X'%x for x in query]), length ==len(query))
-        if length != len(query):
-            pass  # Perform error check.
+        try:
+            length = device.write(ep_homi, query, 100)
+        except usb.core.USBError:
+            self.disconnect()
+            return
 
     def read_reply(self):
+        if self.device is None:
+            self.connect()
         device = self.device
-        reply = device.read(ep_himo, 8, 100)
-        #print ("usb-got reply", ' '.join(['%02X'%x for x in reply]))
-        return reply
+        try:
+            reply = device.read(ep_himo, 8, 100)
+            #print ("usb-got reply", ' '.join(['%02X'%x for x in reply]))
+            return reply
+        except usb.core.USBError:
+            self.disconnect()
+            return
 
     def write_block(self, packet):
+        if self.device is None:
+            self.connect()
         device = self.device
         #print ('usb-attempting block write')
-        length = device.write(ep_homi, packet, 100)
-        ##print ('usb-writing block', len(packet), length)
-        if length != len(packet):
-            pass  # Perform error Check
-        return
+        try:
+            length = device.write(ep_homi, packet, 100)
+            ##print ('usb-writing block', len(packet), length)
+            if length != len(packet):
+                pass  # Perform error Check
+        except usb.core.USBError:
+            self.disconnect()
+            return
 
     def canned_read(self, *args):
         device = self.device
@@ -65,15 +79,21 @@ class GalvoUsb:
         """
         if self.channel:
             self.channel("Connecting...")
-        devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
-        device = list(devices)[0]
-        self.manufacturer = usb.util.get_string(device, device.iManufacturer)
-        self.product = usb.util.get_string(device, device.iProduct)
-        device.set_configuration()  # It only has one.
-        device.reset()
-        self.device = device
-        if self.channel:
-            self.channel("Connected...")
+        while True:
+            devices=usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899)
+            device = list(devices)[0]
+            try:
+                self.manufacturer = usb.util.get_string(device, device.iManufacturer)
+                self.product = usb.util.get_string(device, device.iProduct)
+                device.set_configuration()  # It only has one.
+                device.reset()
+            except ValueError:
+                sleep(0.5)
+                continue
+            self.device = device
+            if self.channel:
+                self.channel("Connected...")
+            break
         return device
 
     def disconnect(self):
@@ -88,6 +108,7 @@ class GalvoUsb:
                 self.disconnect_reset(device)
                 if self.channel:
                     self.channel("USB Disconnection Successful.")
+                self.device = None
             except ConnectionError:
                 pass
 
