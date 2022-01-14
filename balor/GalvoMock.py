@@ -26,12 +26,7 @@ class GalvoMock:
 
     def read_reply(self):
         self.count += 1
-        if self.count % 3 == 0:
-            reply = b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
-        elif self.count % 3 == 1:
-            reply = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-        else:
-            reply = bytes([random.randint(0, 0xFF) for i in range(14)])
+        reply = bytes([random.randint(0, 0xFF) for _ in range(14)])
         self.channel("---> " + str(reply))
         return reply
 
