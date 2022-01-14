@@ -526,9 +526,9 @@ class Job:
         # TODO: Does this order matter?
         if control:
             self.append(OpLaserControl(0x0001))
-            self.mark_end_delay(0x0320)
+            self.set_mark_end_delay(0x0320)
         else:
-            self.mark_end_delay(0x001E)
+            self.set_mark_end_delay(0x001E)
             self.append(OpLaserControl(0x0000))
 
     def set_travel_speed(self, speed):
@@ -546,6 +546,7 @@ class Job:
         self.append(OpMarkSpeed(self.convert_speed(speed)))
 
     def set_power(self, power):
+        # TODO: use or conversion differs by machine
         if self._power == power:
             return
         self.ready()
@@ -553,11 +554,10 @@ class Job:
         self.append(MarkPowerRatio(self.convert_power(power)))
 
     def set_frequency(self, frequency):
+        # TODO: use differs by machine: 0x800A Mark Frequency, 0x800B Mark Pulse Width
         if self._frequency == frequency:
             return
         self._frequency = frequency
-        # if self.machine == "something":
-        # TODO: use differs by machine: 0x800A Mark Frequency, 0x800B Mark Pulse Width
         self.append(OpSetQSwitchPeriod(self.convert_frequency(frequency)))
 
     def set_light(self, on):
@@ -569,42 +569,37 @@ class Job:
         # More research needed.
         pass
 
-    def laser_on_delay(self, delay="dummy"):
+    def set_laser_on_delay(self, *args):
         # TODO: WEAK IMPLEMENTATION
-        if self._laser_on_delay == delay:
+        if self._laser_on_delay == args:
             return
         self.ready()
-        self._laser_on_delay = delay
-        self.append(OpLaserOnDelay(0x0064, 0x8000))
+        self._laser_on_delay = args
+        self.append(OpLaserOnDelay(*args))
 
-    def laser_off_delay(self, delay="dummy"):
+    def set_laser_off_delay(self, delay):
         # TODO: WEAK IMPLEMENTATION
         if self._laser_off_delay == delay:
             return
         self.ready()
         self._laser_off_delay = delay
-        self.append(OpLaserOffDelay(0x0064))
+        self.append(OpLaserOffDelay(delay))
 
-    def polygon_delay(self, delay="dummy"):
+    def set_polygon_delay(self, delay):
         # TODO: WEAK IMPLEMENTATION
         if self._poly_delay == delay:
             return
         self.ready()
         self._poly_delay = delay
-        self.append(OpPolygonDelay(0x000A))
+        self.append(OpPolygonDelay(delay))
 
-    def mark_end_delay(self, delay):
+    def set_mark_end_delay(self, delay):
         # TODO: WEAK IMPLEMENTATION
         if self._mark_end_delay == delay:
             return
-        self.append(OpMarkEndDelay(delay))
-
-    def jump_calibration(self, calibration=0x0008):
-        if self._jump_calibration == calibration:
-            return
         self.ready()
-        self._jump_calibration = calibration
-        self.append(OpJumpCalibration(calibration))
+        self._mark_end_delay = delay
+        self.append(OpMarkEndDelay(delay))
 
     def mark(self, x, y):
         """
@@ -622,17 +617,21 @@ class Job:
         if self._cut_speed is None:
             raise ValueError("Mark Speed must be set before a mark(x,y)")
         if self._laser_on_delay is None:
-            # raise ValueError("LaserOn Delay must be set before a mark(x,y)")
-            self.laser_on_delay()
+            raise ValueError("LaserOn Delay must be set before a mark(x,y)")
         if self._laser_off_delay is None:
-            # raise ValueError("LaserOff Delay must be set before a mark(x,y)")
-            self.laser_off_delay()
+            raise ValueError("LaserOff Delay must be set before a mark(x,y)")
         if self._poly_delay is None:
-            # raise ValueError("Polygon Delay must be set before a mark(x,y)")
-            self.polygon_delay()
+            raise ValueError("Polygon Delay must be set before a mark(x,y)")
         self._last_x = x
         self._last_y = y
         self.append(OpMarkTo(*self.pos(x, y)))
+
+    def jump_calibration(self, calibration=0x0008):
+        if self._jump_calibration == calibration:
+            return
+        self.ready()
+        self._jump_calibration = calibration
+        self.append(OpJumpCalibration(calibration))
 
     def light(self, x, y, calibration=None):
         """
@@ -694,9 +693,9 @@ class Job:
         self.set_power(power)
         self.set_travel_speed(travel_speed)
         self.set_cut_speed(cut_speed)
-        self.laser_on_delay(laser_on_delay)
-        self.laser_off_delay(laser_off_delay)
-        self.polygon_delay(polygon_delay)
+        self.set_laser_on_delay(laser_on_delay)
+        self.set_laser_off_delay(laser_off_delay)
+        self.set_polygon_delay(polygon_delay)
 
     ######################
     # DEBUG FUNCTIONS
