@@ -689,7 +689,7 @@ class Job:
         laser_off_delay=0x0064,
         polygon_delay=0x000A,
     ):
-        self.set_frequency(frequency=frequency)
+        self.set_frequency(frequency)
         self.set_power(power)
         self.set_travel_speed(travel_speed)
         self.set_cut_speed(cut_speed)

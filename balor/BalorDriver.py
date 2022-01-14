@@ -108,20 +108,11 @@ class BalorDriver:
         """
 
         import balor
-        job = balor.BalorJob.Job()
-        job.cal = balor.Cal.Cal(self.service.calibration_file)
-        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
-        cut_speed = int(round(self.service.cut_speed / 2.0))
-        laser_power = int(round(self.service.laser_power * 40.95))
-        q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
-        job.add_light_prefix(travel_speed)
-        # job.append(balor.BalorJob.OpJumpTo(0x8000, 0x8000))  # centerize?
-
+        job = balor.BalorJob.Job(cal=balor.Cal.Cal(self.service.calibration_file))
+        job.set_travel_speed(self.service.travel_speed)
         for plot in queue:
             start = plot.start()
-            # job.laser_control(False)
-            job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
-            # job.laser_control(True)
+            job.goto(start[0], start[1])
             for e in self.group(plot.generator()):
                 on = 1
                 if len(e) == 2:
@@ -130,14 +121,11 @@ class BalorDriver:
                     x, y, on = e
                 if on == 0:
                     try:
-                        # job.laser_control(False)
-                        job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
-                        # job.laser_control(True)
-                        # print("Moving to {x}, {y}".format(x=x, y=y))
+                        job.light(x, y)
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
+                    job.goto(x, y)
         return job
 
     def cutcode_to_mark_job(self, queue):
@@ -148,24 +136,18 @@ class BalorDriver:
         @return:
         """
         import balor
-        job = balor.BalorJob.Job()
-        job.cal = balor.Cal.Cal(self.service.calibration_file)
-        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
-        cut_speed = int(round(self.service.cut_speed / 2.0))
-        laser_power = int(round(self.service.laser_power * 40.95))
-        q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
-        job.add_mark_prefix(
-            travel_speed=travel_speed,
-            laser_power=laser_power,
-            q_switch_period=q_switch_period,
-            cut_speed=cut_speed,
+        job = balor.BalorJob.Job(cal=balor.Cal.Cal(self.service.calibration_file))
+        job.set_mark_settings(
+            travel_speed=self.service.travel_speed,
+            power=self.service.laser_power,
+            frequency=self.service.q_switch_frequency,
+            cut_speed=self.service.cut_speed,
         )
-        job.append(balor.BalorJob.OpJumpTo(0x8000, 0x8000))  # centerize?
-
+        job.goto(0x8000, 0x8000)
         job.laser_control(True)
         for plot in queue:
             start = plot.start()
-            job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(start[0], start[1])))
+            job.goto(start[0], start[1])
 
             for e in self.group(plot.generator()):
                 on = 1
@@ -175,40 +157,37 @@ class BalorDriver:
                     x, y, on = e
                 if on == 0:
                     try:
-                        job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
-                        # print("Moving to {x}, {y}".format(x=x, y=y))
+                        job.goto(x,y)
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.append(balor.BalorJob.OpMarkTo(*job.cal.interpolate(x, y)))
+                    job.mark(x,y)
         job.laser_control(False)
         return job
 
-    def paths_to_light_job(self, paths, quant=50):
+    def paths_to_light_job(self, paths, quant=50, speed=False):
         """
         :param queue:
         :return:
         """
         import balor
-        job = balor.BalorJob.Job()
-        job.cal = balor.Cal.Cal(self.service.calibration_file)
-        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
-        cut_speed = int(round(self.service.cut_speed / 2.0))
-        laser_power = int(round(self.service.laser_power * 40.95))
-        q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
-        job.add_light_prefix(travel_speed)
+        job = balor.BalorJob.Job(cal=balor.Cal.Cal(self.service.calibration_file))
+        job.set_travel_speed(self.service.travel_speed)
 
         for e in paths:
             x, y = e.point(0)
             x *= self.service.get_native_scale_x
             y *= self.service.get_native_scale_y
-            job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
+            job.goto(x, y)
+            if speed:
+                job.set_travel_speed(self.service.cut_speed)
             for i in range(1, quant+1):
                 x, y = e.point(i / float(quant))
                 x *= self.service.get_native_scale_x
                 y *= self.service.get_native_scale_y
-                job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
-        job.calculate_distances()
+                job.light(x, y)
+            if speed:
+                job.set_travel_speed(self.service.travel_speed)
         return job
 
     def paths_to_mark_job(self, paths, quant=50):
@@ -219,33 +198,25 @@ class BalorDriver:
         @return:
         """
         import balor
-        job = balor.BalorJob.Job()
-        job.cal = balor.Cal.Cal(self.service.calibration_file)
-        travel_speed = int(round(self.service.travel_speed / 2.0))  # units are 2mm/sec
-        cut_speed = int(round(self.service.cut_speed / 2.0))
-        laser_power = int(round(self.service.laser_power * 40.95))
-        q_switch_period = int(round(1.0 / (self.service.q_switch_frequency * 1e3) / 50e-9))
-        job.add_mark_prefix(
-            travel_speed=travel_speed,
-            laser_power=laser_power,
-            q_switch_period=q_switch_period,
-            cut_speed=cut_speed,
+        job = balor.BalorJob.Job(cal=balor.Cal.Cal(self.service.calibration_file))
+        job.set_mark_settings(
+            travel_speed=self.service.travel_speed,
+            laser_power=self.service.laser_power,
+            q_switch_period=self.service.q_switch_frequency,
+            cut_speed=self.service.cut_speed,
         )
-        job.append(balor.BalorJob.OpJumpTo(0x8000, 0x8000))  # centerize?
-
+        job.goto(0x8000, 0x8000)
+        job.laser_control(True)
         for e in paths:
             x, y = e.point(0)
             x *= self.service.get_native_scale_x
             y *= self.service.get_native_scale_y
-            job.append(balor.BalorJob.OpJumpTo(*job.cal.interpolate(x, y)))
-            job.laser_control(True)
+            job.goto(x,y)
             for i in range(1, quant+1):
                 x, y = e.point(i / float(quant))
                 x *= self.service.get_native_scale_x
                 y *= self.service.get_native_scale_y
-                job.append(balor.BalorJob.OpMarkTo(*job.cal.interpolate(x, y)))
-            job.laser_control(False)
-        job.calculate_distances()
+                job.mark(x, y)
         return job
 
     def hold_work(self):
