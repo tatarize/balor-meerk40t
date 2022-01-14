@@ -220,9 +220,7 @@ class BalorDevice(Service, ViewPort):
         )
         def light(command, channel, _, speed=False, data=None, remainder=None, **kwgs):
             channel("Creating light job out of elements.")
-            return "balor", self.driver.paths_to_light_job(
-                data, speed=speed
-            )
+            return "balor", self.driver.paths_to_light_job(data, speed=speed)
 
         @self.console_command(
             "stop",
@@ -481,8 +479,16 @@ class BalorDevice(Service, ViewPort):
             if bounds is None:
                 channel(_("Nothing Selected"))
                 return
+            x, y, height, width = bounds
             channel("Element bounds: {bounds}".format(bounds=str(bounds)))
-            return "elements", [Polygon(*bounds)]
+            points = [
+                (x, y),
+                (x + width, y),
+                (x + width, y + height),
+                (x, y + height),
+                (x, y),
+            ]
+            return "elements", [Polygon(*points)]
 
         @self.console_command(
             "hull",
@@ -527,14 +533,21 @@ class BalorDevice(Service, ViewPort):
                     yield points[b % len(points)]
                 pos -= steps
 
-        @self.console_option("q", "quantization", default=200, help="Number of segments to break each path into.")
+        @self.console_option(
+            "q",
+            "quantization",
+            default=200,
+            help="Number of segments to break each path into.",
+        )
         @self.console_command(
             "ants",
             help=_("Marching ants of the given element path."),
             input_type=(None, "elements"),
             output_type="elements",
         )
-        def element_ants(command, channel, _, data=None, quantization=200, args=tuple(), **kwargs):
+        def element_ants(
+            command, channel, _, data=None, quantization=200, args=tuple(), **kwargs
+        ):
             """
             Draws an outline of the current shape.
             """
@@ -551,7 +564,7 @@ class BalorDevice(Service, ViewPort):
                     x *= self.get_native_scale_x
                     y *= self.get_native_scale_y
                     points.append((x, y))
-                points_list.append(list(ant_points(points, int(quantization/10))))
+                points_list.append(list(ant_points(points, int(quantization / 10))))
             return "elements", [Polygon(*p) for p in points_list]
 
         @self.console_option(
