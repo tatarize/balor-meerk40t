@@ -1,4 +1,4 @@
-import math
+from math import ceil
 import numpy as np
 
 import sys
@@ -433,6 +433,35 @@ class CommandList:
     def __bytes__(self):
         return bytes(self.serialize())
 
+    def packet_generator(self):
+        """
+        Performs final operations before packets on the fly
+
+        :return:
+        """
+        last_xy = self._start_x, self._start_y
+
+        # Write buffer.
+        buf = bytearray([0] * 0xC00)  # Create a packet.
+        eol = bytes([0x02, 0x80] + [0] * 10) # End of Line Command
+        i = 0
+        for op in self.operations:
+            if op.has_d():
+                nx, ny = op.get_xy()
+                x, y = last_xy
+                op.set_d(int(((nx - x) ** 2 + (ny - y) ** 2) ** 0.5))
+
+            if op.has_xy():
+                last_xy = op.get_xy()
+            buf[i : i + 12] = op.serialize()
+            i += 12
+            if i >= 0xC00:
+                i = 0
+                yield buf
+        while i < 0xC00:
+            buf[i: i + 12] = eol
+        yield buf
+
     def serialize(self):
         """
         Performs final operations before creating bytearray.
@@ -451,7 +480,7 @@ class CommandList:
                 last_xy = op.get_xy()
 
         # Write buffer.
-        size = 256 * int(round(math.ceil(len(self.operations) / 256.0)))
+        size = 256 * int(round(ceil(len(self.operations) / 256.0)))
         buf = bytearray(([0x02, 0x80] + [0] * 10) * size)  # Create buffer full of NOP
         i = 0
         for op in self.operations:

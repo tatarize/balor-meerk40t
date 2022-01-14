@@ -272,7 +272,7 @@ class BalorDriver:
         return False
 
     def balor_job(self, job):
-        self.connection.send_data(bytes(job))
+        self.connection.send_data(job.packet_generator())
 
     def laser_off(self, *values):
         """
@@ -314,11 +314,11 @@ class BalorDriver:
         @return:
         """
         self.connection.WritePort(0x100)
-        self.connection.send_data(job.serialize())
+        self.connection.send_data(job.packet_generator())
 
     def light_data(self, job):
         self.connection.WritePort(0x100)
-        self.connection.send_data(job)
+        self.connection.send_data(job.packet_generator())
 
     def plot_start(self):
         """
@@ -326,9 +326,9 @@ class BalorDriver:
 
         :return:
         """
-        mark_job = self.cutcode_to_mark_job(self.queue)
+        job = self.cutcode_to_mark_job(self.queue)
         self.queue = []
-        self.connection.send_data(mark_job.serialize())
+        self.connection.send_data(job.packet_generator())
 
     def move_abs(self, x, y):
         """
@@ -384,7 +384,7 @@ class BalorDriver:
         :return:
         """
         if data_type == "balor":
-            self.connection.send_data(data.serialize())
+            self.connection.send_data(data.packet_generator())
 
     def set(self, attribute, value):
         """
