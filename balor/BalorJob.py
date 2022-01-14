@@ -486,6 +486,22 @@ class Job:
             op.bind(self)
         self.operations.extend(x)
 
+    def set_travel_speed(self, speed):
+        converted = int(round(speed / 2.0))  # units are 2mm/sec
+        self.append(OpJumpSpeed(converted))
+
+    def set_cut_speed(self, speed):
+        converted = int(round(speed / 2.0))
+        self.append(OpMarkSpeed(converted))
+
+    def set_laser_power(self, power):
+        converted = int(round(power * 40.95))
+        self.append(MarkPowerRatio(converted))
+
+    def set_q_switch_period(self, frequency):
+        q_switch_period = int(round(1.0 / (frequency * 1e3) / 50e-9))
+        self.append(OpSetQSwitchPeriod(q_switch_period))
+
     def get_operations(self):
         return self.operations
 
