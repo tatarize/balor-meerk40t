@@ -73,7 +73,7 @@ class GalvoConnection:
             self.usb = GalvoUsb(service.channel("galvo-usb"))
         self.connected = False
 
-    def send_data(self, data):
+    def send_data_perpacket(self, data):
         """
         Send sliced packets
 
@@ -90,7 +90,7 @@ class GalvoConnection:
         # if you want this to block until the laser is done, uncomment next line
         self._wait_for_status_bits(query=GetVersion, wait_high=0x20, wait_low=0x04)
 
-    def send_data_old(self, data):
+    def send_data(self, data):
         """
         Send sliced packets
 
@@ -99,9 +99,7 @@ class GalvoConnection:
         """
         self.send_command(ResetList)
         self._wait_for_status_bits(query=GetVersion, wait_high=0x20)
-        while len(data) >= 0xC00:
-            packet = data[:0xC00]
-            data = data[0xC00:]
+        for packet in data:
             self._send_packet(packet)
         self.send_command(SetEndOfList)
         self._wait_for_status_bits(query=ReadPort, wait_high=0x20)
