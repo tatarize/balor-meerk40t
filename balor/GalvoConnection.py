@@ -105,7 +105,7 @@ class GalvoConnection:
         self._wait_for_status_bits(query=ReadPort, wait_high=0x20)
         self.send_command(ExecuteList)
         # if you want this to block until the laser is done, uncomment next line
-        self._wait_for_status_bits(query=GetVersion, wait_high=0x20, wait_low=0x04)
+        # self._wait_for_status_bits(query=GetVersion, wait_high=0x20, wait_low=0x04)
 
     def _send_packet(self, packet):
         """
