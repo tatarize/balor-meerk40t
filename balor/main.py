@@ -16,7 +16,7 @@ from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon
 
 import balor
 from balor.GalvoConnection import GotoXY
-from balor.BalorJob import Job
+from balor.BalorJob import CommandList
 from balor.BalorDriver import BalorDriver
 
 import numpy as np
@@ -308,7 +308,6 @@ class BalorDevice(Service, ViewPort):
         def balor_loop(command, channel, _, data=None, remainder=None, **kwgs):
             self.driver.connection.WritePort(0x0100)
             channel("Looping job: {job}".format(job=str(data)))
-            data.calculate_distances()
             self.spooler.set_idle(("light", data))
             return "balor", data
 
@@ -631,7 +630,7 @@ class BalorDevice(Service, ViewPort):
                 gsmin = grayscale_min
                 gsmax = grayscale_max
                 gsslope = (gsmax - gsmin) / 256.0
-            job = balor.BalorJob.Job()
+            job = balor.BalorJob.CommandList()
             cal = balor.Cal.Cal(self.calibration_file)
             job.cal = cal
 
@@ -723,7 +722,6 @@ class BalorDevice(Service, ViewPort):
                 if not (count % 20):
                     print("\ty = %.3f" % y, file=sys.stderr)
 
-            job.calculate_distances()
             return "balor", [job.serialize()]
 
     @property

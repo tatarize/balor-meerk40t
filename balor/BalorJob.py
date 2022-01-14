@@ -388,7 +388,7 @@ def OperationFactory(code, tracking=None, position=0):
     return OpClass(from_binary=code, tracking=tracking, position=position)
 
 
-class Job:
+class CommandList:
     def __init__(self, machine=None, x=0x8000, y=0x8000, cal=None):
         self.machine = machine
         self.cal = cal
@@ -510,7 +510,7 @@ class Job:
         """
         if not self._ready:
             self._ready = True
-            self.append(OpReadyMark)
+            self.append(OpReadyMark())
 
     def laser_control(self, control):
         """

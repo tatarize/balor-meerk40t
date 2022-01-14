@@ -108,7 +108,7 @@ class BalorDriver:
         """
 
         import balor
-        job = balor.BalorJob.Job(cal=balor.Cal.Cal(self.service.calibration_file))
+        job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
         job.set_travel_speed(self.service.travel_speed)
         for plot in queue:
             start = plot.start()
@@ -136,7 +136,7 @@ class BalorDriver:
         @return:
         """
         import balor
-        job = balor.BalorJob.Job(cal=balor.Cal.Cal(self.service.calibration_file))
+        job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
         job.set_mark_settings(
             travel_speed=self.service.travel_speed,
             power=self.service.laser_power,
@@ -171,7 +171,7 @@ class BalorDriver:
         :return:
         """
         import balor
-        job = balor.BalorJob.Job(cal=balor.Cal.Cal(self.service.calibration_file))
+        job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
         job.set_travel_speed(self.service.travel_speed)
 
         for e in paths:
@@ -198,7 +198,7 @@ class BalorDriver:
         @return:
         """
         import balor
-        job = balor.BalorJob.Job(cal=balor.Cal.Cal(self.service.calibration_file))
+        job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
         job.set_mark_settings(
             travel_speed=self.service.travel_speed,
             laser_power=self.service.laser_power,
