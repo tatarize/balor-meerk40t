@@ -534,12 +534,12 @@ class BalorDevice(Service, ViewPort):
                 for f in range(pos, pos + forward_steps, 1):
                     index = f % size
                     point = points[index]
-                    yield tuple(point)
+                    yield point
                 pos += forward_steps
                 for f in range(pos, pos - steps, -1):
                     index = f % size
                     point = points[index]
-                    yield tuple(point)
+                    yield point
                 pos -= steps
 
         @self.console_option(
