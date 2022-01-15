@@ -45,7 +45,7 @@ for p in points:
 
 from datetime import datetime
 
-sender = Sender(mock=True, debug=print)
+sender = Sender()
 sender.open()
 
 desired_width = 20000
@@ -69,16 +69,6 @@ def tick(cmds, loop_index):
             cmds.light(int(pt[0] + start) , int(pt[1] + 0x8000))
         typeset_max_x = max(typeset_digit[0, :])
         start += typeset_max_x
-
-
-    # from PIL import Image, ImageDraw
-    #
-    # cmds.scale_x = 1.0
-    # cmds.scale_y = 1.0
-    # cmds.size = "decagalvo"
-    # im = Image.new('RGB', (0xFFF, 0xFFF), color=0)
-    # cmds.plot(ImageDraw.Draw(im), 0xFFF)
-    # im.save("myfile.png", format='png')
 
 job = sender.job(tick=tick)
 job.execute(1000)
