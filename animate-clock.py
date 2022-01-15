@@ -1,7 +1,6 @@
 import numpy as np
 from datetime import datetime
 from svgelements import Path
-from balor.MSBF import CommandList
 from balor.sender import Sender
 
 
@@ -43,8 +42,8 @@ for p in points:
     qx = max(q[:, 1])
     q[:, 1] -= (qm + qx) / 2.0
 
-sender = Sender()
-# sender = Sender(debug=print, mock=True)
+# sender = Sender()
+sender = Sender(debug=print, mock=True)
 sender.open()
 
 desired_width = 20000
@@ -72,6 +71,7 @@ def tick(cmds, loop_index):
         start += typeset_max_x * scaling
         # print(start)
 
+    # from balor.MSBF import CommandList
     # c = CommandList()
     # for packet in cmds.packet_generator():
     #     c.add_packet(packet)

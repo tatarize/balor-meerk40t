@@ -30,11 +30,11 @@ class BalorDataValidityException(BalorException): pass
 DISABLE_LASER          = 0x0002
 RESET                  = 0x0003 # Corresponding list command is "LaserOnPoint"
                                 # Does it refer to the red dot aiming laser?
+ENABLE_LASER           = 0x0004
+EXECUTE_LIST           = 0x0005
 SET_PWM_PULSE_WIDTH    = 0x0006 # Might set travel/jog speed
 GET_REGISTER           = 0x0007
 GET_SERIAL_NUMBER      = 0x0009 # In EzCAD mine is 32012LI43405B, Version 4.02, LMC V4 FIB
-ENABLE_LASER           = 0x0004
-EXECUTE_LIST           = 0x0005
 GET_LIST_STATUS        = 0x000A
 GET_XY_POSITION        = 0x000C # Get current galvo position
 SET_XY_POSITION        = 0x000D # Travel the galvo xy to specified position
