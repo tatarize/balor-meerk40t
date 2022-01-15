@@ -266,6 +266,20 @@ class BalorDevice(Service, ViewPort):
                 print(d)
             return "balor", data
 
+        @self.console_argument("filename", type=str, default="balor.png")
+        @self.console_command(
+            "png",
+            help=_("save image of balor write data"),
+            input_type="balor",
+            output_type="balor",
+        )
+        def balor_png(command, channel, _, data=None, filename="balor.png", **kwargs):
+            from PIL import Image, ImageDraw
+            im = Image.new('RGB', (0xFFFF, 0xFFFF), color=0)
+            data.plot(ImageDraw.Draw(im), 0xFFFF)
+            im.save(filename, format='png')
+            return "balor", data
+
         @self.console_argument("filename", type=str, default="balor.bin")
         @self.console_command(
             "save",
