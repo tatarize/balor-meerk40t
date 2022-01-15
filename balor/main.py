@@ -527,10 +527,12 @@ class BalorDevice(Service, ViewPort):
 
         def ant_points(points, steps):
             points = list(points)
-            forward_steps = steps + 1 + int(steps / 10)
+            movement = 1 + int(steps / 10)
+            forward_steps = steps + movement
             pos = 0
             size = len(points)
-            for cycles in range(100):
+            cycles = int(size / movement) + 1
+            for cycle in range(cycles):
                 for f in range(pos, pos + forward_steps, 1):
                     index = f % size
                     point = points[index]
