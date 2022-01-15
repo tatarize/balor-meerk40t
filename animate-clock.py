@@ -71,14 +71,14 @@ def tick(cmds, loop_index):
         start += typeset_max_x
 
 
-    from PIL import Image, ImageDraw
-
-    cmds.scale_x = 1.0
-    cmds.scale_y = 1.0
-    cmds.size = "decagalvo"
-    im = Image.new('RGB', (0xFFF, 0xFFF), color=0)
-    cmds.plot(ImageDraw.Draw(im), 0xFFF)
-    im.save("myfile.png", format='png')
+    # from PIL import Image, ImageDraw
+    #
+    # cmds.scale_x = 1.0
+    # cmds.scale_y = 1.0
+    # cmds.size = "decagalvo"
+    # im = Image.new('RGB', (0xFFF, 0xFFF), color=0)
+    # cmds.plot(ImageDraw.Draw(im), 0xFFF)
+    # im.save("myfile.png", format='png')
 
 job = sender.job(tick=tick)
 job.execute(1000)
