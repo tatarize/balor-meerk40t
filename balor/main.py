@@ -230,6 +230,7 @@ class BalorDevice(Service, ViewPort):
         def stoplight(command, channel, _, data=None, remainder=None, **kwgs):
             channel("Stopping idle job")
             self.spooler.set_idle(None)
+            self.driver.connection.StopList()
             self.driver.connection.WritePort()
 
         @self.console_command(
