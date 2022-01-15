@@ -506,8 +506,8 @@ class BalorDevice(Service, ViewPort):
             pts = []
             for obj in data:
                 if isinstance(obj, Shape):
-                    obj = Path(obj)
-                if isinstance(obj, Path):
+                    if not isinstance(obj, Path):
+                        obj = Path(obj)
                     epath = abs(obj)
                     pts += [q for q in epath.as_points()]
                 elif isinstance(obj, SVGImage):
