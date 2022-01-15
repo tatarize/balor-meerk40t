@@ -1,5 +1,9 @@
 import math
 
+import numpy as np
+
+import sys
+
 
 class Simulation:
     def __init__(self, job, machine, draw, resolution):
@@ -44,11 +48,6 @@ class Simulation:
         #    self.scale*x, self.scale*y),
         #    fill=(cm//2,cm//2,cm//2, 64), width=1)
         self.x, self.y = x, y
-
-
-import numpy as np
-
-import sys
 
 
 class Operation:
@@ -306,6 +305,34 @@ class OpBeginJob(Operation):
         return "Begin job"
 
 
+# TODO: 0x801A FlyEnable
+# TODO: 0x800A Mark Frequency (use differs by machine)
+# TODO: 0x800B Mark Pulse Width (use differs by machine
+# TODO: 0x8011 listWritrPort
+# TODO: 0x801C Direct Laser Switch
+# TODO: 0x801D Fly Delay
+# TODO: 0x801E SetCo2FPK
+# TODO: 0x801F Fly Wait Input
+# TODO: 0x8023 CHANGE MARK COUNT
+# TODO: 0x8024: SetWeldPowerWave
+# TODO: 0x8025 Enable Weld Power Wave
+# TODO: 0x8026 IPGYLPMPulseWidth, SetConfigExtend
+# TODO: 0x8028 Fly Encoder Count
+# TODO: 0x8029: SetDaZWord
+
+
+OpReadyMark = OpBeginJob
+MarkPowerRatio = OpSetLaserPower
+OpJumpSpeed = OpSetTravelSpeed
+OpMarkSpeed = OpSetCutSpeed
+OpLaserOnDelay = OpSetLaserOnTimeComp
+OpLaserOffDelay = OpSetLaserOffTimeComp
+OpJumpCalibration = OpMystery0D
+OpMarkTo = OpCut
+OpJumpTo = OpTravel
+OpMarkEndDelay = OpWait
+
+
 all_operations = [OpBeginJob, OpLaserControl, OpSetQSwitchPeriod, OpCut,
                   OpSetLaserPower, OpSetMystery0F, OpMystery0D, OpSetCutSpeed,
                   OpSetLaserOffTimeComp, OpSetLaserOnTimeComp, OpSetTravelSpeed,
@@ -320,164 +347,6 @@ def OperationFactory(code, tracking=None, position=0):
     OpClass = operations_by_opcode.get(opcode, Operation)
     return OpClass(from_binary=code, tracking=tracking, position=position)
 
-
-class Job:
-    def __init__(self, machine=None):
-        self.machine = machine
-        self.x_scale = 1
-        self.y_scale = 1
-        self.scale_unit = ''
-        self.operations = []
-
-    def get_scale(self):
-        return self.x_scale, self.y_scale, self.scale_unit
-
-    def clear_operations(self):
-        self.operations = []
-
-    def get_position(self):
-        return len(self.operations) - 1
-
-    def duplicate(self, begin, end, repeats=1):
-        for _ in range(repeats):
-            self.operations.extend(self.operations[begin:end])
-
-    def __iter__(self):
-        return iter(self.operations)
-
-    def add_light_prefix(self, travel_speed):
-        self.extend([OpBeginJob(),
-                     OpSetTravelSpeed(travel_speed),
-                     # OpMystery0D(0x0008)
-                     ])
-
-    def line(self, x0, y0, x1, y1, seg_size=5, Op=OpCut):
-        length = ((x0 - x1) ** 2 + (y0 - y1) ** 2) ** 0.5
-        segs = max(2, int(round(length / seg_size)))
-        # print ("**", x0, y0, x1, y1, length, segs, file=sys.stderr)
-
-        xs = np.linspace(x0, x1, segs)
-        ys = np.linspace(y0, y1, segs)
-
-        for n in range(segs):
-            # print ("*", xs[n], ys[n], file=sys.stderr)
-            self.append(Op(*self.cal.interpolate(xs[n], ys[n])))
-
-    def change_q_switch_frequency(self, q_switch_frequency):
-        q_switch_period = int(round(1.0 / (q_switch_frequency * 1e3) / 50e-9))
-        self.append(OpSetQSwitchPeriod(q_switch_period))
-
-    def change_laser_power(self, percent_power):
-        laser_power = int(round(percent_power * 40.95))
-        self.append(OpSetLaserPower(laser_power))
-
-    def change_cut_speed(self, speed_mmps):
-        cut_speed = int(round(speed_mmps / 2.0))
-        self.append(OpSetCutSpeed(cut_speed))
-
-    def change_travel_speed(self, speed_mmps):
-        travel_speed = int(round(speed_mmps / 2.0))
-        self.append(OpSetTravelSpeed(travel_speed))
-
-    def change_settings(self, q_switch_period, laser_power, cut_speed):
-        self.extend([
-            OpSetQSwitchPeriod(q_switch_period),
-            OpSetLaserPower(laser_power),
-            OpSetCutSpeed(cut_speed),
-            # OpMystery0D(0x0008),
-        ])
-
-    # self.settings[color] = (q_switch_period, laser_power, cut_speed, hatch_angle,
-    #                hatch_spacing, hatch_pattern, repeats)
-
-    def add_mark_prefix(self, travel_speed, q_switch_period,
-                        laser_power, cut_speed):
-        self.extend([
-            OpBeginJob(),
-            OpSetQSwitchPeriod(q_switch_period),
-            OpSetLaserPower(laser_power),
-            OpSetTravelSpeed(travel_speed),
-            OpSetCutSpeed(cut_speed),
-            OpSetLaserOnTimeComp(0x0064, 0x8000),
-            OpSetLaserOffTimeComp(0x0064),
-            OpSetMystery0F(0x000A),
-            # OpMystery0D(0x0008),
-        ])
-
-    def laser_control(self, on):
-        if on:
-            self.extend([
-                OpLaserControl(0x0001),
-                OpWait(0x0320),
-            ])
-        else:
-            self.extend([
-                OpWait(0x001E),
-                OpLaserControl(0x0000),
-            ])
-
-    def plot(self, draw, resolution=2048):
-        sim = Simulation(self, self.machine, draw, resolution)
-        for op in self.operations:
-            sim.simulate(op)
-
-    def set_scale(self, x=1, y=1, unit=''):
-        self.x_scale = x
-        self.y_scale = y
-        self.scale_unit = unit
-
-    def append(self, x):
-        x.bind(self)
-        self.operations.append(x)
-
-    def extend(self, x):
-        for op in x: op.bind(self)
-        self.operations.extend(x)
-
-    def get_operations(self):
-        return self.operations
-
-    def add_packet(self, data, tracking=None):
-        # Parse MSBF data and add it as operations
-        i = 0
-        while i < len(data):
-            command = data[i:i + 12]
-            op = OperationFactory(command, tracking=tracking, position=i)
-            op.bind(self)
-            self.operations.append(op)
-            i += 12
-
-    def serialize(self):
-        size = 256 * int(round(math.ceil(len(self.operations) / 256.0)))
-        buf = bytearray(([0x02, 0x80] + [0] * 10) * size)  # Create buffer full of NOP
-        i = 0
-        for op in self.operations:
-            buf[i:i + 12] = op.serialize()
-            i += 12
-        return buf
-
-    def calculate_distances(self):
-        last_xy = 0x8000, 0x8000
-        for op in self.operations:
-            if op.has_d():
-                nx, ny = op.get_xy()
-                x, y = last_xy
-                op.set_d(int(((nx - x) ** 2 + (ny - y) ** 2) ** 0.5))
-
-            if op.has_xy():
-                last_xy = op.get_xy()
-
-
-OpReadyMark = OpBeginJob
-MarkPowerRatio = OpSetLaserPower
-OpJumpSpeed = OpSetTravelSpeed
-OpMarkSpeed = OpSetCutSpeed
-OpLaserOnDelay = OpSetLaserOnTimeComp
-OpLaserOffDelay = OpSetLaserOffTimeComp
-OpJumpCalibration = OpMystery0D
-OpMarkTo = OpCut
-OpJumpTo = OpTravel
-OpMarkEndDelay = OpWait
 
 class CommandList:
     def __init__(self, machine=None, x=0x8000, y=0x8000, cal=None):
@@ -847,10 +716,4 @@ class CommandList:
     def serialize_to_file(self, file):
         with open(file, "wb") as out_file:
             out_file.write(self.serialize())
-
-
-def JobFactory(machine_name):
-    # This is currently just a stub since we don't support any 
-    # incompatible machines
-    return Job(machine=machine_name)
 
