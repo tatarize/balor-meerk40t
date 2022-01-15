@@ -30,8 +30,7 @@ class BalorDataValidityException(BalorException): pass
 DISABLE_LASER          = 0x0002
 RESET                  = 0x0003 # Corresponding list command is "LaserOnPoint"
                                 # Does it refer to the red dot aiming laser?
-SET_06                 = 0x0006 # Might set travel/jog speed
-SET_PWM_PULSE_WIDTH    = 0x0006
+SET_PWM_PULSE_WIDTH    = 0x0006 # Might set travel/jog speed
 GET_REGISTER           = 0x0007
 GET_SERIAL_NUMBER      = 0x0009 # In EzCAD mine is 32012LI43405B, Version 4.02, LMC V4 FIB
 ENABLE_LASER           = 0x0004
@@ -74,23 +73,21 @@ SET_FPK_2E             = 0x002E # First pulse killer related, SetFpkParam2
 IPG_CONFIG_1           = 0x002F
 IPG_CONFIG_2           = 0x0030
 LOCK_INPUT_PORT        = 0x0031
-SET_FIBER_32           = 0x0032 # Unknown fiber laser parameter being set
+SET_FLY_RES            = 0x0032 # Unknown fiber laser parameter being set
                                 # EzCad sets it: 0x0000, 0x0063, 0x03E8, 0x0019
-FIBER_33               = 0x0033 # "IPG (i.e. fiber) Open MO" - MO is probably Master Oscillator
+IPG_OPEN_MO            = 0x0033 # "IPG (i.e. fiber) Open MO" - MO is probably Master Oscillator
                                 # (In BJJCZ documentation, the pin 18 on the IPG connector is 
                                 #  called "main oscillator"; on the raycus docs it is "emission enable.")
                                 # Seen at end of marking operation with all
                                 # zero parameters. My Ezcad has an "open MO delay"
                                 # of 8 ms
-IPG_OPEN_MO            = 0x0033
-GET_FIBER_34           = 0x0034 # Unclear what this means; there is no
+IPG_GET_StMO_AP         = 0x0034 # Unclear what this means; there is no
                                 # corresponding list command. It might be to
                                 # get a status register related to the source.
                                 # It is called IPG_GETStMO_AP in the dll, and the abbreviations
                                 # MO and AP are used for the master oscillator and power amplifier 
                                 # signal lines in BJJCZ documentation for the board; LASERST is 
                                 # the name given to the error code lines on the IPG connector.
-IPG_GET_StMO_AP        = 0x0034
 GET_USER_DATA          = 0x0036
 ENABLE_Z_2             = 0x0039
 GET_FLY_SPEED          = 0x0038
@@ -98,8 +95,8 @@ ENABLE_Z               = 0x003A # Probably fiber laser related
 SETZDATA               = 0x003B
 SET_SPI_SIMMER_CURRENT = 0x003C
 IS_LITE_VERSION        = 0x0040
-UNKNOWN_41             = 0x0041 # Seen at end of cutting with param 0x0003
-GET_MARK_TIME          = 0x0041
+GET_MARK_TIME          = 0x0041 # Seen at end of cutting with param 0x0003
+                                # Only and always called with param 3
 SET_FPK_PARAM          = 0x0062  # Probably "first pulse killer" = fpk
 # fmt: on
 
@@ -170,7 +167,7 @@ class Sender:
         """Initialize the machine."""
         self.serial_number = self.raw_get_serial_no()
         self.version = self.raw_get_version()
-        self._usb_connection.send_command(GET_FIBER_34)
+        self._usb_connection.send_command(IPG_GET_StMO_AP)
 
         self.raw_reset()
 
@@ -198,7 +195,7 @@ class Sender:
         self.raw_set_fpk_param_2(0xFFB, 1, 409, 100)
 
         # Unknown fiber laser related command
-        self._send_command(SET_FIBER_32, 0, 99, 1000, 25)
+        self._send_command(SET_FLY_RES, 0, 99, 1000, 25)
 
         # Is this appropriate for all laser engraver machines?
         self.raw_write_port(0)
@@ -685,6 +682,21 @@ class Sender:
         :return: flywaitcount?
         """
         return self._send_command(GET_FLY_WAIT_COUNT, int(b1))
+
+    def raw_set_fly_res(self, p1, p2, p3, p4, p5):
+        """
+        5 parameter
+        Appears to use a different command call to all 5 operands
+
+        :param p1:
+        :param p2:
+        :param p3:
+        :param p4:
+        :param p5:
+        :return:
+        """
+        return self._send_command(SET_FLY_RES, p1, p2, p3, p4, p5)
+
 
     def raw_get_mark_count(self, p1: bool):
         """
