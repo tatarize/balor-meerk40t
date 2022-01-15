@@ -775,6 +775,7 @@ class CommandList:
             self.append(OpWritePort(0x100))
         else:
             self.append(OpWritePort(0))
+        self._light = on
 
     def set_laser_on_delay(self, *args):
         # TODO: WEAK IMPLEMENTATION
@@ -866,8 +867,8 @@ class CommandList:
             raise ValueError("Travel speed must be set before a jumping")
         self._last_x = x
         self._last_y = y
-        if light and not self._light:
-            self.set_light(True)
+        if light != self._light:
+            self.set_light(light)
         if calibration is not None:
             self.jump_calibration(calibration)
         self.append(OpTravel(*self.pos(x, y)))
