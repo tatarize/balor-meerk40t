@@ -1,7 +1,9 @@
-from svgelements import Path
-
-from balor.sender import Sender
 import numpy as np
+from datetime import datetime
+from svgelements import Path
+from balor.MSBF import CommandList
+from balor.sender import Sender
+
 
 digits = [
     Path('M25.97 -7.15C26.13 -2.03 21.72 0.09 20.79 0.0C20.79 0.0 11.42 0.0 11.42 0.0C5.47 -0.22 5.0 -4.62 5.0 -4.62C5.0 -4.62 5.49 -27.98 5.49 -27.98C5.94 -32.96 13.25 -32.97 13.25 -32.97C13.25 -32.97 21.87 -32.92 21.87 -32.92C22.61 -33.01 26.14 -31.69 25.95 -28.39C25.95 -28.39 25.97 -7.15 25.97 -7.15'),
@@ -41,21 +43,12 @@ for p in points:
     qx = max(q[:, 1])
     q[:, 1] -= (qm + qx) / 2.0
 
-for p in points:
-    q = points[p]
-    qm = min(q[:, 0])
-    qx = max(q[:, 0])
-    print(qm, qx)
-    qm = min(q[:, 1])
-    qx = max(q[:, 1])
-    print(qm, qx)
-
-from datetime import datetime
-
 sender = Sender()
+# sender = Sender(debug=print, mock=True)
 sender.open()
 
 desired_width = 20000
+
 
 def tick(cmds, loop_index):
     cmds.clear()
@@ -72,11 +65,13 @@ def tick(cmds, loop_index):
         pts = points[digit]
         typeset_digit = pts
         cmds.goto(int(typeset_digit[0][0]*scaling + start), int(typeset_digit[0][1]*scaling + 0x8000), calibration=8)
+
         for pt in typeset_digit:
             cmds.light(int(pt[0]*scaling + start) , int(pt[1]*scaling + 0x8000))
         typeset_max_x = max(typeset_digit[0, :]) - min(typeset_digit[0, :])
         start += typeset_max_x * scaling
         # print(start)
+
     # c = CommandList()
     # for packet in cmds.packet_generator():
     #     c.add_packet(packet)
