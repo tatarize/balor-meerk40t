@@ -579,6 +579,7 @@ class BalorDevice(Service, ViewPort):
             "quantization",
             "q",
             default=200,
+            type=int,
             help="Number of segments to break each path into.",
         )
         @self.console_command(

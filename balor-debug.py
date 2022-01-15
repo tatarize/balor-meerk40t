@@ -13,10 +13,6 @@ NOTE: This software is EXPERIMENTAL and has only been tested with a
 single machine. There are many different laser engraving machines 
 and the fact that they look the same, or even have the same markings,
 is not proof that they are really the same.''')
-parser.add_argument('-m', '--machine', 
-        help=("specify which machine protocol to use. Valid machines: "
-            +', '.join([x.__name__ for x in balor.all_known_machines])), 
-        default="BJJCZ_LMCV4_FIBER_M")
 
 parser.add_argument('-f', '--file', 
     help="file to load, in the machine-specific binary format (default stdin)",
@@ -95,7 +91,7 @@ else:
         input_data.append((0.0, 2, 0, packet))
 
 import balor.MSBF
-job = balor.MSBF.JobFactory(args.machine)
+job = balor.MSBF.Job()
 
 if args.size:
     job.set_scale(float(args.size)/0x10000,float(args.size)/0x10000,
