@@ -89,8 +89,8 @@ IPG_GET_StMO_AP         = 0x0034 # Unclear what this means; there is no
                                 # signal lines in BJJCZ documentation for the board; LASERST is 
                                 # the name given to the error code lines on the IPG connector.
 GET_USER_DATA          = 0x0036
-ENABLE_Z_2             = 0x0039
 GET_FLY_SPEED          = 0x0038
+ENABLE_Z_2             = 0x0039
 ENABLE_Z               = 0x003A # Probably fiber laser related
 SETZDATA               = 0x003B
 SET_SPI_SIMMER_CURRENT = 0x003C
