@@ -768,13 +768,13 @@ class CommandList:
         self.append(OpSetQSwitchPeriod(self.convert_frequency(frequency)))
 
     def set_light(self, on):
-        # TODO: WEAK IMPLEMENTATION
         if self._light == on:
             return
         self.ready()
-        # In theory WriterPort(0x100) maybe should turn the light on if it isn't on.
-        # More research needed.
-        pass
+        if on:
+            self.append(OpWritePort(0x100))
+        else:
+            self.append(OpWritePort(0))
 
     def set_laser_on_delay(self, *args):
         # TODO: WEAK IMPLEMENTATION
