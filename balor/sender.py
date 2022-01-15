@@ -315,7 +315,7 @@ class Sender:
 
     def read_port(self):
         port = self.raw_read_port()
-        if port & 0x8000 and self._footswitch_callback:
+        if port[0] & 0x8000 and self._footswitch_callback:
             callback = self._footswitch_callback
             self._footswitch_callback = None
             callback(port)
@@ -913,7 +913,7 @@ class UsbConnection:
             self.status = response[6] | (response[7] << 8)
             return response[2] | (response[3] << 8), response[4] | (response[5] << 8)
         else:
-            return 0
+            return 0, 0
 
     def send_list_chunk(self, data):
         """Send a command list chunk to the machine."""
@@ -958,7 +958,7 @@ class MockConnection:
             self._debug("---> " + str(code) + " " + str(parameters))
         time.sleep(0.05)
         import random
-        return random.randint(0, 255)
+        return random.randint(0, 255), random.randint(0, 255)
 
     def send_list_chunk(self, data):
         """Send a command list chunk to the machine."""
