@@ -1,6 +1,5 @@
 from svgelements import Path
 
-from balor.MSBF import CommandList
 from balor.sender import Sender
 import numpy as np
 
@@ -53,7 +52,7 @@ for p in points:
 
 from datetime import datetime
 
-sender = Sender(mock=True)
+sender = Sender()
 sender.open()
 
 desired_width = 20000
@@ -77,7 +76,7 @@ def tick(cmds, loop_index):
             cmds.light(int(pt[0]*scaling + start) , int(pt[1]*scaling + 0x8000))
         typeset_max_x = max(typeset_digit[0, :]) - min(typeset_digit[0, :])
         start += typeset_max_x * scaling
-        print(start)
+        # print(start)
     # c = CommandList()
     # for packet in cmds.packet_generator():
     #     c.add_packet(packet)
