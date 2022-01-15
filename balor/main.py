@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw
 
 from meerk40t.core.cutcode import LaserSettings, LineCut, CutCode, QuadCut, RasterCut
 from meerk40t.core.elements import LaserOperation
-from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon
+from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape
 
 import balor
 from balor.GalvoConnection import GotoXY
@@ -505,6 +505,8 @@ class BalorDevice(Service, ViewPort):
                 data = list(self.elements.elems(emphasized=True))
             pts = []
             for obj in data:
+                if isinstance(obj, Shape):
+                    obj = Path(obj)
                 if isinstance(obj, Path):
                     epath = abs(obj)
                     pts += [q for q in epath.as_points()]
