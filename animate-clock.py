@@ -1,5 +1,6 @@
 from svgelements import Path
 
+from balor.MSBF import CommandList
 from balor.sender import Sender
 import numpy as np
 
@@ -45,7 +46,7 @@ for p in points:
 
 from datetime import datetime
 
-sender = Sender()
+sender = Sender(mock=True)
 sender.open()
 
 desired_width = 20000
@@ -54,7 +55,7 @@ def tick(cmds, loop_index):
     cmds.clear()
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
-    job.set_travel_speed(2000)
+    job.set_travel_speed(500)
     total_width = 0
     for digit in current_time:
         pts = points[digit]
@@ -64,11 +65,18 @@ def tick(cmds, loop_index):
     for digit in current_time:
         pts = points[digit]
         typeset_digit = pts * scaling
-        cmds.goto(int(typeset_digit[0][0] + start), int(typeset_digit[0][1] + 0x8000))
+        cmds.goto(int(typeset_digit[0][0] + start), int(typeset_digit[0][1] + 0x8000), calibration=8)
         for pt in typeset_digit:
             cmds.light(int(pt[0] + start) , int(pt[1] + 0x8000))
         typeset_max_x = max(typeset_digit[0, :])
         start += typeset_max_x
+    # c = CommandList()
+    # for packet in cmds.packet_generator():
+    #     c.add_packet(packet)
+    # c.set_scale_x = 1.0
+    # c.set_scale_y = 1.0
+    # for operation in c:
+    #     print(operation.text_debug(show_tracking=True))
 
 job = sender.job(tick=tick)
 job.execute(1000)

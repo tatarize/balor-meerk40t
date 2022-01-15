@@ -569,9 +569,16 @@ class CommandList:
         self._mark_end_delay = None
         self._light = None
 
+        self._scale_x = 1.0
+        self._scale_y = 1.0
+        self._units = "galvo"
+
     @property
     def position(self):
         return len(self.operations) - 1
+
+    def get_scale(self):
+        return self._scale_x, self._scale_y, self._units
 
     def clear(self):
         self.operations.clear()
