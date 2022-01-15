@@ -414,6 +414,9 @@ class CommandList:
     def position(self):
         return len(self.operations) - 1
 
+    def get_scale(self):
+        return 1.0, 1.0, "galvo"
+
     def duplicate(self, begin, end, repeats=1):
         for _ in range(repeats):
             self.operations.extend(self.operations[begin:end])

@@ -280,6 +280,16 @@ class BalorDevice(Service, ViewPort):
             im.save(filename, format='png')
             return "balor", data
 
+        @self.console_command(
+            "debug",
+            help=_("debug balor job block"),
+            input_type="balor",
+            output_type="balor",
+        )
+        def balor_debug(command, channel, _, data=None,**kwargs):
+            for operation in data:
+                print(operation.text_debug(show_tracking=True))
+
         @self.console_argument("filename", type=str, default="balor.bin")
         @self.console_command(
             "save",
