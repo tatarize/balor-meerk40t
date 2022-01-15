@@ -106,7 +106,6 @@ class Sender:
         self._device = self._connect_device(machine_index)
         self._init_machine(cor_table)
 
-
     def _connect_device(self, machine_index=0):
         devices=list(usb.core.find(find_all=True, idVendor=0x9588, idProduct=0x9899))
         if len(devices) == 0:
@@ -221,7 +220,6 @@ class Sender:
             raise BalorCommunicationException("Invalid response")
         self._condition_register = response[6]|(response[7]<<8)
         return response[2]|(response[3]<<8), response[4]|(response[5]<<8)
-        
 
     def _send_list_chunk(self, data):
         """Send a command list chunk to the machine."""
@@ -258,43 +256,9 @@ class Sender:
         self.read_port()
         return bool(self._condition_register & 0x04)
 
-    def run_job(self, job_data):
-        """Run a job once. The function returns when the machine is finished
-           executing the job, or when the run is aborted. Returns True if the
-           job finished, False otherwise. Any existing job will be aborted."""
-
-        if self.is_busy(): 
-            self.abort()
-        while self.is_busy():
-            time.sleep(self.sleep_time)
-            if self._abort_flag:
-                self._abort()
-                return False
-
-        self._send_command(WRITE_PORT, 0x0001)
-        self._send_command(RESET_LIST)
-        self.set_xy(0x8000, 0x8000)
-
-        if not self._send_list(job_data):
-            self._abort()
-            return False
-
-        self._send_command(SET_END_OF_LIST)
-        self._send_command(EXECUTE_LIST)
-        self._send_command(SET_CONTROL_MODE, 1)
-
-        while self.is_busy():
-            if self._abort_flag:
-                self._abort()
-                return False
-            time.sleep(self.sleep_time)
-
-        return True
-
-
-    def loop_job(self, job_data, loop_count=True, 
-            callback_finished=None, prefix_job=None):
-        """Run a job repetitively. loop_count is the number of times to repeat the
+    def execute(self, job_data, loop_count=True,
+                callback_finished=None, prefix_job=None):
+        """Run a job. loop_count is the number of times to repeat the
            job; if it is True, it repeats until aborted. If there is a job
            already running, it will be aborted and replaced. Optionally,
            calls a callback function when the job is finished.
@@ -302,7 +266,7 @@ class Sender:
            run only once.
            The loop job can either be regular data in multiples of 3072 bytes, or
            it can be a callable that provides data as above on command."""
-        if self.is_busy(): 
+        if self.is_busy():
             self.abort()
         while self.is_busy():
             time.sleep(self.sleep_time)
@@ -318,7 +282,7 @@ class Sender:
             data = prefix_job if prefix_job else (job_data(loop_count) if callable(job_data) else job_data)
 
             self._send_command(RESET_LIST)
-            
+
             if not self._send_list(data):
                 self._abort()
                 return False
@@ -327,8 +291,8 @@ class Sender:
             self._send_command(EXECUTE_LIST)
             self._send_command(SET_CONTROL_MODE, 1)
 
-            while self.is_busy():# or not self.is_ready():
-                #time.sleep(self.sleep_time)
+            while self.is_busy():  # or not self.is_ready():
+                # time.sleep(self.sleep_time)
                 if self._abort_flag:
                     self._abort()
                     return False
@@ -337,11 +301,15 @@ class Sender:
             if loop_count is not True:
                 loop_count -= 1
 
-
         return True
-        
 
+    def run_job(self, job_data):
+        """Run a job once. The function returns when the machine is finished
+           executing the job, or when the run is aborted. Returns True if the
+           job finished, False otherwise. Any existing job will be aborted."""
+        return self.execute(job_data, 1)
 
+    loop_job = execute
 
     def abort(self):
         """Aborts any job in progress and puts the machine back into an
@@ -354,7 +322,6 @@ class Sender:
 
         self._abort_flag = False
         self._aborted_flag = False
-
 
     def _abort(self):
         self._send_command(RESET_LIST)
