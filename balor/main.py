@@ -275,8 +275,11 @@ class BalorDevice(Service, ViewPort):
         )
         def balor_png(command, channel, _, data=None, filename="balor.png", **kwargs):
             from PIL import Image, ImageDraw
-            im = Image.new('RGB', (0xFFFF, 0xFFFF), color=0)
-            data.plot(ImageDraw.Draw(im), 0xFFFF)
+            data.scale_x = 1.0
+            data.scale_y = 1.0
+            data.size = "decagalvo"
+            im = Image.new('RGB', (0xFFF, 0xFFF), color=0)
+            data.plot(ImageDraw.Draw(im), 0xFFF)
             im.save(filename, format='png')
             return "balor", data
 

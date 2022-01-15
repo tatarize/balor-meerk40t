@@ -433,9 +433,6 @@ class CommandList:
     def __iter__(self):
         return iter(self.operations)
 
-    def __bytes__(self):
-        return bytes(self.serialize())
-
     def packet_generator(self):
         """
         Performs final operations before packets on the fly
