@@ -597,8 +597,6 @@ class BalorDevice(Service, ViewPort):
                     e = abs(e)
                 for i in range(0, quantization + 1):
                     x, y = e.point(i / float(quantization))
-                    x *= self.get_native_scale_x
-                    y *= self.get_native_scale_y
                     points.append((x, y))
                 points_list.append(list(ant_points(points, int(quantization / 10))))
             return "elements", [Polygon(*p) for p in points_list]
