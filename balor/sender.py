@@ -28,7 +28,7 @@ class BalorDataValidityException(BalorException): pass
 
 # fmt: off
 DISABLE_LASER          = 0x0002
-UNKNOWN_03             = 0x0003 # Corresponding list command is "LaserOnPoint"
+RESET                  = 0x0003 # Corresponding list command is "LaserOnPoint"
                                 # Does it refer to the red dot aiming laser?
 SET_06                 = 0x0006 # Might set travel/jog speed
 SET_PWM_PULSE_WIDTH    = 0x0006
@@ -171,9 +171,8 @@ class Sender:
         self.serial_number = self.raw_get_serial_no()
         self.version = self.raw_get_version()
         self._usb_connection.send_command(GET_FIBER_34)
-        
-        # Unknown function
-        self._send_command(UNKNOWN_03)
+
+        self.raw_reset()
 
         # Load in-machine correction table
         self._send_correction_table(self._cor_table)
@@ -338,6 +337,14 @@ class Sender:
         :return:
         """
         return self._send_command(DISABLE_LASER)
+
+    def raw_reset(self):
+        """
+        No parameters.
+        :return:
+        """
+        return self._send_command(RESET)
+
 
     def raw_enable_laser(self):
         """
@@ -952,7 +959,7 @@ class MockConnection:
         """Send a command to the machine and return the response.
            Updates the host condition register as a side effect."""
         if self._debug:
-            self._debug("---> " + str(code) + " " + str(parameters))
+            self._debug("---> 0x%04x: %s" % (code, str(parameters)))
         time.sleep(0.05)
         import random
         return random.randint(0, 255), random.randint(0, 255)
