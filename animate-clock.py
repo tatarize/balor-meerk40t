@@ -37,12 +37,19 @@ for p in points:
     q = points[p]
     qm = min(q[:,0])
     qx = max(q[:,0])
-    print(qm, qx)
-    q[:,0] -= (qm + qx) / 2.0
+    q[:, 0] -= (qm + qx) / 2.0
     qm = min(q[:, 1])
     qx = max(q[:, 1])
     q[:, 1] -= (qm + qx) / 2.0
-    points[p] = q
+
+for p in points:
+    q = points[p]
+    qm = min(q[:, 0])
+    qx = max(q[:, 0])
+    print(qm, qx)
+    qm = min(q[:, 1])
+    qx = max(q[:, 1])
+    print(qm, qx)
 
 from datetime import datetime
 
@@ -64,12 +71,13 @@ def tick(cmds, loop_index):
     start = 0x8000 - (desired_width / 2)
     for digit in current_time:
         pts = points[digit]
-        typeset_digit = pts * scaling
-        cmds.goto(int(typeset_digit[0][0] + start), int(typeset_digit[0][1] + 0x8000), calibration=8)
+        typeset_digit = pts
+        cmds.goto(int(typeset_digit[0][0]*scaling + start), int(typeset_digit[0][1]*scaling + 0x8000), calibration=8)
         for pt in typeset_digit:
-            cmds.light(int(pt[0] + start) , int(pt[1] + 0x8000))
-        typeset_max_x = max(typeset_digit[0, :])
-        start += typeset_max_x
+            cmds.light(int(pt[0]*scaling + start) , int(pt[1]*scaling + 0x8000))
+        typeset_max_x = max(typeset_digit[0, :]) - min(typeset_digit[0, :])
+        start += typeset_max_x * scaling
+        print(start)
     # c = CommandList()
     # for packet in cmds.packet_generator():
     #     c.add_packet(packet)
@@ -77,6 +85,12 @@ def tick(cmds, loop_index):
     # c.set_scale_y = 1.0
     # for operation in c:
     #     print(operation.text_debug(show_tracking=True))
+    #
+    # from PIL import Image, ImageDraw
+    # im = Image.new('RGB', (0xFFF, 0xFFF), color=0)
+    # cmds.plot(ImageDraw.Draw(im), 0xFFF, show_travels=True)
+    # im.save('{time}.png'.format(time=current_time.replace(':', ';'), format='png'))
+
 
 job = sender.job(tick=tick)
 job.execute(1000)

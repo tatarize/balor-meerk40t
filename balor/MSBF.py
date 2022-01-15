@@ -8,7 +8,7 @@ import sys
 
 
 class Simulation:
-    def __init__(self, job, machine, draw, resolution):
+    def __init__(self, job, machine, draw, resolution, show_travels=False):
         self.job = job
         self.machine = machine
         self.draw = draw
@@ -21,6 +21,7 @@ class Simulation:
         self.cut_speed = 0
         self.x = 0x8000
         self.y = 0x8000
+        self.show_travels = show_travels
 
     def simulate(self, op):
         op.simulate(self)
@@ -44,11 +45,13 @@ class Simulation:
         self.x, self.y = x, y
 
     def travel(self, x, y):
+        if not self.show_travels:
+            return
         cm = 128 if self.segcount % 2 else 255
         self.segcount += 1
-        # self.draw.line((self.x*self.scale, self.y*self.scale,
-        #    self.scale*x, self.scale*y),
-        #    fill=(cm//2,cm//2,cm//2, 64), width=1)
+        self.draw.line((self.x*self.scale, self.y*self.scale,
+           self.scale*x, self.scale*y),
+           fill=(cm//2,cm//2,cm//2, 64), width=1)
         self.x, self.y = x, y
 
 
@@ -235,19 +238,7 @@ class OpJumpCalibration(Operation):
     opcode = 0x800D
 
     def text_decode(self):
-        return "Alternate travel operation 0x800D, param=%d" % self.params[0]
-
-    def simulate(self, sim):
-        sim.travel(self.params[self.x], self.params[self.y])
-
-    def text_decode(self):
-        xs, ys, unit = self.job.get_scale()
-        x = '%.3f %s' % (self.params[1] * xs, unit) if unit else '%d' % self.params[1]
-        y = '%.3f %s' % (self.params[0] * ys, unit) if unit else '%d' % self.params[0]
-        d = '%.3f %s' % (self.params[3] * xs, unit) if unit else '%d' % self.params[3]
-        return "Alt travel to x=%s y=%s angle=%04X dist=%s" % (
-            x, y, self.params[2],
-            d)
+        return "Travel compensation operation 0x800D, param=%d" % self.params[0]
 
 
 class OpSetPolygonDelay(Operation):
@@ -933,8 +924,8 @@ class CommandList:
             self.operations.append(op)
             i += 12
 
-    def plot(self, draw, resolution=2048):
-        sim = Simulation(self, self.machine, draw, resolution)
+    def plot(self, draw, resolution=2048, show_travels=False):
+        sim = Simulation(self, self.machine, draw, resolution, show_travels=show_travels)
         for op in self.operations:
             sim.simulate(op)
 
