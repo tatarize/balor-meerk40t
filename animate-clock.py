@@ -41,6 +41,7 @@ for p in points:
     qm = min(q[:, 1])
     qx = max(q[:, 1])
     q[:, 1] -= (qm + qx) / 2.0
+    points[p] = q
 
 from datetime import datetime
 
@@ -56,18 +57,18 @@ def tick(cmds, loop_index):
     job.set_travel_speed(2000)
     total_width = 0
     for digit in current_time:
-        digit, bbox = points[digit]
-        minx, miny, maxx, maxy = bbox
-        digit[:][0] += minx - maxx
-        total_width = bbox[digit][2] - bbox[digit][0]
+        pts = points[digit]
+        total_width += max(pts[0,:]) - min(pts[0,:])
     scaling = desired_width / total_width
     start = 0x8000 - (desired_width / 2)
     for digit in current_time:
-        typeset_digit = digit * scaling
+        pts = points[digit]
+        typeset_digit = pts * scaling
         cmds.goto(int(typeset_digit[0][0] + start), int(typeset_digit[0][1] + 0x8000))
         for pt in typeset_digit:
-            cmds.light(int(pt[0]+ start) , int(pt[1] + 0x8000))
-        start += bboxes[digit][2] * scaling
+            cmds.light(int(pt[0] + start) , int(pt[1] + 0x8000))
+        typeset_max_x = max(typeset_digit[0, :])
+        start += typeset_max_x
 
 
 job = sender.job(tick=tick)
