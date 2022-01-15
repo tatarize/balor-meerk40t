@@ -241,7 +241,7 @@ class Sender:
         self.read_port()
         return bool(self._usb_connection.status & 0x04)
 
-    def execute(self, command_list: CommandList, loop_count=True,
+    def execute(self, command_list: CommandList, loop_count=float('inf'),
                 callback_finished=None):
         """Run a job. loop_count is the number of times to repeat the
            job; if it is True, it repeats until aborted. If there is a job
@@ -262,7 +262,10 @@ class Sender:
             self.raw_reset_list()
             self.set_xy(0x8000, 0x8000)
 
-            while loop_count:
+            loop_index = 0
+            while loop_index < loop_count:
+                if command_list.tick is not None:
+                    command_list.tick(command_list, loop_index)
                 self.raw_reset_list()
 
                 for packet in command_list.packet_generator():
@@ -280,9 +283,7 @@ class Sender:
                     # time.sleep(self.sleep_time)
                     if self._terminate_execution:
                         return False
-
-                if loop_count is not True:
-                    loop_count -= 1
+                loop_index += 1
         if callback_finished is not None:
             callback_finished()
         return True
