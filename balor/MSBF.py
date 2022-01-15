@@ -537,8 +537,17 @@ def OperationFactory(code, tracking=None, position=0):
 
 
 class CommandList:
-    def __init__(self, machine=None, x=0x8000, y=0x8000, cal=None, sender=None):
+    def __init__(self,
+                 machine=None,
+                 x=0x8000,
+                 y=0x8000,
+                 cal=None,
+                 sender=None,
+                 tick=None,
+                 ):
         self.machine = machine
+        self.tick = tick
+
         self._last_x = x
         self._last_y = y
         self._start_x = x
@@ -563,6 +572,21 @@ class CommandList:
     @property
     def position(self):
         return len(self.operations) - 1
+
+    def clear(self):
+        self.operations.clear()
+        self._ready = False
+        self._cut_speed = None
+        self._travel_speed = None
+        self._frequency = None
+        self._power = None
+        self._jump_calibration = None
+        self._laser_control = None
+        self._laser_on_delay = None
+        self._laser_off_delay = None
+        self._poly_delay = None
+        self._mark_end_delay = None
+        self._light = None
 
     def duplicate(self, begin, end, repeats=1):
         for _ in range(repeats):
