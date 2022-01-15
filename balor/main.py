@@ -287,8 +287,12 @@ class BalorDevice(Service, ViewPort):
             output_type="balor",
         )
         def balor_debug(command, channel, _, data=None,**kwargs):
-            for operation in data:
+            c = CommandList()
+            for packet in data.packet_generator():
+                c.add_packet(packet)
+            for operation in c:
                 print(operation.text_debug(show_tracking=True))
+            return "balor", data
 
         @self.console_argument("filename", type=str, default="balor.bin")
         @self.console_command(

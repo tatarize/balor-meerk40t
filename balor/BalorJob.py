@@ -446,7 +446,7 @@ class CommandList:
 
         # Write buffer.
         buf = bytearray([0] * 0xC00)  # Create a packet.
-        eol = bytes([0x02, 0x80] + [0] * 10) # End of Line Command
+        eol = bytes([0x02, 0x80] + [0] * 10)  # End of Line Command
         i = 0
         for op in self.operations:
             if op.has_d():
@@ -757,4 +757,5 @@ class CommandList:
 
     def serialize_to_file(self, file):
         with open(file, "wb") as out_file:
-            out_file.write(self.serialize())
+            for f in self.packet_generator():
+                out_file.write(f)
