@@ -537,14 +537,16 @@ def OperationFactory(code, tracking=None, position=0):
 
 
 class CommandList:
-    def __init__(self, machine=None, x=0x8000, y=0x8000, cal=None):
+    def __init__(self, machine=None, x=0x8000, y=0x8000, cal=None, sender=None):
         self.machine = machine
-        self.cal = cal
-        self.operations = []
         self._last_x = x
         self._last_y = y
         self._start_x = x
         self._start_y = y
+        self.cal = cal
+        self._sender = sender
+        self.operations = []
+
         self._ready = False
         self._cut_speed = None
         self._travel_speed = None
@@ -574,6 +576,11 @@ class CommandList:
         for op in x:
             op.bind(self)
         self.operations.extend(x)
+
+    def execute(self, loop_count=1, *args, **kwargs):
+        if not self._sender:
+            raise ValueError("No sender attached to the job.")
+        self._sender.execute(self, loop_count, *args, **kwargs)
 
     def __iter__(self):
         return iter(self.operations)

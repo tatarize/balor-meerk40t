@@ -16,7 +16,6 @@
 import usb.core
 import usb.util
 import time
-import sys
 import threading
 # TODO: compatibility with ezcad .cor files
 from balor.MSBF import CommandList
@@ -155,6 +154,9 @@ class Sender:
         self._shutdown_machine()
         self._usb_connection.close()
 
+    def job(self, *args, **kwargs):
+        return CommandList(*args, **kwargs, sender=self)
+
     def _send_command(self, *args):
         return self._usb_connection.send_command(*args)
 
@@ -239,8 +241,8 @@ class Sender:
         self.read_port()
         return bool(self._usb_connection.status & 0x04)
 
-    def execute(self, job_data: CommandList, loop_count=True,
-                callback_finished=None, prefix_job=None):
+    def execute(self, command_list: CommandList, loop_count=True,
+                callback_finished=None):
         """Run a job. loop_count is the number of times to repeat the
            job; if it is True, it repeats until aborted. If there is a job
            already running, it will be aborted and replaced. Optionally,
@@ -261,11 +263,9 @@ class Sender:
             self.set_xy(0x8000, 0x8000)
 
             while loop_count:
-                data = prefix_job if prefix_job else (job_data(loop_count) if callable(job_data) else job_data)
-
                 self.raw_reset_list()
 
-                for packet in data.packet_generator():
+                for packet in command_list.packet_generator():
                     while not self.is_ready():
                         if self._terminate_execution:
                             return False
@@ -281,9 +281,10 @@ class Sender:
                     if self._terminate_execution:
                         return False
 
-                prefix_job = None
                 if loop_count is not True:
                     loop_count -= 1
+        if callback_finished is not None:
+            callback_finished()
         return True
 
     def abort(self):
