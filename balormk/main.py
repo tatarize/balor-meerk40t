@@ -16,7 +16,7 @@ from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape
 
 import balor
 from balormk.GalvoConnection import GotoXY
-from balormk.BalorJob import CommandList
+from balor.MSBF import CommandList
 from balormk.BalorDriver import BalorDriver
 
 import numpy as np

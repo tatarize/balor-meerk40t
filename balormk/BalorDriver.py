@@ -5,7 +5,7 @@ from meerk40t.core.cutcode import LaserSettings
 from meerk40t.svgelements import Shape, Path
 
 from balor.Cal import Cal
-from balormk.BalorJob import CommandList
+from balor.MSBF import CommandList
 from balormk.GalvoConnection import GalvoConnection
 
 
