@@ -1,7 +1,7 @@
 import time
 
-from balor.GalvoUsb import GalvoUsb
-from balor.GalvoMock import GalvoMock
+from balormk.GalvoUsb import GalvoUsb
+from balormk.GalvoMock import GalvoMock
 
 EnableLaser = 0x04
 ExecuteList = 0x05
@@ -51,8 +51,8 @@ SetFpkParam = 0x62  # Probably "first pulse killer" = fpk
 
 # These are used during the Open and Close procedures. In the interest of rocking the boat as little as possible they
 # are preserved. These should be replaced.
-from .BJJCZ_LMCV4_FIBER_M_blobs import init as INIT_BLOB_SEQUENCE
-from .BJJCZ_LMCV4_FIBER_M_blobs import quit as QUIT_BLOB_SEQUENCE
+from balor.BJJCZ_LMCV4_FIBER_M_blobs import init as INIT_BLOB_SEQUENCE
+from balor.BJJCZ_LMCV4_FIBER_M_blobs import quit as QUIT_BLOB_SEQUENCE
 
 
 class GalvoConnection:

@@ -18,11 +18,7 @@ import usb.util
 import time
 import sys
 import threading
-
 # TODO: compatibility with ezcad .cor files
-# TODO: threading (currently it isn't just for testing purposes)
-# TODO: should init always be blocking or should it happen in the laser thread?
-
 
 class BalorException(Exception): pass
 class BalorMachineException(BalorException): pass
@@ -52,6 +48,10 @@ SET_PWM_HALF_PERIOD    = 0x001E
 WRITE_PORT             = 0x0021
 WRITE_ANALOG_PORT      = 0x0022 # At end of cut, seen writing 0x07FF
 READ_PORT              = 0x0025
+SET_AXIS_MOTION_PARAM  = 0x0026
+SET_AXIS_ORIGIN_PARAM  = 0x0027
+GO_TO_AXIS_ORIGIN      = 0x0028
+GET_AXIS_POSITION      = 0x002A
 SET_FPK_2E             = 0x002E # First pulse killer related, SetFpkParam2
                                 # My ezcad lists 40 microseconds as FirstPulseKiller
                                 # EzCad sets it 0x0FFB, 1, 0x199, 0x64
@@ -75,24 +75,34 @@ UNKNOWN_41             = 0x0041 # Seen at end of cutting with param 0x0003
 
 class Sender:
     """This is a simplified control class for the BJJCZ (Golden Orange, 
-    Beijing JCZ) LMCV4-FIBER-M and compatible boards. It always runs
-    machine operations in their own thread, so machine operations are
-    non-blocking."""
+    Beijing JCZ) LMCV4-FIBER-M and compatible boards. All operations are blocking
+    so it should probably run in its own thread for nontrivial applications.
+    It does have an .abort() method that it is expected will be called 
+    asynchronously from another thread."""
     ep_hodi  = 0x01 # endpoint for the "dog," i.e. dongle.
     ep_hido  = 0x81 # fortunately it turns out that we can ignore it completely.
     ep_homi = 0x02 # endpoint for host out, machine in. (query status, send ops)
     ep_himo = 0x88 # endpoint for host in, machine out. (receive status reports)
     chunk_size = 12*256
+    sleep_time = 0.001
+
+    # We include this "blob" here (the contents of which are all well-understood) to 
+    # avoid introducing a dependency on job generation from within the sender.
+    # It just consists of the new job command followed by a bunch of NOPs.
+    _abort_list_chunk = (
+               bytearray([0x51, 0x80] + [0x00]*10)       # New job
+             + bytearray(([0x02, 0x80] + [0x00]*10)*255) # NOP
+            )
+    
 
     def __init__(self, machine_index=0, cor_table=None):
-        # Lock for controlling access to the USB device.
-        self._usb_lock = threading.Lock()
-
-        # Lock for controlling access to the current job.
-        self._job_lock = threading.Lock()
-
         self._condition_register = 0xFFFF
+        self._abort_flag = False
+        self._aborted_flag = False
         
+        self._footswitch_callback = None
+        # TODO - interlock callback when the interlock is discovered
+
         self._device = self._connect_device(machine_index)
         self._init_machine(cor_table)
 
@@ -114,7 +124,10 @@ class Sender:
 
         return device
 
-    def _init_machine(self, cor_table=None):
+    def _init_machine(self, cor_table=None,
+            first_pulse_killer=200, pwm_half_period=125,
+            standby_params=(2000,20), timing_mode=1, delay_mode=1, laser_mode=1,
+            control_mode=0):
         """Initialize the machine."""
         self.serial_number = self._send_command(GET_SERIAL_NUMBER)
         self.version = self._send_command(GET_REGISTER, 0x0001)
@@ -127,13 +140,13 @@ class Sender:
         self._send_correction_table(cor_table)
 
         self._send_command(ENABLE_LASER)
-        self._send_command(SET_CONTROL_MODE, 0)
-        self._send_command(SET_LASER_MODE, 1)
-        self._send_command(SET_DELAY_MODE, 1)
-        self._send_command(SET_TIMING, 1)
-        self._send_command(SET_STANDBY, 2000, 20)
-        self._send_command(SET_FIRST_PULSE_KILLER, 200)
-        self._send_command(SET_PWM_HALF_PERIOD, 125)
+        self._send_command(SET_CONTROL_MODE, control_mode)
+        self._send_command(SET_LASER_MODE, laser_mode)
+        self._send_command(SET_DELAY_MODE, delay_mode)
+        self._send_command(SET_TIMING, timing_mode)
+        self._send_command(SET_STANDBY, *standby_params)
+        self._send_command(SET_FIRST_PULSE_KILLER, first_pulse_killer)
+        self._send_command(SET_PWM_HALF_PERIOD, pwm_half_period)
 
         # unknown function
         self._send_command(SET_06, 125)
@@ -153,17 +166,16 @@ class Sender:
         self._send_command(WRITE_PORT, 0)
         # Conjecture is that this puts the output port out of a 
         # high impedance state (based on the name in the DLL,
-        # ENABLEZ), but who knows, maybe it has to do with the Z
-        # axis? Need to get some ezcad captures from the rotary in use.
+        # ENABLEZ)
         # Based on how it's used, it could also be about latching out
         # some of the data that has been set up.
         self._send_command(ENABLE_Z)
 
+        # We don't know what this does, since this laser's power is set
+        # digitally
         self._send_command(WRITE_ANALOG_PORT, 0x07FF)
-        self._send_command(ENABLE_Z)
-
         
-
+        self._send_command(ENABLE_Z)
 
     def _send_correction_table(self, table=None):
         """Send the onboard correction table to the machine."""
@@ -183,7 +195,14 @@ class Sender:
         if self._device.write(self.ep_homi, query, 100) != 12:
             raise BalorCommunicationException("Failed to write correction entry")
 
-
+    def read_port(self):
+        port,_ = self._send_command(READ_PORT, 0)
+        if port & 0x8000 and self._footswitch_callback:
+            callback = self._footswitch_callback
+            self._footswitch_callback = None
+            callback(port)
+            
+        return port
 
     def _send_command(self, code, *parameters):
         """Send a command to the machine and return the response.
@@ -215,58 +234,144 @@ class Sender:
 
     def _send_list(self, data):
         """Sends a command list to the machine. Breaks it into 3072 byte 
-           chunks as needed."""
+           chunks as needed. Returns False if the sending is aborted,
+           True if successful."""
 
         while len(data) >= self.chunk_size:
-            while not self.is_ready(): pass # FIXME Super blocky; fix this for threaded version
+            while not self.is_ready(): 
+                if self._abort_flag:
+                    return False
+                time.sleep(self.sleep_time) 
             self._send_list_chunk(data[:self.chunk_size])
             data = data[self.chunk_size:]
     
+        return True
+
     def is_ready(self):
         """Returns true if the laser is ready for more data, false otherwise."""
-        self._send_command(READ_PORT, 0)
+        self.read_port()
         return bool(self._condition_register & 0x20)
 
     def is_busy(self):
         """Returns true if the machine is busy, false otherwise;
            Note that running a lighting job counts as being busy."""
-        #FIXME acquire lock
-        self._send_command(READ_PORT, 0)
+        self.read_port()
         return bool(self._condition_register & 0x04)
 
-    def run_job(self, job_data, callback_finished=None):
-        """Run a job once. Optionally, call a callback function when
-           the job has finished. If a job is already running, it will
-           be aborted and replaced."""
+    def run_job(self, job_data):
+        """Run a job once. The function returns when the machine is finished
+           executing the job, or when the run is aborted. Returns True if the
+           job finished, False otherwise. Any existing job will be aborted."""
 
-        if self.is_busy(): self.abort()
+        if self.is_busy(): 
+            self.abort()
+        while self.is_busy():
+            time.sleep(self.sleep_time)
+            if self._abort_flag:
+                self._abort()
+                return False
 
-        self._send_command(WRITE_PORT, 0x001)
+        self._send_command(WRITE_PORT, 0x0001)
         self._send_command(RESET_LIST)
         self.set_xy(0x8000, 0x8000)
 
-        self._send_list(job_data)
+        if not self._send_list(job_data):
+            self._abort()
+            return False
 
         self._send_command(SET_END_OF_LIST)
         self._send_command(EXECUTE_LIST)
         self._send_command(SET_CONTROL_MODE, 1)
 
-    
-    def loop_job(self, job_header, job_body, loop_count=0, 
-            callback_finished=None):
-        """Run a job repetitively. job_header is commands to run only once,
-           e.g. to set up travel speed or other parameters; job_body is 
-           commands to loop. loop_count is the number of times to repeat the
-           job; if it is zero, it repeats until aborted. If there is a job
+        while self.is_busy():
+            if self._abort_flag:
+                self._abort()
+                return False
+            time.sleep(self.sleep_time)
+
+        return True
+
+
+    def loop_job(self, job_data, loop_count=True, 
+            callback_finished=None, prefix_job=None):
+        """Run a job repetitively. loop_count is the number of times to repeat the
+           job; if it is True, it repeats until aborted. If there is a job
            already running, it will be aborted and replaced. Optionally,
-           calls a callback function when the job is finished."""
+           calls a callback function when the job is finished.
+           Optionally, a "prefix job" can be run before the loop, which will be
+           run only once.
+           The loop job can either be regular data in multiples of 3072 bytes, or
+           it can be a callable that provides data as above on command."""
+        if self.is_busy(): 
+            self.abort()
+        while self.is_busy():
+            time.sleep(self.sleep_time)
+            if self._abort_flag:
+                self._abort()
+                return False
+
+        self._send_command(WRITE_PORT, 0x0001)
+        self._send_command(RESET_LIST)
+        self.set_xy(0x8000, 0x8000)
+
+        while loop_count:
+            data = prefix_job if prefix_job else (job_data(loop_count) if callable(job_data) else job_data)
+
+            self._send_command(RESET_LIST)
+            
+            if not self._send_list(data):
+                self._abort()
+                return False
+
+            self._send_command(SET_END_OF_LIST)
+            self._send_command(EXECUTE_LIST)
+            self._send_command(SET_CONTROL_MODE, 1)
+
+            while self.is_busy():# or not self.is_ready():
+                #time.sleep(self.sleep_time)
+                if self._abort_flag:
+                    self._abort()
+                    return False
+
+            prefix_job = None
+            if loop_count is not True:
+                loop_count -= 1
+
+
+        return True
+        
+
+
 
     def abort(self):
         """Aborts any job in progress and puts the machine back into an
-           idle condition."""
+           idle ready condition."""
+        self._aborted_flag = False
+        self._abort_flag = True
+        
+        while not self._aborted_flag:
+            time.sleep(self.sleep_time)
+
+        self._abort_flag = False
+        self._aborted_flag = False
+
+
+    def _abort(self):
+        self._send_command(RESET_LIST)
+        self._send_list_chunk(self._abort_list_chunk)
+        
+        self._send_command(SET_END_OF_LIST)
+        self._send_command(EXECUTE_LIST)
+
+        while self.is_busy():
+            time.sleep(self.sleep_time)
+
+        self.set_xy(0x8000, 0x8000)
+        self._aborted_flag = True
 
     def set_footswitch_callback(self, callback_footswitch):
         """Sets the callback function for the footswitch."""
+        self._footswitch_callback = callback_footswitch
 
     def get_condition(self):
         """Returns the 16-bit condition register value (from whatever

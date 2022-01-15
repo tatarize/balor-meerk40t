@@ -15,9 +15,9 @@ from meerk40t.core.elements import LaserOperation
 from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape
 
 import balor
-from balor.GalvoConnection import GotoXY
-from balor.BalorJob import CommandList
-from balor.BalorDriver import BalorDriver
+from balormk.GalvoConnection import GotoXY
+from balormk.BalorJob import CommandList
+from balormk.BalorDriver import BalorDriver
 
 import numpy as np
 import scipy
@@ -58,14 +58,6 @@ class BalorDevice(Service, ViewPort):
                 "type": float,
                 "label": _("Width"),
                 "tip": _("Lens Size"),
-            },
-            {
-                "attr": "bedheight",
-                "object": self,
-                "default": "110mm",
-                "type": float,
-                "label": _("Height"),
-                "tip": _("Height of the laser bed."),
             },
         ]
         self.register_choices("bed_dim", choices)
@@ -127,14 +119,6 @@ class BalorDevice(Service, ViewPort):
                 "type": float,
                 "label": _("Q Switch Frequency"),
                 "tip": _("Frequency of the Q Switch (full disclosure, no clue)"),
-            },
-            {
-                "attr": "output",
-                "object": self,
-                "default": None,
-                "type": str,
-                "label": _("Output File"),
-                "tip": _("Additional save to file option for a job."),
             },
             {
                 "attr": "mock",

@@ -4,7 +4,9 @@ import time
 from meerk40t.core.cutcode import LaserSettings
 from meerk40t.svgelements import Shape, Path
 
-from balor.GalvoConnection import GalvoConnection
+from balor.Cal import Cal
+from balormk.BalorJob import CommandList
+from balormk.GalvoConnection import GalvoConnection
 
 
 class BalorDriver:
@@ -108,8 +110,7 @@ class BalorDriver:
         :return:
         """
 
-        import balor
-        job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
+        job = CommandList(cal=Cal(self.service.calibration_file))
         job.set_travel_speed(self.service.travel_speed)
         for plot in queue:
             start = plot.start()
@@ -136,8 +137,7 @@ class BalorDriver:
         @param queue:
         @return:
         """
-        import balor
-        job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
+        job = CommandList(cal=Cal(self.service.calibration_file))
         job.set_mark_settings(
             travel_speed=self.service.travel_speed,
             power=self.service.laser_power,
@@ -174,8 +174,7 @@ class BalorDriver:
         :param queue:
         :return:
         """
-        import balor
-        job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
+        job = CommandList(cal=Cal(self.service.calibration_file))
         job.set_travel_speed(self.service.travel_speed)
 
         for e in paths:
@@ -205,8 +204,7 @@ class BalorDriver:
         @param queue:
         @return:
         """
-        import balor
-        job = balor.BalorJob.CommandList(cal=balor.Cal.Cal(self.service.calibration_file))
+        job = CommandList(cal=Cal(self.service.calibration_file))
         job.set_mark_settings(
             travel_speed=self.service.travel_speed,
             power=self.service.laser_power,
