@@ -259,8 +259,6 @@ class Sender:
                     return False
 
             self.raw_write_port(0x0001)
-            self.raw_reset_list()
-            self.set_xy(0x8000, 0x8000)
 
             loop_index = 0
             while loop_index < loop_count:
@@ -279,8 +277,7 @@ class Sender:
                 self.raw_execute_list()
                 self.raw_set_control_mode(1,0)
 
-                while self.is_busy():  # or not self.is_ready():
-                    # time.sleep(self.sleep_time)
+                while self.is_busy():
                     if self._terminate_execution:
                         return False
                 loop_index += 1
