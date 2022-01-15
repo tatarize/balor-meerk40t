@@ -1,4 +1,3 @@
-import random
 import time
 
 from balor.GalvoUsb import GalvoUsb

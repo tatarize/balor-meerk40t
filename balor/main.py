@@ -576,8 +576,8 @@ class BalorDevice(Service, ViewPort):
                 pos -= steps
 
         @self.console_option(
-            "q",
             "quantization",
+            "q",
             default=200,
             help="Number of segments to break each path into.",
         )
