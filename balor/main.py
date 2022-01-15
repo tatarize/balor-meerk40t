@@ -526,14 +526,20 @@ class BalorDevice(Service, ViewPort):
             return "elements", [Polygon(*hull)]
 
         def ant_points(points, steps):
+            points = list(points)
             forward_steps = steps + 1 + int(steps / 10)
             pos = 0
+            size = len(points)
             for cycles in range(100):
                 for f in range(pos, pos + forward_steps, 1):
-                    yield points[f % len(points)]
+                    index = f % size
+                    point = points[index]
+                    yield tuple(point)
                 pos += forward_steps
-                for b in range(pos, pos + steps, -1):
-                    yield points[b % len(points)]
+                for f in range(pos, pos - steps, -1):
+                    index = f % size
+                    point = points[index]
+                    yield tuple(point)
                 pos -= steps
 
         @self.console_option(
@@ -557,11 +563,12 @@ class BalorDevice(Service, ViewPort):
             if data is None:
                 data = list(self.elements.elems(emphasized=True))
             points_list = []
-            points = []
+            points = list()
             for e in data:
-                if not isinstance(e, Path):
-                    continue
-                e = abs(e)
+                if isinstance(e, Shape):
+                    if not isinstance(e, Path):
+                        e = Path(e)
+                    e = abs(e)
                 for i in range(0, quantization + 1):
                     x, y = e.point(i / float(quantization))
                     x *= self.get_native_scale_x
