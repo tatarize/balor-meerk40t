@@ -2,6 +2,7 @@ import sys
 import time
 
 from meerk40t.core.cutcode import LaserSettings
+from meerk40t.svgelements import Shape, Path
 
 from balor.GalvoConnection import GalvoConnection
 
@@ -178,6 +179,10 @@ class BalorDriver:
         job.set_travel_speed(self.service.travel_speed)
 
         for e in paths:
+            if isinstance(e, Shape):
+                if not isinstance(e, Path):
+                    e = Path(e)
+                e = abs(e)
             x, y = e.point(0)
             x *= self.service.get_native_scale_x
             y *= self.service.get_native_scale_y
