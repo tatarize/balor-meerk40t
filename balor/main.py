@@ -665,21 +665,6 @@ class BalorDevice(Service, ViewPort):
                 threshold *= -1.0
             dither = 0
             passes = 1
-            # approximate scale for speeds
-            # ap_x_scale = cal.interpolate(10.0, 10.0)[0] - cal.interpolate(-10.0, -10.0)[0]
-            # ap_y_scale = cal.interpolate(10.0, 10.0)[1] - cal.interpolate(-10.0, -10.0)[1]
-            # ap_scale = (ap_x_scale+ap_y_scale)/20.0
-            # print ("Approximate scale", ap_scale, "units/mm", file=sys.stderr)
-            travel_speed = int(round(self.travel_speed / 2.0))  # units are 2mm/sec
-            cut_speed = int(round(self.cut_speed / 2.0))
-            laser_power = int(round(self.laser_power * 40.95))
-            q_switch_period = int(round(1.0 / (self.q_switch_frequency * 1e3) / 50e-9))
-            print("Image size: %.2f mm x %.2f mm" % (width, height), file=sys.stderr)
-            print("Travel speed 0x%04X" % travel_speed, file=sys.stderr)
-            print("Cut speed 0x%04X" % cut_speed, file=sys.stderr)
-            print("Q switch period 0x%04X" % q_switch_period, file=sys.stderr)
-            print("Laser power 0x%04X" % laser_power, file=sys.stderr)
-
             if grayscale:
                 gsmin = grayscale_min
                 gsmax = grayscale_max
@@ -695,11 +680,14 @@ class BalorDevice(Service, ViewPort):
             )
 
             dither = 0
-            job.add_mark_prefix(
-                travel_speed=travel_speed,
-                laser_power=laser_power,
-                q_switch_period=q_switch_period,
-                cut_speed=cut_speed,
+            job.set_mark_settings(
+                travel_speed=self.travel_speed,
+                power=self.laser_power,
+                frequency=self.q_switch_frequency,
+                cut_speed=self.cut_speed,
+                laser_on_delay=100,
+                laser_off_delay=100,
+                polygon_delay=100,
             )
             y = y0
             count = 0
@@ -707,7 +695,7 @@ class BalorDevice(Service, ViewPort):
             old_y = y0
             while y < y0 + height:
                 x = x0
-                job.append(balor.BalorJob.OpTravel(*cal.interpolate(x, y)))
+                job.goto(x,y)
                 old_x = x0
                 while x < x0 + width:
                     px = img(y, x)[0][0]
@@ -718,11 +706,11 @@ class BalorDevice(Service, ViewPort):
                         if px > 0:
                             gsval = gsmin + gsslope * px
                             if grayscale == "power":
-                                job.change_laser_power(gsval)
+                                job.set_power(gsval)
                             elif grayscale == "speed":
-                                job.change_cut_speed(gsval)
+                                job.set_cut_speed(gsval)
                             elif grayscale == "q_switch_frequency":
-                                job.change_q_switch_frequency(gsval)
+                                job.set_frequency(gsval)
                             elif grayscale == "passes":
                                 passes = int(round(gsval))
                                 # Would probably be better to do this over the course of multiple
@@ -734,49 +722,47 @@ class BalorDevice(Service, ViewPort):
                                 job.laser_control(True)  # laser turn on
                             i = passes
                             while i > 1:
-                                job.append(balor.BalorJob.OpCut(*cal.interpolate(x, y)))
-                                job.append(
-                                    balor.BalorJob.OpCut(*cal.interpolate(old_x, old_y))
-                                )
+                                job.mark(x,y)
+                                job.mark(old_x, old_y)
                                 i -= 2
-                            job.append(balor.BalorJob.OpCut(*cal.interpolate(x, y)))
+                            job.mark(x,y)
                             burning = True
 
                         else:
                             if burning:
                                 # laser turn off
                                 job.laser_control(False)
-                            job.append(balor.BalorJob.OpTravel(*cal.interpolate(x, y)))
+                            job.goto(x,y)
                             burning = False
                     else:
 
                         if px + dither > threshold:
                             if not burning:
                                 job.laser_control(True)  # laser turn on
-                            job.append(balor.BalorJob.OpCut(*cal.interpolate(x, y)))
+                            job.mark(x,y)
                             burning = True
                             dither = 0.0
                         else:
                             if burning:
                                 # laser turn off
                                 job.laser_control(False)
-                            job.append(balor.BalorJob.OpTravel(*cal.interpolate(x, y)))
-                            dither += abs(px + dither - threshold) * args.dither
+                            job.goto(x,y)
+                            dither += abs(px + dither - threshold) * dither
                             burning = False
                     old_x = x
-                    x += args.raster_x_res
+                    x += raster_x_res
                 if burning:
                     # laser turn off
                     job.laser_control(False)
                     burning = False
 
                 old_y = y
-                y += args.raster_y_res
+                y += raster_y_res
                 count += 1
                 if not (count % 20):
                     print("\ty = %.3f" % y, file=sys.stderr)
 
-            return "balor", [job.serialize()]
+            return "balor", job
 
     @property
     def current_x(self):
