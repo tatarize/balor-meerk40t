@@ -223,7 +223,7 @@ def render_gcode(gfile, job, cal, args):
                 if burning and y < ymin: ymin=y
 
                 # Cut
-                job.append(balor.MSBF.OpCut(*cal.interpolate(x,y)))
+                job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
             elif index == 4: #dwell
                 #delay = params['P']
                 # Probably not useful to actually do this

@@ -250,18 +250,12 @@ class OpJumpCalibration(Operation):
             d)
 
 
-OpAltTravel = OpJumpCalibration
-
-
-class OpSetMystery0F(Operation):
+class OpSetPolygonDelay(Operation):
     name = "POLYGON DELAY"
     opcode = 0x800F
 
     def text_decode(self):
         return "Set polygon delay, param=%d" % self.params[0]
-
-
-OpSetPolygonDelay = OpSetMystery0F
 
 
 class OpMarkPowerRatio(Operation):
@@ -307,26 +301,230 @@ class OpReadyMark(Operation):
         return "Begin job"
 
 
-# TODO: 0x801A FlyEnable
-# TODO: 0x800A Mark Frequency (use differs by machine)
-# TODO: 0x800B Mark Pulse Width (use differs by machine
-# TODO: 0x8011 listWritrPort
-# TODO: 0x801C Direct Laser Switch
-# TODO: 0x801D Fly Delay
-# TODO: 0x801E SetCo2FPK
-# TODO: 0x801F Fly Wait Input
-# TODO: 0x8023 CHANGE MARK COUNT
-# TODO: 0x8024: SetWeldPowerWave
-# TODO: 0x8025 Enable Weld Power Wave
-# TODO: 0x8026 IPGYLPMPulseWidth, SetConfigExtend
-# TODO: 0x8028 Fly Encoder Count
-# TODO: 0x8029: SetDaZWord
+class OpFlyEnable(Operation):
+
+    opcode = 0x801A
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpMarkFrequency(Operation):
+    opcode = 0x800A
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpMarkPulseWidth(Operation):
+
+    opcode = 0x800B
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpWritePort(Operation):
+    opcode = 0x8011
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpDirectLaserSwitch(Operation):
+    opcode = 0x801C
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpFlyDelay(Operation):
+    opcode = 0x801D
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpSetCo2FPK(Operation):
+    opcode = 0x801E
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpFlyWaitInput(Operation):
+
+    opcode = 0x801F
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpChangeMarkCount(Operation):
+    opcode = 0x8023
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpSetWeldPowerWave(Operation):
+
+    opcode = 0x8024
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpEnableWeldPowerWave(Operation):
+
+    opcode = 0x8025
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpIPGYLPMPulseWidth(Operation):
+    opcode = 0x8026
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpFlyEncoderCount(Operation):
+
+    opcode = 0x8028
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpSetDaZWord(Operation):
+
+    opcode = 0x8029
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
 
 
 all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpCut,
-                  OpMarkPowerRatio, OpSetMystery0F, OpJumpCalibration, OpSetCutSpeed,
+                  OpMarkPowerRatio, OpSetPolygonDelay, OpJumpCalibration, OpSetCutSpeed,
                   OpSetLaserOffDelay, OpSetLaserOnDelay, OpSetTravelSpeed,
-                  OpSetMarkEndDelay, OpEndOfList, OpTravel
+                  OpSetMarkEndDelay, OpEndOfList, OpTravel, OpMarkFrequency, OpMarkPulseWidth,
+                  OpWritePort, OpDirectLaserSwitch, OpFlyDelay, OpSetCo2FPK, OpFlyWaitInput,
+                  OpChangeMarkCount, OpSetWeldPowerWave, OpEnableWeldPowerWave, OpIPGYLPMPulseWidth,
+                  OpFlyEncoderCount, OpSetDaZWord
                   ]
 
 operations_by_opcode = {OpClass.opcode: OpClass for OpClass in all_operations}
@@ -438,7 +636,6 @@ class CommandList:
             buf[i: i + 12] = eol
             i += 12
         yield buf
-
 
     ######################
     # GEOMETRY HELPERS

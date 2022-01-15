@@ -175,10 +175,10 @@ def raster_render(job, cal, in_file, out_file, args):
                             job.laser_control(True) # laser turn on
                         i = passes
                         while i > 1:
-                            job.append(balor.MSBF.OpCut(*cal.interpolate(x,y)))
-                            job.append(balor.MSBF.OpCut(*cal.interpolate(old_x,old_y)))
+                            job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
+                            job.append(balor.MSBF.OpCut(*cal.interpolate(old_x, old_y)))
                             i -= 2
-                        job.append(balor.MSBF.OpCut(*cal.interpolate(x,y)))
+                        job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
                         burning=True
 
                     else:
@@ -192,7 +192,7 @@ def raster_render(job, cal, in_file, out_file, args):
                     if px+dither > threshold:
                         if not burning:
                             job.laser_control(True) # laser turn on
-                        job.append(balor.MSBF.OpCut(*cal.interpolate(x,y)))
+                        job.append(balor.MSBF.OpCut(*cal.interpolate(x, y)))
                         burning=True
                         dither = 0.0
                     else:

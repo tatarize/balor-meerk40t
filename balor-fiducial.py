@@ -88,12 +88,12 @@ def render_fiducial(job, cal, args):
     for _ in range(args.groups):
         job.laser_control(True)
         for __ in range(args.repetition):
-            job.append(balor.MSBF.OpCut(xmin,ymax,0x8000))
-            job.append(balor.MSBF.OpCut(xmax,ymax,0x8000))
-            job.append(balor.MSBF.OpCut(xmax,ymin,0x8000))
-            job.append(balor.MSBF.OpCut(xmin,ymin,0x8000))
+            job.append(balor.MSBF.OpCut(xmin, ymax, 0x8000))
+            job.append(balor.MSBF.OpCut(xmax, ymax, 0x8000))
+            job.append(balor.MSBF.OpCut(xmax, ymin, 0x8000))
+            job.append(balor.MSBF.OpCut(xmin, ymin, 0x8000))
         job.laser_control(False)
-        job.append(balor.MSBF.OpWait(wait_time))
+        job.append(balor.MSBF.OpSetMarkEndDelay(wait_time))
     job.append(balor.MSBF.OpTravel(*cal.interpolate(args.x,args.y)))
     
 
@@ -101,7 +101,7 @@ def render_fiducial(job, cal, args):
 
     job.append(balor.MSBF.OpTravel(*cal.interpolate(0.0,0.0)))
     
-    for _ in range(200): job.append(balor.MSBF.OpWait(0x100))
+    for _ in range(200): job.append(balor.MSBF.OpSetMarkEndDelay(0x100))
     job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
     job.calculate_distances()
 

@@ -97,35 +97,35 @@ class TestPattern:
 
     def add_light_prefix(self):
         self.job.extend([
-                balor.MSBF.OpBeginJob(),
+                balor.MSBF.OpReadyMark(),
                 balor.MSBF.OpSetTravelSpeed(self.args.travel_speed),
-                balor.MSBF.OpMystery0D(0x0008),
+                balor.MSBF.OpJumpCalibration(0x0008),
             ])
 
     def laser_power(self, on):
         if on:
             self.job.extend([
                 balor.MSBF.OpLaserControl(0x0001),
-                balor.MSBF.OpWait(0x0320),
+                balor.MSBF.OpSetMarkEndDelay(0x0320),
             ])
         else:
             self.job.extend([
-                balor.MSBF.OpWait(0x001E),
+                balor.MSBF.OpSetMarkEndDelay(0x001E),
                 balor.MSBF.OpLaserControl(0x0000),
             ])
 
 
     def add_mark_prefix(self):
         self.job.extend([
-                balor.MSBF.OpBeginJob(),
+                balor.MSBF.OpReadyMark(),
                 balor.MSBF.OpSetQSwitchPeriod(self.args.q_switch_period),
-                balor.MSBF.OpSetLaserPower(self.args.laser_power),
+                balor.MSBF.OpMarkPowerRatio(self.args.laser_power),
                 balor.MSBF.OpSetTravelSpeed(self.args.travel_speed),
                 balor.MSBF.OpSetCutSpeed(self.args.cut_speed),
-                balor.MSBF.OpSetLaserOnTimeComp(0x0064, 0x8000),
-                balor.MSBF.OpSetLaserOffTimeComp(0x0064),
-                balor.MSBF.OpSetMystery0F(0x000A),
-                balor.MSBF.OpMystery0D(0x0008),
+                balor.MSBF.OpSetLaserOnDelay(0x0064, 0x8000),
+                balor.MSBF.OpSetLaserOffDelay(0x0064),
+                balor.MSBF.OpSetPolygonDelay(0x000A),
+                balor.MSBF.OpJumpCalibration(0x0008),
             ])
 
 class OldGridPattern(TestPattern):
@@ -142,24 +142,24 @@ class OldGridPattern(TestPattern):
             # Make a square marking at 0,0
             self.job.append(balor.MSBF.OpTravel(ymin + fiducial_offset, xmin + fiducial_offset))
             self.laser_power(True)
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset,
                                              xmin + fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size,
                                              xmin + fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size,
                                              xmin + fiducial_offset))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset,
                                              xmin + fiducial_offset))
             self.laser_power(False)
             # Make a triangle at max X
             self.job.append(balor.MSBF.OpTravel(ymin + fiducial_offset, 
                                                 xmax - fiducial_offset))
             self.laser_power(True)
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset,
                                              xmax - fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size,
                                              xmax - fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset,
                                              xmax - fiducial_offset))
             self.laser_power(False)
         # getting rid of either the x or y lines makes it stop working
@@ -210,24 +210,24 @@ class CopyGridPattern(TestPattern):
             # Make a square marking at 0,0
             self.job.append(balor.MSBF.OpTravel(ymin + fiducial_offset, xmin + fiducial_offset))
             self.laser_power(True)
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset,
                                              xmin + fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size,
                                              xmin + fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size,
                                              xmin + fiducial_offset))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset,
                                              xmin + fiducial_offset))
             self.laser_power(False)
             # Make a triangle at max X
             self.job.append(balor.MSBF.OpTravel(ymin + fiducial_offset, 
                                                 xmax - fiducial_offset))
             self.laser_power(True)
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset,
                                              xmax - fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset + fiducial_size,
                                              xmax - fiducial_offset + fiducial_size))
-            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset, 
+            self.job.append(balor.MSBF.OpCut(ymin + fiducial_offset,
                                              xmax - fiducial_offset))
             self.laser_power(False)
 
@@ -340,9 +340,9 @@ class GridPattern(TestPattern):
         #    x += cell_size*2
 
         for _ in range(200):
-            self.job.append(balor.MSBF.OpWait(0x100))
+            self.job.append(balor.MSBF.OpSetMarkEndDelay(0x100))
 
-        self.job.append(balor.MSBF.OpMystery0D(0x0008))
+        self.job.append(balor.MSBF.OpJumpCalibration(0x0008))
         self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
 
         self.job.calculate_distances()
@@ -365,7 +365,7 @@ class CalPattern(TestPattern):
 
         for n in range(segs):
             #print ("*", xs[n], ys[n], file=sys.stderr)
-            self.job.append(balor.MSBF.OpCut(*self.cal.interpolate(xs[n], ys[n] )))
+            self.job.append(balor.MSBF.OpCut(*self.cal.interpolate(xs[n], ys[n])))
 
     def render(self):
         marking = self.args.operation == 'mark'
@@ -426,9 +426,9 @@ class CalPattern(TestPattern):
 
 
         for _ in range(200):
-            self.job.append(balor.MSBF.OpWait(0x100))
+            self.job.append(balor.MSBF.OpSetMarkEndDelay(0x100))
 
-        self.job.append(balor.MSBF.OpMystery0D(0x0008))
+        self.job.append(balor.MSBF.OpJumpCalibration(0x0008))
         self.job.append(balor.MSBF.OpTravel(0x8000, 0x8000))
 
         self.job.calculate_distances()

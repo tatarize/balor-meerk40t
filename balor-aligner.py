@@ -361,7 +361,7 @@ class Aligner:
         job.append(balor.MSBF.OpTravel(nx, ny))
         job.laser_control(True)
         for vx,vy in square:
-            job.append(balor.MSBF.OpCut(vx,vy,0x8000))
+            job.append(balor.MSBF.OpCut(vx, vy, 0x8000))
         job.laser_control(False)
         job.calculate_distances()
         return job.serialize()
