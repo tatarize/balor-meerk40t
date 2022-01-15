@@ -206,8 +206,8 @@ class BalorDevice(Service, ViewPort):
             return "balor", self.driver.paths_to_mark_job(data)
 
         @self.console_option(
-            "s",
             "speed",
+            "s",
             type=bool,
             action="store_true",
             help="Run this light job at slow speed for the parts that would have been cuts.",
