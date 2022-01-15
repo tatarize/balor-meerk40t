@@ -4,6 +4,8 @@ import numpy as np
 
 import sys
 
+#TODO: Angle for Travel and Cut is really high bits of distance.
+
 
 class Simulation:
     def __init__(self, job, machine, draw, resolution):
@@ -136,7 +138,7 @@ class Operation:
         return self.params[self.x], self.params[self.y]
 
 
-class OpNo(Operation):
+class OpEndOfList(Operation):
     name = "NO OPERATION ()"
     opcode = 0x8002
 
@@ -164,7 +166,7 @@ class OpTravel(Operation):
         sim.travel(self.params[self.x], self.params[self.y])
 
 
-class OpWait(Operation):
+class OpSetMarkEndDelay(Operation):
     name = "WAIT (time)"
     opcode = 0x8004
 
@@ -201,7 +203,7 @@ class OpSetTravelSpeed(Operation):
         return "Set travel speed = %.2f mm/s" % (self.params[0] * 1.9656)
 
 
-class OpSetLaserOnTimeComp(Operation):
+class OpSetLaserOnDelay(Operation):
     name = "SET ON TIME COMPENSATION (time)"
     opcode = 0x8007
 
@@ -209,7 +211,7 @@ class OpSetLaserOnTimeComp(Operation):
         return "Set on time compensation = %d us" % (self.params[0])
 
 
-class OpSetLaserOffTimeComp(Operation):
+class OpSetLaserOffDelay(Operation):
     name = "SET OFF TIME COMPENSATION (time)"
     opcode = 0x8008
 
@@ -228,7 +230,7 @@ class OpSetCutSpeed(Operation):
         sim.cut_speed = self.params[0] * 1.9656
 
 
-class OpMystery0D(Operation):
+class OpJumpCalibration(Operation):
     name = "Alternate travel (0x800D)"
     opcode = 0x800D
 
@@ -248,7 +250,7 @@ class OpMystery0D(Operation):
             d)
 
 
-OpAltTravel = OpMystery0D
+OpAltTravel = OpJumpCalibration
 
 
 class OpSetMystery0F(Operation):
@@ -259,10 +261,10 @@ class OpSetMystery0F(Operation):
         return "Set polygon delay, param=%d" % self.params[0]
 
 
-OpPolygonDelay = OpSetMystery0F
+OpSetPolygonDelay = OpSetMystery0F
 
 
-class OpSetLaserPower(Operation):
+class OpMarkPowerRatio(Operation):
     name = "SET LASER POWER (power)"
     opcode = 0x8012
 
@@ -297,7 +299,7 @@ class OpLaserControl(Operation):
         sim.laser_on = bool(self.params[0])
 
 
-class OpBeginJob(Operation):
+class OpReadyMark(Operation):
     name = "BEGIN JOB"
     opcode = 0x8051
 
@@ -321,22 +323,10 @@ class OpBeginJob(Operation):
 # TODO: 0x8029: SetDaZWord
 
 
-OpReadyMark = OpBeginJob
-MarkPowerRatio = OpSetLaserPower
-OpJumpSpeed = OpSetTravelSpeed
-OpMarkSpeed = OpSetCutSpeed
-OpLaserOnDelay = OpSetLaserOnTimeComp
-OpLaserOffDelay = OpSetLaserOffTimeComp
-OpJumpCalibration = OpMystery0D
-OpMarkTo = OpCut
-OpJumpTo = OpTravel
-OpMarkEndDelay = OpWait
-
-
-all_operations = [OpBeginJob, OpLaserControl, OpSetQSwitchPeriod, OpCut,
-                  OpSetLaserPower, OpSetMystery0F, OpMystery0D, OpSetCutSpeed,
-                  OpSetLaserOffTimeComp, OpSetLaserOnTimeComp, OpSetTravelSpeed,
-                  OpWait, OpNo, OpTravel
+all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpCut,
+                  OpMarkPowerRatio, OpSetMystery0F, OpJumpCalibration, OpSetCutSpeed,
+                  OpSetLaserOffDelay, OpSetLaserOnDelay, OpSetTravelSpeed,
+                  OpSetMarkEndDelay, OpEndOfList, OpTravel
                   ]
 
 operations_by_opcode = {OpClass.opcode: OpClass for OpClass in all_operations}
@@ -454,7 +444,7 @@ class CommandList:
     # GEOMETRY HELPERS
     ######################
 
-    def draw_line(self, x0, y0, x1, y1, seg_size=5, Op=OpMarkTo):
+    def draw_line(self, x0, y0, x1, y1, seg_size=5, Op=OpCut):
         length = ((x0 - x1) ** 2 + (y0 - y1) ** 2) ** 0.5
         segs = max(2, int(round(length / seg_size)))
         # print ("**", x0, y0, x1, y1, length, segs, file=sys.stderr)
@@ -527,14 +517,14 @@ class CommandList:
             return
         self.ready()
         self._travel_speed = speed
-        self.append(OpJumpSpeed(self.convert_speed(speed)))
+        self.append(OpSetTravelSpeed(self.convert_speed(speed)))
 
     def set_cut_speed(self, speed):
         if self._cut_speed == speed:
             return
         self.ready()
         self._cut_speed = speed
-        self.append(OpMarkSpeed(self.convert_speed(speed)))
+        self.append(OpSetCutSpeed(self.convert_speed(speed)))
 
     def set_power(self, power):
         # TODO: use or conversion differs by machine
@@ -542,7 +532,7 @@ class CommandList:
             return
         self.ready()
         self._power = power
-        self.append(MarkPowerRatio(self.convert_power(power)))
+        self.append(OpMarkPowerRatio(self.convert_power(power)))
 
     def set_frequency(self, frequency):
         # TODO: use differs by machine: 0x800A Mark Frequency, 0x800B Mark Pulse Width
@@ -566,7 +556,7 @@ class CommandList:
             return
         self.ready()
         self._laser_on_delay = args
-        self.append(OpLaserOnDelay(*args))
+        self.append(OpSetLaserOnDelay(*args))
 
     def set_laser_off_delay(self, delay):
         # TODO: WEAK IMPLEMENTATION
@@ -574,7 +564,7 @@ class CommandList:
             return
         self.ready()
         self._laser_off_delay = delay
-        self.append(OpLaserOffDelay(delay))
+        self.append(OpSetLaserOffDelay(delay))
 
     def set_polygon_delay(self, delay):
         # TODO: WEAK IMPLEMENTATION
@@ -582,7 +572,7 @@ class CommandList:
             return
         self.ready()
         self._poly_delay = delay
-        self.append(OpPolygonDelay(delay))
+        self.append(OpSetPolygonDelay(delay))
 
     def set_mark_end_delay(self, delay):
         # TODO: WEAK IMPLEMENTATION
@@ -590,7 +580,7 @@ class CommandList:
             return
         self.ready()
         self._mark_end_delay = delay
-        self.append(OpMarkEndDelay(delay))
+        self.append(OpSetMarkEndDelay(delay))
 
     def mark(self, x, y):
         """
@@ -615,7 +605,7 @@ class CommandList:
             raise ValueError("Polygon Delay must be set before a mark(x,y)")
         self._last_x = x
         self._last_y = y
-        self.append(OpMarkTo(*self.pos(x, y)))
+        self.append(OpCut(*self.pos(x, y)))
 
     def jump_calibration(self, calibration=0x0008):
         if self._jump_calibration == calibration:
@@ -654,7 +644,7 @@ class CommandList:
             self.set_light(True)
         if calibration is not None:
             self.jump_calibration(calibration)
-        self.append(OpJumpTo(*self.pos(x, y)))
+        self.append(OpTravel(*self.pos(x, y)))
 
     def init(self, x, y):
         """
