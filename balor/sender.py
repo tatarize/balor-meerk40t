@@ -126,8 +126,8 @@ class Sender:
             standby_param_1=2000, standby_param_2=20, timing_mode=1, delay_mode=1,
             laser_mode=1, control_mode=0, footswitch_callback=None,
             debug=False, mock=False):
-        self._abort_flag = False
-        self._aborted_flag = False
+        self._lock = threading.Lock()
+        self._terminate_execution = False
         self._machine_index = machine_index
         self._cor_table=cor_table
         self._first_pulse_killer=first_pulse_killer
@@ -249,79 +249,58 @@ class Sender:
            run only once.
            The loop job can either be regular data in multiples of 3072 bytes, or
            it can be a callable that provides data as above on command."""
-        if self.is_busy():
-            self.abort()
-        while self.is_busy():
-            time.sleep(self.sleep_time)
-            if self._abort_flag:
-                self._abort()
-                return False
-
-        self.raw_write_port(0x0001)
-        self.raw_reset_list()
-        self.set_xy(0x8000, 0x8000)
-
-        while loop_count:
-            data = prefix_job if prefix_job else (job_data(loop_count) if callable(job_data) else job_data)
-
-            self.raw_reset_list()
-
-            for packet in data.packet_generator():
-                while not self.is_ready():
-                    if self._abort_flag:
-                        self._abort()
-                        return False
-                    time.sleep(self.sleep_time)
-                self._usb_connection.send_list_chunk(packet)
-
-            self.raw_set_end_of_list()
-            self.raw_execute_list()
-            self.raw_set_control_mode(1,0)
-
-            while self.is_busy():  # or not self.is_ready():
-                # time.sleep(self.sleep_time)
-                if self._abort_flag:
-                    self._abort()
+        self._terminate_execution = False
+        with self._lock:
+            while self.is_busy():
+                time.sleep(self.sleep_time)
+                if self._terminate_execution:
                     return False
 
-            prefix_job = None
-            if loop_count is not True:
-                loop_count -= 1
+            self.raw_write_port(0x0001)
+            self.raw_reset_list()
+            self.set_xy(0x8000, 0x8000)
 
+            while loop_count:
+                data = prefix_job if prefix_job else (job_data(loop_count) if callable(job_data) else job_data)
+
+                self.raw_reset_list()
+
+                for packet in data.packet_generator():
+                    while not self.is_ready():
+                        if self._terminate_execution:
+                            return False
+                        time.sleep(self.sleep_time)
+                    self._usb_connection.send_list_chunk(packet)
+
+                self.raw_set_end_of_list()
+                self.raw_execute_list()
+                self.raw_set_control_mode(1,0)
+
+                while self.is_busy():  # or not self.is_ready():
+                    # time.sleep(self.sleep_time)
+                    if self._terminate_execution:
+                        return False
+
+                prefix_job = None
+                if loop_count is not True:
+                    loop_count -= 1
         return True
-
-    def run_job(self, job_data):
-        """Run a job once. The function returns when the machine is finished
-           executing the job, or when the run is aborted. Returns True if the
-           job finished, False otherwise. Any existing job will be aborted."""
-        return self.execute(job_data, 1)
-
-    loop_job = execute
 
     def abort(self):
         """Aborts any job in progress and puts the machine back into an
            idle ready condition."""
-        self._aborted_flag = False
-        self._abort_flag = True
-        
-        while not self._aborted_flag:
-            time.sleep(self.sleep_time)
+        self._terminate_execution = True
+        with self._lock:
+            self.raw_reset_list()
+            self._send_list_chunk(self._abort_list_chunk)
 
-        self._abort_flag = False
-        self._aborted_flag = False
+            self.raw_set_end_of_list()
+            self.raw_execute_list()
 
-    def _abort(self):
-        self.raw_reset_list()
-        self._send_list_chunk(self._abort_list_chunk)
+            while self.is_busy():
+                time.sleep(self.sleep_time)
 
-        self.raw_set_end_of_list()
-        self.raw_execute_list()
-
-        while self.is_busy():
-            time.sleep(self.sleep_time)
-
-        self.set_xy(0x8000, 0x8000)
-        self._aborted_flag = True
+            self.set_xy(0x8000, 0x8000)
 
     def set_footswitch_callback(self, callback_footswitch):
         """Sets the callback function for the footswitch."""
