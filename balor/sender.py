@@ -19,6 +19,8 @@ import time
 import sys
 import threading
 # TODO: compatibility with ezcad .cor files
+from balor.MSBF import CommandList
+
 
 class BalorException(Exception): pass
 class BalorMachineException(BalorException): pass
@@ -122,7 +124,8 @@ class Sender:
     def __init__(self, machine_index=0, cor_table=None,
             first_pulse_killer=200, pwm_half_period=125,
             standby_param_1=2000, standby_param_2=20, timing_mode=1, delay_mode=1,
-            laser_mode=1, control_mode=0, footswitch_callback=None, debug=False, mock=False):
+            laser_mode=1, control_mode=0, footswitch_callback=None,
+            debug=False, mock=False):
         self._abort_flag = False
         self._aborted_flag = False
         self._machine_index = machine_index
@@ -146,6 +149,7 @@ class Sender:
     def open(self):
         self._usb_connection.open()
         self._init_machine()
+        return True
 
     def close(self):
         self._shutdown_machine()
@@ -164,7 +168,7 @@ class Sender:
         """Initialize the machine."""
         self.serial_number = self.raw_get_serial_no()
         self.version = self.raw_get_version()
-        self.source_condition,_ = self._usb_connection.send_command(GET_FIBER_34)
+        self._usb_connection.send_command(GET_FIBER_34)
         
         # Unknown function
         self._send_command(UNKNOWN_03)
@@ -224,21 +228,6 @@ class Sender:
             for n in range(65**2):
                 self._send_correction_entry(table[n*5:n*5+5])
 
-    def _send_list(self, data):
-        """Sends a command list to the machine. Breaks it into 3072 byte
-           chunks as needed. Returns False if the sending is aborted,
-           True if successful."""
-
-        while len(data) >= 0xC00:
-            while not self.is_ready():
-                if self._abort_flag:
-                    return False
-                time.sleep(self.sleep_time)
-            self._usb_connection.send_list_chunk(data[:0xC00])
-            data = data[0xC00:]
-
-        return True
-
     def is_ready(self):
         """Returns true if the laser is ready for more data, false otherwise."""
         self.read_port()
@@ -250,7 +239,7 @@ class Sender:
         self.read_port()
         return bool(self._usb_connection.status & 0x04)
 
-    def execute(self, job_data, loop_count=True,
+    def execute(self, job_data: CommandList, loop_count=True,
                 callback_finished=None, prefix_job=None):
         """Run a job. loop_count is the number of times to repeat the
            job; if it is True, it repeats until aborted. If there is a job
@@ -277,9 +266,13 @@ class Sender:
 
             self.raw_reset_list()
 
-            if not self._send_list(data):
-                self._abort()
-                return False
+            for packet in data.packet_generator():
+                while not self.is_ready():
+                    if self._abort_flag:
+                        self._abort()
+                        return False
+                    time.sleep(self.sleep_time)
+                self._usb_connection.send_list_chunk(packet)
 
             self.raw_set_end_of_list()
             self.raw_execute_list()
@@ -340,7 +333,7 @@ class Sender:
         return self._usb_connection.status
 
     def read_port(self):
-        port, _ = self._send_command(READ_PORT, 0)
+        port = self.raw_read_port()
         if port & 0x8000 and self._footswitch_callback:
             callback = self._footswitch_callback
             self._footswitch_callback = None
@@ -350,12 +343,12 @@ class Sender:
 
     def set_xy(self, x, y):
         """Change the galvo position. If the machine is running a job,
-           this will abort the job.""" 
-        self._send_command(SET_XY_POSITION, x, y)
+           this will abort the job."""
+        self.raw_set_xy_position(x,y)
 
     def get_xy(self):
         """Returns the galvo position."""
-        return self._send_command(GET_XY_POSITION)
+        return self.raw_get_xy_position()
 
     #############################
     # Raw LMC Interface Commands.
@@ -880,7 +873,7 @@ class UsbConnection:
     ep_homi = 0x02  # endpoint for host out, machine in. (query status, send ops)
     ep_himo = 0x88  # endpoint for host in, machine out. (receive status reports)
 
-    def __init__(self, machine_index=0, debug=False):
+    def __init__(self, machine_index=0, debug=None):
         self.machine_index = machine_index
         self.device = None
         self.status = None
@@ -901,9 +894,13 @@ class UsbConnection:
         device.set_configuration()
         device.reset()
         self.device = device
+        if self._debug:
+            self._debug("Connected.")
 
     def close(self):
-        pass
+        self.status = None
+        if self._debug:
+            self._debug("Disconnected.")
 
     def send_correction_entry(self, correction):
         """Send an individual correction table entry to the machine."""
@@ -924,10 +921,14 @@ class UsbConnection:
             query[2 * n + 3] = (parameter >> 8) & 0x00FF
         if self.device.write(self.ep_homi, query, 100) != 12:
             raise BalorCommunicationException("Failed to write command")
+        if self._debug:
+            self._debug("---> " + str(query))
         if read:
             response = self.device.read(self.ep_himo, 8, 100)
             if len(response) != 8:
                 raise BalorCommunicationException("Invalid response")
+            if self._debug:
+                self._debug("<--- " + str(response))
             self.status = response[6] | (response[7] << 8)
             return response[2] | (response[3] << 8), response[4] | (response[5] << 8)
         else:
@@ -941,10 +942,12 @@ class UsbConnection:
         sent = self.device.write(self.ep_homi, data, 100)
         if sent != len(data):
             raise BalorCommunicationException("Could not send list chunk")
+        if self._debug:
+            self._debug("---> " + str(data))
 
 
 class MockConnection:
-    def __init__(self, machine_index=0, debug=False):
+    def __init__(self, machine_index=0, debug=None):
         self.machine_index = machine_index
         self._debug = debug
         self.device = True
@@ -956,9 +959,12 @@ class MockConnection:
 
     def open(self):
         self.device = True
+        if self._debug:
+            self._debug("Connected.")
 
     def close(self):
-        pass
+        if self._debug:
+            self._debug("Disconnected.")
 
     def send_correction_entry(self, correction):
         """Send an individual correction table entry to the machine."""
@@ -967,6 +973,9 @@ class MockConnection:
     def send_command(self, code, *parameters):
         """Send a command to the machine and return the response.
            Updates the host condition register as a side effect."""
+        if self._debug:
+            self._debug("---> " + str(code) + " " + str(parameters))
+        time.sleep(0.05)
         import random
         return random.randint(0, 255)
 
@@ -974,4 +983,6 @@ class MockConnection:
         """Send a command list chunk to the machine."""
         if len(data) != 0xC00:
             raise BalorDataValidityException("Invalid chunk size %d" % len(data))
+        if self._debug:
+            self._debug("---> " + str(data))
 

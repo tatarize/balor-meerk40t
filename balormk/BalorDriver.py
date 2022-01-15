@@ -6,7 +6,7 @@ from meerk40t.svgelements import Shape, Path
 
 from balor.Cal import Cal
 from balor.MSBF import CommandList
-from balormk.GalvoConnection import GalvoConnection
+from balor.sender import Sender
 
 
 class BalorDriver:
@@ -16,7 +16,8 @@ class BalorDriver:
         self.native_y = 0x8000
 
         self.name = str(self.service)
-        self.connection = GalvoConnection(service)
+
+        self.connection = Sender(debug=self.service.channel("balor", buffer_size=50), mock=self.service.mock)
         self.connected = False
         self.connecting = False
 
@@ -33,7 +34,6 @@ class BalorDriver:
         self.queue = []
 
         self.connect()
-
 
     def __repr__(self):
         return "BalorDriver(%s)" % self.name
@@ -275,7 +275,7 @@ class BalorDriver:
         return False
 
     def balor_job(self, job):
-        self.connection.send_data(job.packet_generator())
+        self.connection.execute(job)
 
     def laser_off(self, *values):
         """
@@ -316,12 +316,12 @@ class BalorDriver:
         @param job:
         @return:
         """
-        self.connection.WritePort(0x100)
-        self.connection.send_data(job.packet_generator())
+        self.connection.raw_write_port(0x100)
+        self.connection.execute(job)
 
     def light_data(self, job):
-        self.connection.WritePort(0x100)
-        self.connection.send_data(job.packet_generator())
+        self.connection.raw_write_port(0x100)
+        self.connection.execute(job)
 
     def plot_start(self):
         """
@@ -331,7 +331,7 @@ class BalorDriver:
         """
         job = self.cutcode_to_mark_job(self.queue)
         self.queue = []
-        self.connection.send_data(job.packet_generator())
+        self.connection.execute(job)
 
     def move_abs(self, x, y):
         """
@@ -387,7 +387,7 @@ class BalorDriver:
         :return:
         """
         if data_type == "balor":
-            self.connection.send_data(data.packet_generator())
+            self.connection.execute(data)
 
     def set(self, attribute, value):
         """

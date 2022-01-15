@@ -1,21 +1,13 @@
 import os
 import sys
-import threading
-import time
-
-from meerk40t.core.cutcode import LaserSettings, CutCode, LineCut
 from meerk40t.core.spoolers import Spooler
 from meerk40t.core.units import ViewPort
 from meerk40t.kernel import Service
 
-from PIL import Image, ImageDraw
-
-from meerk40t.core.cutcode import LaserSettings, LineCut, CutCode, QuadCut, RasterCut
-from meerk40t.core.elements import LaserOperation
 from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape
 
 import balor
-from balormk.GalvoConnection import GotoXY
+from balor.sender import Sender
 from balor.MSBF import CommandList
 from balormk.BalorDriver import BalorDriver
 
@@ -214,23 +206,14 @@ class BalorDevice(Service, ViewPort):
         def stoplight(command, channel, _, data=None, remainder=None, **kwgs):
             channel("Stopping idle job")
             self.spooler.set_idle(None)
-            self.driver.connection.StopList()
-            self.driver.connection.WritePort()
+            self.driver.connection.abort()
 
         @self.console_command(
             "usb_connect",
             help=_("connect usb"),
         )
         def usb_connect(command, channel, _, data=None, remainder=None, **kwgs):
-            if self.driver.connecting:
-                self.driver.disconnect()
-                return
-            if self.driver.connected:
-                self.driver.disconnect()
-                return
-            if self.driver._shutdown:
-                self.driver.restart()
-                return
+            self.driver.connect()
 
         @self.console_command(
             "usb_disconnect",
@@ -320,7 +303,7 @@ class BalorDevice(Service, ViewPort):
             output_type="balor",
         )
         def balor_loop(command, channel, _, data=None, remainder=None, **kwgs):
-            self.driver.connection.WritePort(0x0100)
+            self.driver.connection.raw_write_port(0x0100)
             channel("Looping job: {job}".format(job=str(data)))
             self.spooler.set_idle(("light", data))
             return "balor", data
@@ -335,7 +318,7 @@ class BalorDevice(Service, ViewPort):
             if x is not None and y is not None:
                 rx = int(0x8000 + x) & 0xFFFF
                 ry = int(0x8000 + y) & 0xFFFF
-                self.driver.connection.GotoXY(rx, ry)
+                self.driver.connection.set_xy(rx, ry)
 
         @self.console_argument("off", type=str)
         @self.console_command(
@@ -344,10 +327,10 @@ class BalorDevice(Service, ViewPort):
         )
         def balor_on(command, channel, _, off=None, remainder=None, **kwgs):
             if off == "off":
-                reply = self.driver.connection.WritePort()
+                reply = self.driver.connection.raw_write_port(0)
                 channel("Turning off redlight.")
             else:
-                reply = self.driver.connection.WritePort(0x0100)
+                reply = self.driver.connection.raw_write_port(0x0100)
                 channel("Turning on redlight.")
 
         @self.console_command(
@@ -355,7 +338,7 @@ class BalorDevice(Service, ViewPort):
             help=_("Sends status check"),
         )
         def balor_status(command, channel, _, remainder=None, **kwgs):
-            reply = self.driver.connection.ReadPort()
+            reply = self.driver.connection.read_port()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
                 channel(
@@ -369,7 +352,7 @@ class BalorDevice(Service, ViewPort):
             help=_("Checks the list status."),
         )
         def balor_status(command, channel, _, remainder=None, **kwgs):
-            reply = self.driver.connection.GetListStatus()
+            reply = self.driver.connection.raw_get_list_status()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
                 channel(
@@ -383,7 +366,7 @@ class BalorDevice(Service, ViewPort):
             help=_("Checks the serial number."),
         )
         def balor_serial(command, channel, _, remainder=None, **kwgs):
-            reply = self.driver.connection.GetSerialNo()
+            reply = self.driver.connection.raw_get_serial_no()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
                 channel(
