@@ -1,54 +1,78 @@
 # balor-meerk40t
 
-The core idea here is to give an example of the Balor driver for galvo fiber lasers into meerk40t as a plugin.
+Provide a plugin to connect Balor with Meerk40t. Balor is a project which reverse engineers the LMC boards typically controlled by EzCad2 and colloquially referred to as EzCad2 boards.
 
-https://forum.makerforums.info/t/about-the-balor-category/84495
+For more information on Balor.
+* See the MakerForum - https://forum.makerforums.info/t/about-the-balor-category/84495
+* BryceSchroeder's website: https://www.bryce.pw/engraver.html
+* Source Code: https://gitlab.com/bryce15/balor
 
-See:
-https://www.bryce.pw/engraver.html
-https://gitlab.com/bryce15/balor (source code)
-
-This is intended to conform to meerk40t plugin code:
-https://github.com/meerk40t/meerk40t/wiki/Driver-API:-Writing-a-Driver
 
 # Install MeerK40t Development Branch
 
-To run you must install the meerk40t 0.8.0 branch (semi-stable) 
+To run balor-meerk40t, you must install the meerk40t 0.8.0 branch (semi-stable) 
 
 `pip install git+https://github.com/meerk40t.meerk40t.git@tatarize-services`
 
-To install the branch located at:
-https://github.com/meerk40t/meerk40t/tree/tatarize-services
+This should install the branch located at:
+* https://github.com/meerk40t/meerk40t/tree/tatarize-services
 
 # Install balor-meerk40t
 
-`pip install git+https://github.com/tatarize.balor-meerk40t.git`
+You need to install this plugin:
 
-This should install this plugin for 0.8.0 branch.
+`pip install git+https://github.com/tatarize.balor-meerk40t.git`
 
 # Add device.
 
-In device manager, add a new device. Add in a balor device. You can delete the other devices to use this device as default.
+In device manager, add a new device. Add in a "balor" device. You can delete the default M2-Nano device that meerk40t installs as a default.
 
-# Notes
+# Console Commands
+
+In addition to the regular interactions with the meerk40t gui (wxMeerk40t) you can issue console commands to control Balor. This is helpful if you would like to contribute to reverse engineering or to run some functionalities that are currently not accessible through the Meerk40t GUI.
+
+Balor interacts with MeerK40t's console commands see: [MeerK40t Features: Console](https://www.youtube.com/watch?v=c_QBZlNvhVo)
+
+* `mark`: Mark converts an `elements` type consisting of paths or shapes into a mark job. It takes extended parameters (see below). If you do not set an option the ones found in config for the Global Defaults will be used.
+     * `travel_speed` (`t`)
+     * `frequency` (`q`)
+     * `power` (`p`),
+     * `cut_speed` (`s`)
+     * `laser_on_delay` (`n`)
+     * `laser_off_delay` (`f`)
+     * `polygon_delay` (`n`)
+     * `quantization` (`Q`) 
+* `light`: Light converts an `elements` type of paths or shapes into a light job. This type of job does not cut. It only moves performs movements using the red light. There are options to travel at slower speeds for the parts of the job that would have been cut.
+     * `speed` (`s`): Run at a simulation speed equal to the cut speed.
+     * `travel_speed` (`t`)
+     * `simulation_speed` (`m`): Use this speed rather than the default cut speed
+     * `quantization` (`Q`)
+* `loop`: Put the job in the loop idle job event in spooler.
+* `spool`: Put the job in the spooler.
+* `stop`: Stop the currently running job in balor. This is linked to the No-Light Galvo button in the ribbonbar.
+* `usb_connect`: Connect the device
+* `usb_disconnect`: Disconnect the device
+* `print`: Debug: print the packets to standard out.
+* `png`:  Debug: save the image of the job simulation.
+     * `filename`: default: "balor.png"
+* `debug`: Debug: print the parsed information of the created packets of the job.
+* `save`: Debug: save the raw binary data of the job.
+     * `filename`: filename to save raw binary `balor.bin` is default. 
+* `goto`: sends a goto position in galvos. `goto 0 0` will center the laser.
+* `red`: turn red light on
+     * `off`: turns the red light off rather than on
+* `status`: sends a status check on the board and prints the bits of the reply.
+* `lstatus`: sends a status check on the list status.
+* `serial_number`: sends a check for board serial number.
+* `calibrate`: set the balor calibration file, or unset it.
+* `correction`: set the balor correction file. This is a cor file but the formatting isn't fully realized so it's just raw bytes.
+* `position`: Debug: give the current position in galvos for the selected area.
+* `lens`: Sets the lens/bed size.
+     * `lens_size`: lens since in some accepted units eg. `110mm` 
+* `box`: Converts the outline selection area into a `elements` type object. This is mostly so that that can be put into the loop. `box light loop` to create the looped selected box.
+* `hull`: Displays the hull of the current selected element. This is like a rubberband outline. eg. `hull light loop`
+* `ants`: Display marching ants animation of the current selected job.
+
+# Notes:
 * To set the calfile you type in console `set -p balor calfile "<file>"` this will set it from the default which is cal_0002.csv.
 * The positions are absolute so the bed locations cannot exceed the 0xFFFF limit, which means anything further than a few 100mm or so on the bed is wrong. This isn't processed correctly locally but could be.
-* I'm not sure I did things right but the output looks like
-```
-utting 36.85538009809475, 40.893977917251924 at power 1
-Cutting 36.880780084378756, 40.893977917251924 at power 1
-Cutting 36.906180070662764, 40.893977917251924 at power 1
-Cutting 36.93158005694677, 40.893977917251924 at power 1
-Cutting 36.95698004323078, 40.893977917251924 at power 1
-Cutting 36.982380029514786, 40.893977917251924 at power 1
-Cutting 37.007780015798794, 40.868577930967916 at power 1
-Cutting 37.0331800020828, 40.868577930967916 at power 1
-Cutting 37.05857998836681, 40.868577930967916 at power 1
-Cutting 37.083979974650816, 40.868577930967916 at power 1
-Cutting 37.109379960934824, 40.868577930967916 at power 1
-Cutting 37.134779947218824, 40.868577930967916 at power 1
-���      ����      ����      � ���      � ���      �)���      �)���      �3���      �3���      �<���      �<���      �E���      �E���      �O���      �O���      �X���      �X���      �a���      �a���      �k���      �k���      �t���      �t���      �}���      �}���      �����      �����      �����      �����      �����      �����      �����      �����      ���x�      ���x�      ���x�      ���x�      ���x�      ���x�      �Ƞx�      �Ƞx�      �Ҡx�      �Ҡx�      �۠x�      �۠x�      ��x�      ��x�      ��x�      ��x�      ���x�      ���x�      � �x�      � �x�      �
-�x�      �
-���      ����      ����      � ���      � ���      �)���      �)���      �2���      �2���      �<���      �<���      �E���      �E���      �N���      �N���      �X���      �X���      �a���      �a���      �j���      �j���      �t���      �t���      �}���      �}���      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �Ȩ��      �Ȩ��      �Ѩ��      �Ѩ��      �ۨ��      �ۨ��      �䨬�      �䨬�      ���      ���      �����      �����      � ���      � ���      �	���      �	���      ����      ����      ����      ����      �%���      �%���      �/���      �/���      �8���      �8���      �A���      �A���      �K���      �K���      �T���      �T���      �]���      �]���      �g���      �g���      �p���      �p���      �y���      �y���      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �ĩ��      �ĩ��      �ͩ��      �ͩ��      �ש��      �ש��      �੏�      �੏�      �驏�      �驏�      �󩏿      �󩏿      �����      �����      ����      ����      ����      ����      ����      ����      �!���      �!���      �+���      �+���      �4���      �4���      �=���      �=���      �G���      �G���      �P���      �P���      �Y���      �Y���      �c���      �c���      �l���      �l���      �u���      �u���      ����      ����      �����      �����      ���|�      ���|�      ���|�      ���|�      ���|�      ���|�      ���|�      ���|�      ���|�      ���|�      ���|�      ���|�      �ɪ|�      �ɪ|�      �Ӫ|�      �Ӫ|�      �ܪ|�      �ܪ|�      ��|�      ��|�      ��|�      ��|�      ���r�      ���r�      ��r�      ��r�      ��r�      ��r�      ��r�      ��r�      ��r�      ��r�      �'�r�      �'�r�      �0�r�      �0�r�      �9�r�      �9�r�      �C�r�      �C�r�      �L�r�      �L�r�      �U�h�      �U�h�      �_�h�      �_�h�      �h�h�      �h�h�      �q�h�      �q�h�      �{�h�      �{�h�      ���h�      ���h�      ���h�      ���h�      ���h�      ���h�      ���h�      ���h�      ���h�      ���h�      ���^�      ���^�      ���^�      ���^�      �ū^�      �ū^�      �ϫ_�      �ϫ_�      �ث_�      �ث_�      ��_�      ��_�      ��_�      ��_�      ���_�      ���_�      ���_�      ���_�      ��_�      ��_�      ��_�      ��_�      ��U�      ��U�      �"�U�      �"�U�      �,�U�      �,�U�      �5�U�      �5�U�      �>�U�      �>�U�      �H�U�      �H�U�      �Q�U�      �Q�U�      �Z�U�      �Z�U�      �d�U�      �d�U�      �m�U�      �m�U�      �v�K�      �v�K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      ���K�      �ʬK�      �ʬK�      �ԬK�      �ԬK�      �ݬA�      �ݬA�      ��A�      ��A�      ��A�      ��A�      ���A�      ���A�      ��A�      ��A�      ��A�      ��A�      ��A�      ��A�      ��A�      ��A�      �'�A�      �'�A�      �1�A�      �1�A�      �:�7�      �:�7�      �C�7�      �C�7�      �M�7�      �M�7�      �V�7�      �V�7�      �_�8�      �_�8�      �i�8�      �i�8�      �r�8�      �r�8�      �{�8�      �{�8�      ���8�      ���8�      ���8�      ���8�      ���.�      ���.�      ���.�      ���.�      ���.�      ���.�      ���.�      ���.�      ���.�      ���.�      �ƭ.�      �ƭ.�      �ϭ.�      �ϭ.�      �ح.�      �ح.�      ��.�      ��.�      ��.�      ��.�      ���.�      ���.�      ���$�      ���$�      ��$�      ��$�      ��$�      ��$�      ��$�      ��$�      �#�$�      �#�$�      �,�$�      �,�$�      �5�$�      �5�$�      �?�$�      �?�$�      �H�$�      �H�$�      �Q�$�      �Q�$�      �Z��      �Z��      �d��      �d��      �m��      �m��      �v��      �v��      ����      ����      ����      ����      ����      ����      ����      ����      ����      ����      ����      ����      ����      ����      ����      ����      �ʮ�      �ʮ�      �Ӯ�      �Ӯ�      �ݮ�      �ݮ�      ���      ���      ���      ���      ����      ����      ���      ���      ���      ���      ���      ���      ���      ���      �'��      �'��      �0��      �0��      �:��      �:��      �C��      �C��      �L��      �L��      �U��      �U��      �_��      �_��      �h��      �h��      �q��      �q��      �{��      �{��      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �����      �ů��      �ů��      �ί��      �ί��      �د��      �د��      ���      ���      ���      ���      ���      ���      ����      ����      ���      ���      ���      ���      ���      ���      �"��      �"��      �+��      �+��      �4��      �4��      �>��      �>��      �G��      �G��      �P��      �P��      �Y��      �Y��      �c��      �c��      �l��      �l��      �u��      �u��      ���      ���      ����      ����      ����      ����      ����      ����      ���߾      ���߾      ���߾      ���߾      ���߾      ���߾      ���߾      ���߾      �ɰ߾      �ɰ߾      �Ұ߾      �Ұ߾      �۰߾      �۰߾      ��߾      ��߾      ��߾      ��߾      ���߾      ���߾      � �վ      � �վ      �
-�վ      �```
-
