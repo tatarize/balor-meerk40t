@@ -225,15 +225,93 @@ class BalorDevice(Service, ViewPort):
 
             return "spooler", spooler
 
+        @self.console_option(
+            "travel_speed", "t", type=float, help="Set the travel speed."
+        )
+        @self.console_option("power", "p", type=float, help="Set the power level")
+        @self.console_option(
+            "frequency", "q", type=float, help="Set the device's qswitch frequency"
+        )
+        @self.console_option(
+            "cut_speed", "s", type=float, help="Set the cut speed of the device"
+        )
+        @self.console_option("power", "p", type=float, help="Set the power level")
+        @self.console_option(
+            "laser_on_delay", "n", type=float, help="Sets the device's laser on delay"
+        )
+        @self.console_option(
+            "laser_off_delay", "f", type=float, help="Sets the device's laser off delay"
+        )
+        @self.console_option(
+            "polygon_delay",
+            "n",
+            type=float,
+            help="Sets the device's laser polygon delay",
+        )
+        @self.console_option(
+            "quantization",
+            "Q",
+            type=int,
+            default=500,
+            help="Number of line segments to break this path into",
+        )
         @self.console_command(
             "mark",
             input_type="elements",
             output_type="balor",
             help=_("runs mark on path."),
         )
-        def mark(command, channel, _, data=None, remainder=None, **kwgs):
+        def mark(
+            command,
+            channel,
+            _,
+            data=None,
+            travel_speed=None,
+            power=None,
+            frequency=None,
+            cut_speed=None,
+            laser_on_delay=None,
+            laser_off_delay=None,
+            polygon_delay=None,
+            quantization=500,
+            **kwgs
+        ):
             channel("Creating mark job out of elements.")
-            return "balor", self.driver.paths_to_mark_job(data)
+            paths = data
+            from balor.Cal import Cal
+            job = CommandList(cal=Cal(self.calibration_file))
+            job.set_mark_settings(
+                travel_speed=self.travel_speed
+                if travel_speed is None
+                else travel_speed,
+                power=self.laser_power if power is None else power,
+                frequency=self.q_switch_frequency
+                if frequency is None
+                else frequency,
+                cut_speed=self.cut_speed if cut_speed is None else cut_speed,
+                laser_on_delay=self.delay_laser_on
+                if laser_on_delay is None
+                else laser_on_delay,
+                laser_off_delay=self.delay_laser_off
+                if laser_off_delay is None
+                else laser_off_delay,
+                polygon_delay=self.delay_polygon
+                if polygon_delay is None
+                else polygon_delay,
+            )
+            job.goto(0x8000, 0x8000)
+            job.laser_control(True)
+            for e in paths:
+                x, y = e.point(0)
+                x *= self.get_native_scale_x
+                y *= self.get_native_scale_y
+                job.goto(x, y)
+                for i in range(1, quantization + 1):
+                    x, y = e.point(i / float(quantization))
+                    x *= self.get_native_scale_x
+                    y *= self.get_native_scale_y
+                    job.mark(x, y)
+            return "balor", job
 
         @self.console_option(
             "speed",
