@@ -43,7 +43,7 @@ for p in points:
     q[:, 1] -= (qm + qx) / 2.0
 
 # sender = Sender()
-sender = Sender(debug=print, mock=True)
+sender = Sender()
 sender.open()
 
 desired_width = 10000
