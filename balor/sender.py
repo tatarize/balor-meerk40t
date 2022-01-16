@@ -122,6 +122,8 @@ class Sender:
             standby_param_1=2000, standby_param_2=20, timing_mode=1, delay_mode=1,
             laser_mode=1, control_mode=0, footswitch_callback=None,
             debug=False, mock=False):
+        if cor_table is None:
+            cor_table = open("balor/default.cor", 'rb').read()
         self._lock = threading.Lock()
         self._terminate_execution = False
         self._machine_index = machine_index
