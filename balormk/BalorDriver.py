@@ -175,34 +175,6 @@ class BalorDriver:
         job.laser_control(False)
         return job
 
-    def paths_to_light_job(self, paths, quant=50, speed=False):
-        """
-        :param queue:
-        :return:
-        """
-        job = CommandList(cal=Cal(self.service.calibration_file))
-        job.set_travel_speed(self.service.travel_speed)
-
-        for e in paths:
-            if isinstance(e, Shape):
-                if not isinstance(e, Path):
-                    e = Path(e)
-                e = abs(e)
-            x, y = e.point(0)
-            x *= self.service.get_native_scale_x
-            y *= self.service.get_native_scale_y
-            job.goto(x, y)
-            if speed:
-                job.set_travel_speed(self.service.cut_speed)
-            for i in range(1, quant+1):
-                x, y = e.point(i / float(quant))
-                x *= self.service.get_native_scale_x
-                y *= self.service.get_native_scale_y
-                job.light(x, y)
-            if speed:
-                job.set_travel_speed(self.service.travel_speed)
-        return job
-
 
     def hold_work(self):
         """

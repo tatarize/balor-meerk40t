@@ -7,6 +7,7 @@ from meerk40t.kernel import Service
 from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape
 
 import balor
+from balor.Cal import Cal
 from balor.MSBF import CommandList
 from balormk.BalorDriver import BalorDriver
 
@@ -283,15 +284,14 @@ class BalorDevice(Service, ViewPort):
             channel("Creating mark job out of elements.")
             paths = data
             from balor.Cal import Cal
+
             job = CommandList(cal=Cal(self.calibration_file))
             job.set_mark_settings(
                 travel_speed=self.travel_speed
                 if travel_speed is None
                 else travel_speed,
                 power=self.laser_power if power is None else power,
-                frequency=self.q_switch_frequency
-                if frequency is None
-                else frequency,
+                frequency=self.q_switch_frequency if frequency is None else frequency,
                 cut_speed=self.cut_speed if cut_speed is None else cut_speed,
                 laser_on_delay=self.delay_laser_on
                 if laser_on_delay is None
@@ -324,15 +324,70 @@ class BalorDevice(Service, ViewPort):
             action="store_true",
             help="Run this light job at slow speed for the parts that would have been cuts.",
         )
+        @self.console_option(
+            "travel_speed", "t", type=float, help="Set the travel speed."
+        )
+        @self.console_option(
+            "simulation_speed",
+            "m",
+            type=float,
+            help="sets the simulation speed for this operation",
+        )
+        @self.console_option(
+            "quantization",
+            "Q",
+            type=int,
+            default=500,
+            help="Number of line segments to break this path into",
+        )
         @self.console_command(
             "light",
             input_type="elements",
             output_type="balor",
             help=_("runs light on events."),
         )
-        def light(command, channel, _, speed=False, data=None, remainder=None, **kwgs):
+        def light(
+            command,
+            channel,
+            _,
+            speed=False,
+            travel_speed=None,
+            simulation_speed=None,
+            quantization=500,
+            data=None,
+            **kwgs
+        ):
             channel("Creating light job out of elements.")
-            return "balor", self.driver.paths_to_light_job(data, speed=speed)
+            paths = data
+            job = CommandList(cal=Cal(self.calibration_file))
+            if travel_speed is None:
+                travel_speed = self.travel_speed
+            if simulation_speed is None:
+                simulation_speed = self.cut_speed
+            else:
+                # If we set a sim-speed we should go at that speed
+                speed = True
+            job.set_travel_speed(travel_speed)
+
+            for e in paths:
+                if isinstance(e, Shape):
+                    if not isinstance(e, Path):
+                        e = Path(e)
+                    e = abs(e)
+                x, y = e.point(0)
+                x *= self.get_native_scale_x
+                y *= self.get_native_scale_y
+                job.goto(x, y)
+                if speed:
+                    job.set_travel_speed(simulation_speed)
+                for i in range(1, quantization + 1):
+                    x, y = e.point(i / float(quantization))
+                    x *= self.get_native_scale_x
+                    y *= self.get_native_scale_y
+                    job.light(x, y)
+                if speed:
+                    job.set_travel_speed(travel_speed)
+            return "balor", job
 
         @self.console_command(
             "stop",
