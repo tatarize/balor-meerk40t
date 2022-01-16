@@ -794,7 +794,7 @@ class BalorDevice(Service, ViewPort):
             output_type="elements",
         )
         def element_ants(
-            command, channel, _, data=None, quantization=200, args=tuple(), **kwargs
+            command, channel, _, data=None, quantization=500, args=tuple(), **kwargs
         ):
             """
             Draws an outline of the current shape.

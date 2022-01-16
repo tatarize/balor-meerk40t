@@ -43,7 +43,8 @@ class BalorDriver:
 
     def connect(self):
         """
-        Connect to the GalvoConnection
+        Connect to the Balor Sender
+
         :return:
         """
         self.connected = False
