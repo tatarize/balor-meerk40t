@@ -29,10 +29,10 @@ class BalorConfiguration(MWindow):
             self, wx.ID_ANY, context=self.context, choices="balor"
         )
         self.panel_optimize = PropertiesPanel(
-            self, wx.ID_ANY, context=self.context, choices="optimize"
+            self, wx.ID_ANY, context=self.context, choices="balor-global"
         )
         self.notebook_main.AddPage(self.panel_main, _("Balor"))
-        self.notebook_main.AddPage(self.panel_optimize, _("Optimize"))
+        self.notebook_main.AddPage(self.panel_optimize, _("Global Settings"))
         self.Layout()
 
         self.add_module_delegate(self.panel_main)

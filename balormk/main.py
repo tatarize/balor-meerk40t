@@ -43,35 +43,6 @@ class BalorDevice(Service, ViewPort):
 
         choices = [
             {
-                "attr": "lens_size",
-                "object": self,
-                "default": "110mm",
-                "type": float,
-                "label": _("Width"),
-                "tip": _("Lens Size"),
-            },
-            {
-                "attr": "redlight_offset_x",
-                "object": self,
-                "default": "0mm",
-                "type": float,
-                "label": _("Redlight X Offset"),
-                "tip": _("Offset the redlight positions by this amount in x"),
-            },
-            {
-                "attr": "redlight_offset_y",
-                "object": self,
-                "default": "0mm",
-                "type": float,
-                "label": _("Redlight Y Offset"),
-                "tip": _("Offset the redlight positions by this amount in y"),
-            },
-        ]
-        self.register_choices("bed_dim", choices)
-        ViewPort.__init__(self, 0, 0, self.lens_size, self.lens_size)
-
-        choices = [
-            {
                 "attr": "label",
                 "object": self,
                 "default": "balor-device",
@@ -111,6 +82,44 @@ class BalorDevice(Service, ViewPort):
                 "label": _("Correction File"),
                 "tip": _("Provide a correction file for the machine"),
             },
+            {
+                "attr": "lens_size",
+                "object": self,
+                "default": "110mm",
+                "type": float,
+                "label": _("Width"),
+                "tip": _("Lens Size"),
+            },
+            {
+                "attr": "redlight_offset_x",
+                "object": self,
+                "default": "0mm",
+                "type": float,
+                "label": _("Redlight X Offset"),
+                "tip": _("Offset the redlight positions by this amount in x"),
+            },
+            {
+                "attr": "redlight_offset_y",
+                "object": self,
+                "default": "0mm",
+                "type": float,
+                "label": _("Redlight Y Offset"),
+                "tip": _("Offset the redlight positions by this amount in y"),
+            },
+            {
+                "attr": "mock",
+                "object": self,
+                "default": False,
+                "type": bool,
+                "label": _("Run mock-usb backend"),
+                "tip": _(
+                    "This starts connects to fake software laser rather than real one for debugging."
+                ),
+            },
+        ]
+        self.register_choices("balor", choices)
+
+        choices = [
             {
                 "attr": "travel_speed",
                 "object": self,
@@ -167,20 +176,11 @@ class BalorDevice(Service, ViewPort):
                 "label": _("Polygon Delay"),
                 "tip": _("Delay amount between different points in the path travel."),
             },
-            {
-                "attr": "mock",
-                "object": self,
-                "default": False,
-                "type": bool,
-                "label": _("Run mock-usb backend"),
-                "tip": _(
-                    "This starts connects to fake software laser rather than real one for debugging."
-                ),
-            },
         ]
-        self.register_choices("balor", choices)
-
+        self.register_choices("balor-global", choices)
         self.state = 0
+
+        ViewPort.__init__(self, 0, 0, self.lens_size, self.lens_size)
         self.spooler = Spooler(self)
         self.driver = BalorDriver(self)
         self.spooler.driver = self.driver
