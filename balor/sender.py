@@ -165,6 +165,9 @@ class Sender:
     def _send_list_chunk(self, *args):
         self._usb_connection.send_list_chunk(*args)
 
+    def _send_list(self, *args):
+        self._usb_connection.send_list(*args)
+
     def _init_machine(self):
         """Initialize the machine."""
         self.serial_number = self.raw_get_serial_no()
@@ -255,6 +258,10 @@ class Sender:
                 time.sleep(self.sleep_time)
                 if self._terminate_execution:
                     return False
+            while not self.is_ready():
+                time.sleep(self.sleep_time)
+                if self._terminate_execution:
+                    return False
 
             self.raw_write_port(0x0001)
 
@@ -270,9 +277,10 @@ class Sender:
                             return False
                         time.sleep(self.sleep_time)
                     self._usb_connection.send_list_chunk(packet)
+                    self.raw_set_end_of_list(0x8001,0x8001)
+                    self.raw_execute_list()
 
-                self.raw_set_end_of_list()
-                self.raw_execute_list()
+                self.raw_set_end_of_list(0,0)
                 self.raw_set_control_mode(1,0)
 
                 while self.is_busy():
@@ -495,12 +503,12 @@ class Sender:
         """
         return self._send_command(SET_MAX_POLY_DELAY, int(s1), int(value))
 
-    def raw_set_end_of_list(self):
+    def raw_set_end_of_list(self, a=0, b=0):
         """
         No parameters
         :return: value response
         """
-        return self._send_command(SET_END_OF_LIST)
+        return self._send_command(SET_END_OF_LIST, a, b)
 
     def raw_set_first_pulse_killer(self, s1: int, value: int):
         """
@@ -901,6 +909,11 @@ class UsbConnection:
         if self._debug:
             self._debug("Disconnected.")
 
+    def is_ready(self):
+        self.send_command(READ_PORT, 0)
+        return self.status & 0x20
+
+
     def send_correction_entry(self, correction):
         """Send an individual correction table entry to the machine."""
         # This is really a command and should just be issued without reading.
@@ -908,6 +921,21 @@ class UsbConnection:
         query[2:2 + 5] = correction
         if self.device.write(self.ep_homi, query, 100) != 12:
             raise BalorCommunicationException("Failed to write correction entry")
+
+    def send_list(self, data):
+        """Sends a command list to the machine. Breaks it into 3072 byte
+           chunks as needed. Returns False if the sending is aborted,
+           True if successful."""
+
+        while len(data) >= self.chunk_size:
+            while not self.is_ready():
+                if self._abort_flag:
+                    return False
+                time.sleep(self.sleep_time)
+            self.send_list_chunk(data[:self.chunk_size])
+            data = data[self.chunk_size:]
+
+        return True
 
     def send_command(self, code, *parameters, read=True):
         """Send a command to the machine and return the response.
