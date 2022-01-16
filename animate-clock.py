@@ -67,7 +67,7 @@ def tick(cmds, loop_index):
 
         for pt in typeset_digit:
             cmds.light(int(pt[0]*scaling + start) , int(pt[1]*scaling + 0x8000))
-        typeset_max_x = max(typeset_digit[0, :]) - min(typeset_digit[0, :])
+        typeset_max_x = max(typeset_digit[:, 0]) - min(typeset_digit[:, 0])
         start += typeset_max_x * scaling
         # print(start)
 
