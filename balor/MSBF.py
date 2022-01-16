@@ -95,6 +95,7 @@ class Operation:
         blank[1] = self.opcode >> 8
         i = 2
         for param in self.params:
+            param = int(round(param))
             blank[i] = param & 0xFF
             try:
                 blank[i + 1] = param >> 8
