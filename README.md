@@ -74,5 +74,4 @@ Balor interacts with MeerK40t's console commands see: [MeerK40t Features: Consol
 * `ants`: Display marching ants animation of the current selected job.
 
 # Notes:
-* To set the calfile you type in console `set -p balor calfile "<file>"` this will set it from the default which is cal_0002.csv.
-* The positions are absolute so the bed locations cannot exceed the 0xFFFF limit, which means anything further than a few 100mm or so on the bed is wrong. This isn't processed correctly locally but could be.
+* The galvo positions are the native resolution of the machine. They are from 0x0000 to 0xFFFF with 0x8000 being the center. The positions are absolute so the bed locations cannot exceed the 0xFFFF limit.
