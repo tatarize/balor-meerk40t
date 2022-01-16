@@ -783,7 +783,7 @@ class BalorDevice(Service, ViewPort):
         @self.console_option(
             "quantization",
             "q",
-            default=200,
+            default=500,
             type=int,
             help="Number of segments to break each path into.",
         )
@@ -808,6 +808,8 @@ class BalorDevice(Service, ViewPort):
                     if not isinstance(e, Path):
                         e = Path(e)
                     e = abs(e)
+                else:
+                    continue
                 for i in range(0, quantization + 1):
                     x, y = e.point(i / float(quantization))
                     points.append((x, y))
@@ -913,9 +915,7 @@ class BalorDevice(Service, ViewPort):
                 gsmin = grayscale_min
                 gsmax = grayscale_max
                 gsslope = (gsmax - gsmin) / 256.0
-            job = balor.BalorJob.CommandList()
-            cal = balor.Cal.Cal(self.calibration_file)
-            job.cal = cal
+            job = CommandList(cal=balor.Cal.Cal(self.calibration_file))
 
             img = scipy.interpolate.RectBivariateSpline(
                 np.linspace(y0, y0 + height, in_file.size[1]),
