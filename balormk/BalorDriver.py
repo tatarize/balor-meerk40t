@@ -203,36 +203,6 @@ class BalorDriver:
                 job.set_travel_speed(self.service.travel_speed)
         return job
 
-    def paths_to_mark_job(self, paths, quant=50):
-        """
-        Convert path to a mark job.
-
-        @param queue:
-        @return:
-        """
-        job = CommandList(cal=Cal(self.service.calibration_file))
-        job.set_mark_settings(
-            travel_speed=self.service.travel_speed,
-            power=self.service.laser_power,
-            frequency=self.service.q_switch_frequency,
-            cut_speed=self.service.cut_speed,
-            laser_on_delay=100,
-            laser_off_delay=100,
-            polygon_delay=100
-        )
-        job.goto(0x8000, 0x8000)
-        job.laser_control(True)
-        for e in paths:
-            x, y = e.point(0)
-            x *= self.service.get_native_scale_x
-            y *= self.service.get_native_scale_y
-            job.goto(x,y)
-            for i in range(1, quant+1):
-                x, y = e.point(i / float(quant))
-                x *= self.service.get_native_scale_x
-                y *= self.service.get_native_scale_y
-                job.mark(x, y)
-        return job
 
     def hold_work(self):
         """
