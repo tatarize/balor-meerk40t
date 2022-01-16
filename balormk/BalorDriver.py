@@ -17,7 +17,13 @@ class BalorDriver:
 
         self.name = str(self.service)
 
-        self.connection = Sender(debug=self.service.channel("balor", buffer_size=50), mock=self.service.mock)
+        try:
+            with open(self.service.corfile, "br") as corfile:
+                table = corfile.read()
+        except (IOError, TypeError):
+            table = None
+
+        self.connection = Sender(debug=self.service.channel("balor", buffer_size=50), mock=self.service.mock, cor_table=table)
         self.connected = False
         self.connecting = False
 

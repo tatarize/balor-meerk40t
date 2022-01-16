@@ -7,7 +7,6 @@ from meerk40t.kernel import Service
 from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape
 
 import balor
-from balor.sender import Sender
 from balor.MSBF import CommandList
 from balormk.BalorDriver import BalorDriver
 
@@ -79,6 +78,22 @@ class BalorDevice(Service, ViewPort):
                 "type": str,
                 "label": _("Calibration File"),
                 "tip": _("Provide a calibration file for the machine"),
+            },
+            {
+                "attr": "corfile_enabled",
+                "object": self,
+                "default": False,
+                "type": bool,
+                "label": _("Enable Correction File"),
+                "tip": _("Use correction file?"),
+            },
+            {
+                "attr": "corfile",
+                "object": self,
+                "default": None,
+                "type": str,
+                "label": _("Correction File"),
+                "tip": _("Provide a correction file for the machine"),
             },
             {
                 "attr": "travel_speed",
@@ -412,6 +427,45 @@ class BalorDevice(Service, ViewPort):
                         )
                     )
                     channel("Calibration file was not set.")
+
+        @self.console_argument("filename", type=str, default=None)
+        @self.console_command(
+            "correction",
+            help=_("set the correction file"),
+        )
+        def set_corfile(command, channel, _, filename=None, remainder=None, **kwgs):
+            if filename is None:
+                file = self.corfile
+                if file is None:
+                    channel("No correction file set.")
+                else:
+                    channel(
+                        "Correction file is set to: {file}".format(file=self.corfile)
+                    )
+                    from os.path import exists
+
+                    if exists(file):
+                        channel("Correction file exists!")
+                        cal = balor.Cal.Cal(file)
+                        if cal.enabled:
+                            channel("Correction file successfully loads.")
+                        else:
+                            channel("Correction file does not load.")
+                    else:
+                        channel("WARNING: Correction file does not exist.")
+            else:
+                from os.path import exists
+
+                if exists(filename):
+                    self.corfile = filename
+                else:
+                    channel(
+                        "The file at {filename} does not exist.".format(
+                            filename=os.path.realpath(filename)
+                        )
+                    )
+                    channel("Correction file was not set.")
+
 
         @self.console_command(
             "position",
