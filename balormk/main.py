@@ -50,6 +50,22 @@ class BalorDevice(Service, ViewPort):
                 "label": _("Width"),
                 "tip": _("Lens Size"),
             },
+            {
+                "attr": "redlight_offset_x",
+                "object": self,
+                "default": "0mm",
+                "type": float,
+                "label": _("Redlight X Offset"),
+                "tip": _("Offset the redlight positions by this amount in x"),
+            },
+            {
+                "attr": "redlight_offset_y",
+                "object": self,
+                "default": "0mm",
+                "type": float,
+                "label": _("Redlight Y Offset"),
+                "tip": _("Offset the redlight positions by this amount in y"),
+            },
         ]
         self.register_choices("bed_dim", choices)
         ViewPort.__init__(self, 0, 0, self.lens_size, self.lens_size)
@@ -125,7 +141,31 @@ class BalorDevice(Service, ViewPort):
                 "default": 30.0,
                 "type": float,
                 "label": _("Q Switch Frequency"),
-                "tip": _("Frequency of the Q Switch (full disclosure, no clue)"),
+                "tip": _("QSwitch Frequency value"),
+            },
+            {
+                "attr": "delay_laser_on",
+                "object": self,
+                "default": 100.0,
+                "type": float,
+                "label": _("Laser On Delay"),
+                "tip": _("Delay for the start of the laser"),
+            },
+            {
+                "attr": "delay_laser_off",
+                "object": self,
+                "default": 100.0,
+                "type": float,
+                "label": _("Laser Off Delay"),
+                "tip": _("Delay amount for the end of the laser"),
+            },
+            {
+                "attr": "delay_polygon",
+                "object": self,
+                "default": 100.0,
+                "type": float,
+                "label": _("Polygon Delay"),
+                "tip": _("Delay amount between different points in the path travel."),
             },
             {
                 "attr": "mock",
@@ -145,7 +185,6 @@ class BalorDevice(Service, ViewPort):
         self.driver = BalorDriver(self)
         self.spooler.driver = self.driver
 
-        # self.add_service_delegate(self.driver)
         self.add_service_delegate(self.spooler)
 
         self.viewbuffer = ""
@@ -257,12 +296,13 @@ class BalorDevice(Service, ViewPort):
         )
         def balor_png(command, channel, _, data=None, filename="balor.png", **kwargs):
             from PIL import Image, ImageDraw
+
             data.scale_x = 1.0
             data.scale_y = 1.0
             data.size = "decagalvo"
-            im = Image.new('RGB', (0xFFF, 0xFFF), color=0)
+            im = Image.new("RGB", (0xFFF, 0xFFF), color=0)
             data.plot(ImageDraw.Draw(im), 0xFFF)
-            im.save(filename, format='png')
+            im.save(filename, format="png")
             return "balor", data
 
         @self.console_command(
@@ -271,7 +311,7 @@ class BalorDevice(Service, ViewPort):
             input_type="balor",
             output_type="balor",
         )
-        def balor_debug(command, channel, _, data=None,**kwargs):
+        def balor_debug(command, channel, _, data=None, **kwargs):
             c = CommandList()
             for packet in data.packet_generator():
                 c.add_packet(packet)
@@ -466,10 +506,9 @@ class BalorDevice(Service, ViewPort):
                     )
                     channel("Correction file was not set.")
 
-
         @self.console_command(
             "position",
-            help=_("give the galvo position of the selection"),
+            help=_("give the position of the selection box in galvos"),
         )
         def galvo_pos(command, channel, _, data=None, args=tuple(), **kwargs):
             """
@@ -745,9 +784,9 @@ class BalorDevice(Service, ViewPort):
                 power=self.laser_power,
                 frequency=self.q_switch_frequency,
                 cut_speed=self.cut_speed,
-                laser_on_delay=100,
-                laser_off_delay=100,
-                polygon_delay=100,
+                laser_on_delay=self.delay_laser_on,
+                laser_off_delay=self.delay_laser_off,
+                polygon_delay=self.delay_polygon,
             )
             y = y0
             count = 0
@@ -755,7 +794,7 @@ class BalorDevice(Service, ViewPort):
             old_y = y0
             while y < y0 + height:
                 x = x0
-                job.goto(x,y)
+                job.goto(x, y)
                 old_x = x0
                 while x < x0 + width:
                     px = img(y, x)[0][0]
@@ -782,31 +821,31 @@ class BalorDevice(Service, ViewPort):
                                 job.laser_control(True)  # laser turn on
                             i = passes
                             while i > 1:
-                                job.mark(x,y)
+                                job.mark(x, y)
                                 job.mark(old_x, old_y)
                                 i -= 2
-                            job.mark(x,y)
+                            job.mark(x, y)
                             burning = True
 
                         else:
                             if burning:
                                 # laser turn off
                                 job.laser_control(False)
-                            job.goto(x,y)
+                            job.goto(x, y)
                             burning = False
                     else:
 
                         if px + dither > threshold:
                             if not burning:
                                 job.laser_control(True)  # laser turn on
-                            job.mark(x,y)
+                            job.mark(x, y)
                             burning = True
                             dither = 0.0
                         else:
                             if burning:
                                 # laser turn off
                                 job.laser_control(False)
-                            job.goto(x,y)
+                            job.goto(x, y)
                             dither += abs(px + dither - threshold) * dither
                             burning = False
                     old_x = x
