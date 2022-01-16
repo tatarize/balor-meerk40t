@@ -478,14 +478,14 @@ class BalorDevice(Service, ViewPort):
             if bounds is None:
                 channel(_("Nothing Selected"))
                 return
-            x, y, height, width = bounds
+            xmin, ymin, xmax, ymax = bounds
             channel("Element bounds: {bounds}".format(bounds=str(bounds)))
             points = [
-                (x, y),
-                (x + width, y),
-                (x + width, y + height),
-                (x, y + height),
-                (x, y),
+                (xmin, ymin),
+                (xmax, ymin),
+                (xmax, ymax),
+                (xmin, ymax),
+                (xmin, ymin),
             ]
             return "elements", [Polygon(*points)]
 
