@@ -46,14 +46,14 @@ for p in points:
 sender = Sender(debug=print, mock=True)
 sender.open()
 
-desired_width = 20000
+desired_width = 10000
 
 
 def tick(cmds, loop_index):
     cmds.clear()
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
-    job.set_travel_speed(500)
+    job.set_travel_speed(8000)
     total_width = 0
     for digit in current_time:
         pts = points[digit]
@@ -87,7 +87,12 @@ def tick(cmds, loop_index):
 
 
 job = sender.job(tick=tick)
-job.execute(1000)
+try:
+    job.execute(1000)
+except KeyboardInterrupt as e:
+    print("Interrupted, quitting", e)
+sender.close()
+
 sender.close()
 
 
