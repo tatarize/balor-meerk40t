@@ -306,6 +306,12 @@ class BalorDevice(Service, ViewPort):
             job.goto(0x8000, 0x8000)
             job.laser_control(True)
             for e in paths:
+                if isinstance(e, Shape):
+                    if not isinstance(e, Path):
+                        e = Path(e)
+                    e = abs(e)
+                else:
+                    continue
                 x, y = e.point(0)
                 x *= self.get_native_scale_x
                 y *= self.get_native_scale_y
@@ -374,6 +380,8 @@ class BalorDevice(Service, ViewPort):
                     if not isinstance(e, Path):
                         e = Path(e)
                     e = abs(e)
+                else:
+                    continue
                 x, y = e.point(0)
                 x *= self.get_native_scale_x
                 y *= self.get_native_scale_y
