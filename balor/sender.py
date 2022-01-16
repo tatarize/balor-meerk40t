@@ -20,6 +20,7 @@ import threading
 # TODO: compatibility with ezcad .cor files
 from balor.MSBF import CommandList
 
+
 class BalorException(Exception): pass
 class BalorMachineException(BalorException): pass
 class BalorCommunicationException(BalorException): pass
@@ -116,61 +117,52 @@ class Sender:
              + bytearray(([0x02, 0x80] + [0x00]*10)*255) # NOP
             )
 
-    def __init__(self, machine_index=0, cor_table=None,
-            first_pulse_killer=200, pwm_half_period=125,
-            standby_param_1=2000, standby_param_2=20, timing_mode=1, delay_mode=1,
-            laser_mode=1, control_mode=0, footswitch_callback=None,
-            debug=False, mock=False):
-        if cor_table is None:
-            from .default_cor import DEFAULT_COR_TABLE
-            cor_table = DEFAULT_COR_TABLE
+    def __init__(self, footswitch_callback=None, debug=False):
+        self.serial_number = None
+        self.version = None
         self._lock = threading.Lock()
         self._terminate_execution = False
-        self._machine_index = machine_index
-        self._cor_table=cor_table
-        self._first_pulse_killer=first_pulse_killer
-        self._pwm_half_period=pwm_half_period
-        self._standby_param_1=standby_param_1
-        self._standby_param_2=standby_param_2
-        self._timing_mode = timing_mode
-        self._delay_mode=delay_mode
-        self._laser_mode=laser_mode
-        self._control_mode=control_mode
         self._footswitch_callback = footswitch_callback
         self._debug = debug
+        self._usb_connection = None
 
+    def open(self, machine_index=0, mock=False, **kwargs):
+        if self._usb_connection is not None:
+            raise BalorCommunicationException("Attempting to open an open connection.")
         if not mock:
-            self._usb_connection = UsbConnection(self._machine_index, debug=debug)
+            connection = UsbConnection(machine_index, debug=self._debug)
         else:
-            self._usb_connection = MockConnection(self._machine_index, debug=debug)
-
-    def open(self):
-        self._usb_connection.open()
-        self._init_machine()
+            connection = MockConnection(machine_index, debug=self._debug)
+        connection.open()
+        self._usb_connection = connection
+        self._init_machine(**kwargs)
         time.sleep(0.05)  # We sacrifice this time at the altar of the unknown race condition
         return True
 
-    def close(self):
-        self._shutdown_machine()
-        self._usb_connection.close()
-
-    def job(self, *args, **kwargs):
-        return CommandList(*args, **kwargs, sender=self)
-
-    def _send_command(self, *args):
-        return self._usb_connection.send_command(*args)
-
-    def _send_correction_entry(self, *args):
-        self._usb_connection.send_correction_entry(*args)
-
-    def _send_list_chunk(self, *args):
-        self._usb_connection.send_list_chunk(*args)
-
-    def _send_list(self, *args):
-        self._usb_connection.send_list(*args)
-
-    def _init_machine(self):
+    def _init_machine(self,
+                      cor_table=None,
+                      first_pulse_killer=200,
+                      pwm_half_period=125,
+                      pwm_pulse_width=125,
+                      standby_param_1=2000,
+                      standby_param_2=20,
+                      timing_mode=1,
+                      delay_mode=1,
+                      laser_mode=1,
+                      control_mode=0,
+                      fpk2_p1=0xFFB,
+                      fpk2_p2=1,
+                      fpk2_p3=409,
+                      fpk2_p4=100,
+                      fly_res_p1=0,
+                      fly_res_p2=99,
+                      fly_res_p3=1000,
+                      fly_res_p4=25,
+                      **kwargs):
         """Initialize the machine."""
+        if cor_table is None:
+            from .default_cor import DEFAULT_COR_TABLE
+            cor_table = DEFAULT_COR_TABLE
         self.serial_number = self.raw_get_serial_no()
         self.version = self.raw_get_version()
         self._usb_connection.send_command(IPG_GET_StMO_AP)
@@ -178,19 +170,19 @@ class Sender:
         self.raw_reset()
 
         # Load in-machine correction table
-        self._send_correction_table(self._cor_table)
+        self._send_correction_table(cor_table)
 
         self.raw_enable_laser()
-        self.raw_set_control_mode(self._control_mode,0)
-        self.raw_set_laser_mode(self._laser_mode, 0)
-        self.raw_set_delay_mode(self._delay_mode, 0)
-        self.raw_set_timing(self._timing_mode, 0)
-        self.raw_set_standby(self._standby_param_1, self._standby_param_2, 0, 0)
-        self.raw_set_first_pulse_killer(self._first_pulse_killer, 0)
-        self.raw_set_pwm_half_period(self._pwm_half_period, 0)
+        self.raw_set_control_mode(control_mode,0)
+        self.raw_set_laser_mode(laser_mode, 0)
+        self.raw_set_delay_mode(delay_mode, 0)
+        self.raw_set_timing(timing_mode, 0)
+        self.raw_set_standby(standby_param_1, standby_param_2, 0, 0)
+        self.raw_set_first_pulse_killer(first_pulse_killer, 0)
+        self.raw_set_pwm_half_period(pwm_half_period, 0)
 
         # unknown function
-        self.raw_set_pwm_pulse_width(125, 0)
+        self.raw_set_pwm_pulse_width(pwm_pulse_width, 0)
         # "IPG_OpenMO" (main oscillator?)
         self.raw_ipg_open_mo(0, 0)
         # Unclear if used for anything
@@ -198,15 +190,15 @@ class Sender:
 
         # 0x0FFB is probably a 12 bit rendering of int12 -5
         # Apparently some parameters for the first pulse killer
-        self.raw_set_fpk_param_2(0xFFB, 1, 409, 100)
+        self.raw_set_fpk_param_2(fpk2_p1, fpk2_p2, fpk2_p3, fpk2_p4)
 
         # Unknown fiber laser related command
-        self._send_command(SET_FLY_RES, 0, 99, 1000, 25)
+        self._send_command(SET_FLY_RES, fly_res_p1, fly_res_p2, fly_res_p3, fly_res_p4)
 
         # Is this appropriate for all laser engraver machines?
         self.raw_write_port(0)
 
-        # Conjecture is that this puts the output port out of a 
+        # Conjecture is that this puts the output port out of a
         # high impedance state (based on the name in the DLL,
         # ENABLEZ)
         # Based on how it's used, it could also be about latching out
@@ -218,8 +210,29 @@ class Sender:
         self.raw_write_analog_port_1(0x07FF, 0)
         self.raw_enable_z()
 
-    def _shutdown_machine(self):
-        pass
+    def close(self):
+        self.abort()
+        if self._usb_connection is not None:
+            self._usb_connection.close()
+        self._usb_connection = None
+
+    def job(self, *args, **kwargs):
+        return CommandList(*args, **kwargs, sender=self)
+
+    def _send_command(self, *args):
+        if self._usb_connection is None:
+            raise BalorCommunicationException("No usb connection.")
+        return self._usb_connection.send_command(*args)
+
+    def _send_correction_entry(self, *args):
+        if self._usb_connection is None:
+            raise BalorCommunicationException("No usb connection.")
+        self._usb_connection.send_correction_entry(*args)
+
+    def _send_list_chunk(self, *args):
+        if self._usb_connection is None:
+            raise BalorCommunicationException("No usb connection.")
+        self._usb_connection.send_list_chunk(*args)
 
     def _send_correction_table(self, table=None):
         """Send the onboard correction table to the machine."""
@@ -907,6 +920,9 @@ class UsbConnection:
 
     def close(self):
         self.status = None
+        if self.device is not None:
+            usb.util.dispose_resources(self.device)
+            self.device = None
         if self._debug:
             self._debug("Disconnected.")
 
@@ -921,21 +937,6 @@ class UsbConnection:
         query[2:2 + 5] = correction
         if self.device.write(self.ep_homi, query, 100) != 12:
             raise BalorCommunicationException("Failed to write correction entry")
-
-    def send_list(self, data):
-        """Sends a command list to the machine. Breaks it into 3072 byte
-           chunks as needed. Returns False if the sending is aborted,
-           True if successful."""
-
-        while len(data) >= self.chunk_size:
-            while not self.is_ready():
-                if self._abort_flag:
-                    return False
-                time.sleep(self.sleep_time)
-            self.send_list_chunk(data[:self.chunk_size])
-            data = data[self.chunk_size:]
-
-        return True
 
     def send_command(self, code, *parameters, read=True):
         """Send a command to the machine and return the response.

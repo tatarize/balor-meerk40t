@@ -2,11 +2,10 @@ import sys
 import time
 
 from meerk40t.core.cutcode import LaserSettings
-from meerk40t.svgelements import Shape, Path
 
 from balor.Cal import Cal
 from balor.MSBF import CommandList
-from balor.sender import Sender
+from balor.sender import Sender, BalorMachineException
 
 
 class BalorDriver:
@@ -14,18 +13,11 @@ class BalorDriver:
         self.service = service
         self.native_x = 0x8000
         self.native_y = 0x8000
-
         self.name = str(self.service)
+        self.channel = self.service.channel("balor", buffer_size=50)
+        self.connection = Sender(debug=self.channel)
 
-        try:
-            with open(self.service.corfile, "br") as corfile:
-                table = corfile.read()
-        except (IOError, TypeError):
-            table = None
-
-        self.connection = Sender(debug=self.service.channel("balor", buffer_size=50), mock=self.service.mock, cor_table=table)
         self.connected = False
-        self.connecting = False
 
         self.settings = LaserSettings()
 
@@ -38,7 +30,6 @@ class BalorDriver:
         self._shutdown = False
 
         self.queue = []
-
         self.connect()
 
     def __repr__(self):
@@ -56,24 +47,42 @@ class BalorDriver:
         :return:
         """
         self.connected = False
-        self.connecting = True
         while not self.connected:
-            self.connected = self.connection.open()
+            try:
+                try:
+                    with open(self.service.corfile, "br") as corfile:
+                        table = corfile.read()
+                except (IOError, TypeError):
+                    table = None
+                self.connected = self.connection.open(
+                    mock=self.service.mock,
+                    machine_index=0,
+                    cor_table=table,
+                    first_pulse_killer=200,
+                    pwm_half_period=125,
+                    standby_param_1=2000,
+                    standby_param_2=20,
+                    timing_mode=1,
+                    delay_mode=1,
+                    laser_mode=1,
+                    control_mode=0,
+                )
+            except BalorMachineException as e:
+                self.service.signal("pipe;usb_status", str(e))
+                self.channel(str(e))
+                return
             if not self.connected:
                 self.service.signal("pipe;usb_status", "Connecting...")
                 if self._shutdown:
-                    self.connecting = False
                     self.service.signal("pipe;usb_status", "Failed to connect")
                     return
                 time.sleep(1)
         self.connected = True
-        self.connecting = False
         self.service.signal("pipe;usb_status", "Connected")
 
     def disconnect(self):
         self.connection.close()
         self.connected = False
-        self.connecting = False
         self.service.signal("pipe;usb_status", "Disconnected")
 
     def group(self, plot):
@@ -88,19 +97,24 @@ class BalorDriver:
         for i in range(0, len(plot)):
             if len(plot[i]) == 2:
                 try:
-                    x0, y0 = plot[i-1]
+                    x0, y0 = plot[i - 1]
                     x1, y1 = plot[i]
-                    x2, y2 = plot[i+1]
+                    x2, y2 = plot[i + 1]
                     if x2 - x1 == x1 - x0 and y2 - y1 == y1 - y0:
                         continue
                 except IndexError:
                     pass
             else:
                 try:
-                    x0, y0, on0 = plot[i-1]
+                    x0, y0, on0 = plot[i - 1]
                     x1, y1, on1 = plot[i]
-                    x2, y2, on2 = plot[i+1]
-                    if x2 - x1 == x1 - x0 and y2 - y1 == y1 - y0 and on0 == on1 and on1 == on2:
+                    x2, y2, on2 = plot[i + 1]
+                    if (
+                        x2 - x1 == x1 - x0
+                        and y2 - y1 == y1 - y0
+                        and on0 == on1
+                        and on1 == on2
+                    ):
                         continue
                 except IndexError:
                     pass
@@ -151,7 +165,7 @@ class BalorDriver:
             cut_speed=self.service.cut_speed,
             laser_on_delay=100,
             laser_off_delay=100,
-            polygon_delay=100
+            polygon_delay=100,
         )
         job.goto(0x8000, 0x8000)
         job.laser_control(True)
@@ -167,14 +181,13 @@ class BalorDriver:
                     x, y, on = e
                 if on == 0:
                     try:
-                        job.goto(x,y)
+                        job.goto(x, y)
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.mark(x,y)
+                    job.mark(x, y)
         job.laser_control(False)
         return job
-
 
     def hold_work(self):
         """
@@ -223,7 +236,7 @@ class BalorDriver:
         return False
 
     def balor_job(self, job):
-        self.connection.execute(job,1)
+        self.connection.execute(job, 1)
 
     def laser_off(self, *values):
         """
@@ -265,11 +278,11 @@ class BalorDriver:
         @return:
         """
         self.connection.raw_write_port(0x100)
-        self.connection.execute(job,1)
+        self.connection.execute(job, 1)
 
     def light_data(self, job):
         self.connection.raw_write_port(0x100)
-        self.connection.execute(job,1)
+        self.connection.execute(job, 1)
 
     def plot_start(self):
         """
@@ -279,7 +292,7 @@ class BalorDriver:
         """
         job = self.cutcode_to_mark_job(self.queue)
         self.queue = []
-        self.connection.execute(job,1)
+        self.connection.execute(job, 1)
 
     def move_abs(self, x, y):
         """
@@ -290,7 +303,7 @@ class BalorDriver:
         :param y:
         :return:
         """
-        print("tried to move to", x,y)
+        print("tried to move to", x, y)
 
     def move_rel(self, dx, dy):
         """
@@ -309,14 +322,14 @@ class BalorDriver:
         :param y:
         :return:
         """
-        self.move_abs(0,0)
+        self.move_abs(0, 0)
 
     def unlock_rail(self):
         """
         This is called to unlock the gantry so we can move the laser plotting head freely.
         :return:
         """
-        #hard
+        # hard
         pass
 
     def lock_rail(self):
@@ -335,7 +348,7 @@ class BalorDriver:
         :return:
         """
         if data_type == "balor":
-            self.connection.execute(data,1)
+            self.connection.execute(data, 1)
 
     def set(self, attribute, value):
         """
@@ -411,7 +424,7 @@ class BalorDriver:
         Wants the driver to pause.
         :return:
         """
-        pass # you don't tell me what to do!
+        pass  # you don't tell me what to do!
 
     def resume(self):
         """
@@ -430,7 +443,7 @@ class BalorDriver:
 
         :return:
         """
-        pass # Dunno how to do this.
+        pass  # Dunno how to do this.
 
     def status(self):
         """
