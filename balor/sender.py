@@ -149,6 +149,7 @@ class Sender:
     def open(self):
         self._usb_connection.open()
         self._init_machine()
+        time.sleep(0.05)  # We sacrifice this time at the altar of the unknown race condition
         return True
 
     def close(self):
