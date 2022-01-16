@@ -276,6 +276,10 @@ class BalorDevice(Service, ViewPort):
             quantization=500,
             **kwgs
         ):
+            """
+            Mark takes in element types from element* or circle or hull and applies the mark settings, and outputs
+            a Balor job type. These could be spooled, looped, debugged or whatever else might be wanted/needed.
+            """
             channel("Creating mark job out of elements.")
             paths = data
             from balor.Cal import Cal
