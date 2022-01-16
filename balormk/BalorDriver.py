@@ -275,7 +275,7 @@ class BalorDriver:
         return False
 
     def balor_job(self, job):
-        self.connection.execute(job)
+        self.connection.execute(job,1)
 
     def laser_off(self, *values):
         """
@@ -317,11 +317,11 @@ class BalorDriver:
         @return:
         """
         self.connection.raw_write_port(0x100)
-        self.connection.execute(job)
+        self.connection.execute(job,1)
 
     def light_data(self, job):
         self.connection.raw_write_port(0x100)
-        self.connection.execute(job)
+        self.connection.execute(job,1)
 
     def plot_start(self):
         """
@@ -331,7 +331,7 @@ class BalorDriver:
         """
         job = self.cutcode_to_mark_job(self.queue)
         self.queue = []
-        self.connection.execute(job)
+        self.connection.execute(job,1)
 
     def move_abs(self, x, y):
         """
@@ -387,7 +387,7 @@ class BalorDriver:
         :return:
         """
         if data_type == "balor":
-            self.connection.execute(data)
+            self.connection.execute(data,1)
 
     def set(self, attribute, value):
         """
