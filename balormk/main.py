@@ -1,10 +1,10 @@
 import os
 import sys
 from meerk40t.core.spoolers import Spooler
-from meerk40t.core.units import ViewPort
+from meerk40t.core.units import ViewPort, UNITS_PER_INCH
 from meerk40t.kernel import Service
 
-from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape
+from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape, Angle, Matrix, Polyline
 
 import balor
 from balor.Cal import Cal
@@ -14,6 +14,8 @@ from balormk.BalorDriver import BalorDriver
 import numpy as np
 import scipy
 import scipy.interpolate
+
+from balormk.pathtools import EulerianFill
 
 
 def plugin(kernel, lifecycle):
@@ -1187,6 +1189,114 @@ class BalorDevice(Service, ViewPort):
 
             return "balor", job
 
+        @self.console_option(
+            "travel_speed", "t", type=float, help="Set the travel speed."
+        )
+        @self.console_option("power", "p", type=float, help="Set the power level")
+        @self.console_option(
+            "frequency", "q", type=float, help="Set the device's qswitch frequency"
+        )
+        @self.console_option(
+            "cut_speed", "s", type=float, help="Set the cut speed of the device"
+        )
+        @self.console_option("power", "p", type=float, help="Set the power level")
+        @self.console_option(
+            "laser_on_delay", "n", type=float, help="Sets the device's laser on delay"
+        )
+        @self.console_option(
+            "laser_off_delay", "f", type=float, help="Sets the device's laser off delay"
+        )
+        @self.console_option(
+            "polygon_delay",
+            "n",
+            type=float,
+            help="Sets the device's laser polygon delay",
+        )
+        @self.console_option(
+            "angle", "a", type=Angle.parse, default=0, help=_("Angle of the fill")
+        )
+        @self.console_option(
+            "distance", "d", type=str, default="1mm", help=_("distance between rungs")
+        )
+        @self.console_command(
+            "hatch",
+            help=_("hatch <angle> <distance>"),
+            output_type = "balor",
+        )
+        def hatch(command,
+                  channel,
+                  _,
+                  angle=None,
+                  distance=None,
+                  travel_speed=None,
+                  power=None,
+                  frequency=None,
+                  cut_speed=None,
+                  laser_on_delay=None,
+                  laser_off_delay=None,
+                  polygon_delay=None,
+                  **kwargs):
+            from balor.Cal import Cal
+
+            job = CommandList(cal=Cal(self.calibration_file))
+            job.set_mark_settings(
+                travel_speed=self.travel_speed
+                if travel_speed is None
+                else travel_speed,
+                power=self.laser_power if power is None else power,
+                frequency=self.q_switch_frequency if frequency is None else frequency,
+                cut_speed=self.cut_speed if cut_speed is None else cut_speed,
+                laser_on_delay=self.delay_laser_on
+                if laser_on_delay is None
+                else laser_on_delay,
+                laser_off_delay=self.delay_laser_off
+                if laser_off_delay is None
+                else laser_off_delay,
+                polygon_delay=self.delay_polygon
+                if polygon_delay is None
+                else polygon_delay,
+            )
+            elements = self.elements
+            channel(_("Hatch Filling"))
+            if distance is not None:
+                distance = distance.value(
+                    ppi=UNITS_PER_INCH, relative_length=self.device.width
+                )
+            else:
+                distance = 16
+
+            efill = EulerianFill(distance)
+            for element in elements.elems(emphasized=True):
+                if not isinstance(element, Shape):
+                    continue
+                e = abs(Path(element))
+                e *= Matrix.scale(self.get_native_scale_x, self.get_native_scale_y)
+                if angle is not None:
+                    e *= Matrix.rotate(angle)
+
+                pts = [abs(e).point(i / 100.0, error=1e-4) for i in range(101)]
+                efill += pts
+
+            points = efill.get_fill()
+
+            def split(points):
+                pos = 0
+                for i, pts in enumerate(points):
+                    if pts is None:
+                        yield points[pos: i - 1]
+                        pos = i + 1
+                if pos != len(points):
+                    yield points[pos: len(points)]
+
+            for s in split(points):
+                for p in s:
+                    if p.value == "RUNG":
+                        job.mark(p.x, p.y)
+                    if p.value == "EDGE":
+                        job.goto(p.x, p.y)
+            return "balor", job
+
+
     @property
     def current_x(self):
         """
@@ -1225,3 +1335,4 @@ class BalorDevice(Service, ViewPort):
             return self.calfile
         else:
             return None
+
