@@ -329,8 +329,8 @@ class BalorDriver:
         unit_y *= self.service.get_native_scale_y
         self.native_x = unit_x
         self.native_y = unit_y
-        self.native_x &= 0xFFFF
-        self.native_y &= 0xFFFF
+        self.native_x = int(self.native_x) & 0xFFFF
+        self.native_y = int(self.native_y) & 0xFFFF
         self.connection.set_xy(self.native_x, self.native_y)
 
     def move_rel(self, dx, dy):
