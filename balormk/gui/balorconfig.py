@@ -28,15 +28,19 @@ class BalorConfiguration(MWindow):
         self.panel_main = PropertiesPanel(
             self, wx.ID_ANY, context=self.context, choices="balor"
         )
-        self.panel_optimize = PropertiesPanel(
+        self.panel_global = PropertiesPanel(
             self, wx.ID_ANY, context=self.context, choices="balor-global"
         )
+        self.panel_extra = PropertiesPanel(
+            self, wx.ID_ANY, context=self.context, choices="balor-extra"
+        )
         self.notebook_main.AddPage(self.panel_main, _("Balor"))
-        self.notebook_main.AddPage(self.panel_optimize, _("Global Settings"))
+        self.notebook_main.AddPage(self.panel_global, _("Global Settings"))
+        self.notebook_main.AddPage(self.panel_extra, _("Extras"))
         self.Layout()
 
         self.add_module_delegate(self.panel_main)
-        self.add_module_delegate(self.panel_optimize)
+        self.add_module_delegate(self.panel_global)
 
     def window_preserve(self):
         return False
