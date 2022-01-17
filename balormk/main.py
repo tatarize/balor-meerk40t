@@ -238,6 +238,14 @@ class BalorDevice(Service, ViewPort):
                 "tip": _("Unknown"),
             },
             {
+                "attr": "laser_mode",
+                "object": self,
+                "default": 1,
+                "type": int,
+                "label": _("Laser Mode"),
+                "tip": _("Unknown"),
+            },
+            {
                 "attr": "control_mode",
                 "object": self,
                 "default": 0,
