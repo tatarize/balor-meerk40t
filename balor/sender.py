@@ -902,7 +902,10 @@ class UsbConnection:
 
         # if the permissions are wrong, these will throw usb.core.USBError
         device.set_configuration()
-        device.reset()
+        try:
+            device.reset()
+        except usb.core.USBError:
+            pass
         self.device = device
         if self._debug:
             self._debug("Connected.")
