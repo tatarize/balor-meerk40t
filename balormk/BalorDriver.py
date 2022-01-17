@@ -30,7 +30,6 @@ class BalorDriver:
         self._shutdown = False
 
         self.queue = []
-        self.connect()
 
     def __repr__(self):
         return "BalorDriver(%s)" % self.name
@@ -246,6 +245,8 @@ class BalorDriver:
         return False
 
     def balor_job(self, job):
+        if not self.connected:
+            self.connect()
         self.connection.execute(job, 1)
 
     def laser_off(self, *values):
@@ -287,10 +288,14 @@ class BalorDriver:
         @param job:
         @return:
         """
+        if not self.connected:
+            self.connect()
         self.connection.raw_write_port(0x100)
         self.connection.execute(job, 1)
 
     def light_data(self, job):
+        if not self.connected:
+            self.connect()
         self.connection.raw_write_port(0x100)
         self.connection.execute(job, 1)
 
@@ -300,6 +305,8 @@ class BalorDriver:
 
         :return:
         """
+        if not self.connected:
+            self.connect()
         job = self.cutcode_to_mark_job(self.queue)
         self.queue = []
         self.connection.execute(job, 1)
@@ -313,6 +320,8 @@ class BalorDriver:
         :param y:
         :return:
         """
+        if not self.connected:
+            self.connect()
         unit_x = self.service.length(x, 0, relative_length=self.service.lens_size, as_float=True)
         unit_y = self.service.length(y, 1, relative_length=self.service.lens_size, as_float=True)
         unit_x *= self.service.get_native_scale_x
@@ -331,14 +340,16 @@ class BalorDriver:
         :param dy:
         :return:
         """
+        if not self.connected:
+            self.connect()
         unit_dx = self.service.length(dx, 0, relative_length=self.service.lens_size, as_float=True)
         unit_dy = self.service.length(dy, 1, relative_length=self.service.lens_size, as_float=True)
         unit_dx *= self.service.get_native_scale_x
         unit_dy *= self.service.get_native_scale_y
         self.native_x += unit_dx
         self.native_y += unit_dy
-        self.native_x &= 0xFFFF
-        self.native_y &= 0xFFFF
+        self.native_x = int(self.native_x) & 0xFFFF
+        self.native_y = int(self.native_y) & 0xFFFF
         self.connection.set_xy(self.native_x, self.native_y)
 
     def home(self, x=None, y=None):
@@ -359,6 +370,8 @@ class BalorDriver:
         :return:
         """
         if data_type == "balor":
+            if not self.connected:
+                self.connect()
             self.connection.execute(data, 1)
 
     def set(self, attribute, value):
@@ -435,6 +448,8 @@ class BalorDriver:
         Wants the driver to pause.
         :return:
         """
+        if not self.connected:
+            self.connect()
         self.connection.raw_stop_list()
 
     def resume(self):
@@ -446,6 +461,8 @@ class BalorDriver:
 
         :return:
         """
+        if not self.connected:
+            self.connect()
         self.connection.raw_restart_list()
 
     def reset(self):
