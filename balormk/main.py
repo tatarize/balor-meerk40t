@@ -117,6 +117,14 @@ class BalorDevice(Service, ViewPort):
                     "This starts connects to fake software laser rather than real one for debugging."
                 ),
             },
+            {
+                "attr": "machine_index",
+                "object": self,
+                "default": 0,
+                "type": int,
+                "label": _("Machine index to select"),
+                "tip": _("Which machine should we connect to? -- Leave at 0 if you have 1 machine."),
+            },
         ]
         self.register_choices("balor", choices)
 

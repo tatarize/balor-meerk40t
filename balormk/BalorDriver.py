@@ -57,7 +57,7 @@ class BalorDriver:
                     table = None
                 self.connected = self.connection.open(
                     mock=self.service.mock,
-                    machine_index=0,
+                    machine_index=self.service.machine_index,
                     cor_table=table,
                     first_pulse_killer=self.service.first_pulse_killer,
                     pwm_pulse_width=self.service.pwm_pulse_width,
