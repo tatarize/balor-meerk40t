@@ -1259,11 +1259,11 @@ class BalorDevice(Service, ViewPort):
             elements = self.elements
             channel(_("Hatch Filling"))
             if distance is not None:
-                distance = distance.value(
-                    ppi=UNITS_PER_INCH, relative_length=self.device.width
-                )
+                distance = self.length(distance, -1, as_float=True)
+                distance *= self.get_native_scale_x
             else:
-                distance = 16
+                distance = self.length("1mm", -1, as_float=True)
+                distance *= self.get_native_scale_x
 
             efill = EulerianFill(distance)
             for element in elements.elems(emphasized=True):
