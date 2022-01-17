@@ -28,7 +28,11 @@ Windows, unlike Mac and Linux, will likely require something to allow the progra
 
 # Add device.
 
-In device manager, add a new device. Add in a "balor" device. You can delete the default M2-Nano device that meerk40t installs as a default.
+In device manager, add a new device. Add in a "balor" device. You can delete the default M2-Nano device that meerk40t installs as a default. If you use the compiled binary in the project this step may not be necessary.
+
+# GUI
+
+May of the built in gui call backs work even though many are for plotter based lasers. So you can "jog" your laser around which involves moving the red dot rather pointlessly. Homing will restore the red dot to the center. You can run cut and engrave jobs though these will be run with global settings set in config. The galvo light button in the ribbon bar will let you highlight the project in several different ways. Stopping a job in process works but currently takes ~2 seconds. Pause and resume may partially work. 
 
 # Console Commands
 
