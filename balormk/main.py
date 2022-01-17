@@ -572,7 +572,10 @@ class BalorDevice(Service, ViewPort):
             help=_("Pauses the currently running job"),
         )
         def pause(command, channel, _, data=None, remainder=None, **kwgs):
-            channel("Pausing current job")
+            if self.driver.paused:
+                channel("Resuming current job")
+            else:
+                channel("Pausing current job")
             self.driver.pause()
 
         @self.console_command(
