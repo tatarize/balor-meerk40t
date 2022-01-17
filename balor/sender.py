@@ -255,7 +255,7 @@ class Sender:
         self.read_port()
         return bool(self._usb_connection.status & 0x04)
 
-    def execute(self, command_list: CommandList, loop_count=float('inf'),
+    def execute(self, command_list: CommandList, loop_count=1,
                 callback_finished=None):
         """Run a job. loop_count is the number of times to repeat the
            job; if it is True, it repeats until aborted. If there is a job
