@@ -22,9 +22,6 @@ class BalorDriver:
 
         self.settings = LaserSettings()
 
-        self.holds = []
-        self.temp_holds = []
-
         self.is_relative = False
         self.laser = False
 
@@ -208,7 +205,7 @@ class BalorDriver:
 
         :return:
         """
-        return self.hold()
+        return self.paused
 
     def hold_idle(self):
         """
@@ -216,33 +213,6 @@ class BalorDriver:
         was found to be empty.
         :return:
         """
-        return False
-
-    def hold(self):
-        """
-        Holds are criteria to use to pause the data interpretation. These halt the production of new data until the
-        criteria is met. A hold is constant and will always halt the data while true. A temp_hold will be removed
-        as soon as it does not hold the data.
-
-        -- This is generally just a much fancier way to process any holds we might have.
-
-        :return: Whether data interpretation should hold.
-        """
-        temp_hold = False
-        fail_hold = False
-        for i, hold in enumerate(self.temp_holds):
-            if not hold():
-                self.temp_holds[i] = None
-                fail_hold = True
-            else:
-                temp_hold = True
-        if fail_hold:
-            self.temp_holds = [hold for hold in self.temp_holds if hold is not None]
-        if temp_hold:
-            return True
-        for hold in self.holds:
-            if hold():
-                return True
         return False
 
     def balor_job(self, job):
