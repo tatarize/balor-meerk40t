@@ -89,6 +89,7 @@ FIBER_GET_StMO_AP      = 0x0034 # Unclear what this means; there is no
                                 # signal lines in BJJCZ documentation for the board; LASERST is
                                 # the name given to the error code lines on the IPG connector.
 GET_USER_DATA          = 0x0036 # ?
+GET_FLY_PULSE_COUNT    = 0x0037 # ?
 GET_FLY_SPEED          = 0x0038 # ?
 ENABLE_Z_2             = 0x0039 # ?
 ENABLE_Z               = 0x003A # Probably fiber laser related
@@ -841,6 +842,13 @@ class Sender:
         :return:
         """
         self._send_command(GET_FLY_SPEED, p1, p2, p3, p4)
+
+    def raw_get_fly_pulse_count(self, p1):
+        """
+        :param p1:
+        :return:
+        """
+        self._send_command(GET_FLY_PULSE_COUNT, p1)
 
     def raw_set_fiber_config(self, p1, p2):
         self.raw_fiber_config_1(0, p1, p2)
