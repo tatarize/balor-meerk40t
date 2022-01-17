@@ -360,7 +360,7 @@ class BalorDriver:
         :param y:
         :return:
         """
-        self.move_abs(0x8000, 0x8000)
+        self.move_abs("50%", "50%")
 
     def blob(self, data_type, data):
         """
