@@ -463,7 +463,7 @@ class OpEnableWeldPowerWave(Operation):
         )
 
 
-class OpIPGYLPMPulseWidth(Operation):
+class OpFiberYLPMPulseWidth(Operation):
     opcode = 0x8026
     # name = "Name"
     name = str(opcode)
@@ -515,7 +515,7 @@ all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpCut,
                   OpSetLaserOffDelay, OpSetLaserOnDelay, OpSetTravelSpeed,
                   OpSetMarkEndDelay, OpEndOfList, OpTravel, OpMarkFrequency, OpMarkPulseWidth,
                   OpWritePort, OpDirectLaserSwitch, OpFlyDelay, OpSetCo2FPK, OpFlyWaitInput,
-                  OpChangeMarkCount, OpSetWeldPowerWave, OpEnableWeldPowerWave, OpIPGYLPMPulseWidth,
+                  OpChangeMarkCount, OpSetWeldPowerWave, OpEnableWeldPowerWave, OpFiberYLPMPulseWidth,
                   OpFlyEncoderCount, OpSetDaZWord
                   ]
 
