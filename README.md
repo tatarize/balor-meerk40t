@@ -23,6 +23,9 @@ You need to install this plugin:
 
 `pip install git+https://github.com/tatarize.balor-meerk40t.git`
 
+# Windows Driver
+Windows, unlike Mac and Linux, will likely require something to allow the program to use pyusb compatible usb drivers. At least for now. The easiest method of doing this would be to follow the instruction for [Zadig.](https://zadig.akeo.ie/) The device uses idVendor=0x9588, idProduct=0x9899. 
+
 # Add device.
 
 In device manager, add a new device. Add in a "balor" device. You can delete the default M2-Nano device that meerk40t installs as a default.
@@ -72,6 +75,16 @@ Balor interacts with MeerK40t's console commands see: [MeerK40t Features: Consol
 * `box`: Converts the outline selection area into a `elements` type object. This is mostly so that that can be put into the loop. `box light loop` to create the looped selected box.
 * `hull`: Displays the hull of the current selected element. This is like a rubberband outline. eg. `hull light loop`
 * `ants`: Display marching ants animation of the current selected job.
+* `hatch`: Fills the currently selected shape in with a hatch fill.
+     * `distance` (`d`)
+     * `angle` (`a`): angle can't be used due to an implementation bug.
+     * `travel_speed` (`t`)
+     * `frequency` (`q`)
+     * `power` (`p`),
+     * `cut_speed` (`s`)
+     * `laser_on_delay` (`n`)
+     * `laser_off_delay` (`f`)
+     * `polygon_delay` (`n`)
 
 # Notes:
 * The galvo positions are the native resolution of the machine. They are from 0x0000 to 0xFFFF with 0x8000 being the center. The positions are absolute so the bed locations cannot exceed the 0xFFFF limit.
