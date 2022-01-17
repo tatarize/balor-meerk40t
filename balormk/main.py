@@ -557,6 +557,33 @@ class BalorDevice(Service, ViewPort):
             self.driver.connection.abort()
 
         @self.console_command(
+            "estop",
+            help=_("stops the current job, deletes the spooler"),
+            input_type=(None),
+        )
+        def estop(command, channel, _, data=None, remainder=None, **kwgs):
+            channel("Stopping idle job")
+            self.spooler.set_idle(None)
+            self.spooler.clear_queue()
+            self.driver.connection.abort()
+
+        @self.console_command(
+            "pause",
+            help=_("Pauses the currently running job"),
+        )
+        def pause(command, channel, _, data=None, remainder=None, **kwgs):
+            channel("Pausing current job")
+            self.driver.pause()
+
+        @self.console_command(
+            "resume",
+            help=_("Resume the currently running job"),
+        )
+        def resume(command, channel, _, data=None, remainder=None, **kwgs):
+            channel("Resume the current job")
+            self.driver.resume()
+
+        @self.console_command(
             "usb_connect",
             help=_("connect usb"),
         )

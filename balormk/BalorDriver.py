@@ -16,6 +16,7 @@ class BalorDriver:
         self.name = str(self.service)
         self.channel = self.service.channel("balor", buffer_size=50)
         self.connection = Sender(debug=self.channel)
+        self.paused = False
 
         self.connected = False
 
@@ -450,6 +451,10 @@ class BalorDriver:
         """
         if not self.connected:
             self.connect()
+        if self.paused:
+            self.resume()
+            return
+        self.paused = True
         self.connection.raw_stop_list()
 
     def resume(self):
@@ -463,6 +468,7 @@ class BalorDriver:
         """
         if not self.connected:
             self.connect()
+        self.paused = False
         self.connection.raw_restart_list()
 
     def reset(self):
