@@ -304,7 +304,15 @@ class BalorDriver:
         :param y:
         :return:
         """
-        print("tried to move to", x, y)
+        unit_x = self.service.length(x, 0, relative_length=self.service.lens_size, as_float=True)
+        unit_y = self.service.length(y, 1, relative_length=self.service.lens_size, as_float=True)
+        unit_x *= self.service.get_native_scale_x
+        unit_y *= self.service.get_native_scale_y
+        self.native_x = unit_x
+        self.native_y = unit_y
+        self.native_x &= 0xFFFF
+        self.native_y &= 0xFFFF
+        self.connection.set_xy(self.native_x, self.native_y)
 
     def move_rel(self, dx, dy):
         """
@@ -314,7 +322,15 @@ class BalorDriver:
         :param dy:
         :return:
         """
-        print("tried to move by", dx, dy)
+        unit_dx = self.service.length(dx, 0, relative_length=self.service.lens_size, as_float=True)
+        unit_dy = self.service.length(dy, 1, relative_length=self.service.lens_size, as_float=True)
+        unit_dx *= self.service.get_native_scale_x
+        unit_dy *= self.service.get_native_scale_y
+        self.native_x += unit_dx
+        self.native_y += unit_dy
+        self.native_x &= 0xFFFF
+        self.native_y &= 0xFFFF
+        self.connection.set_xy(self.native_x, self.native_y)
 
     def home(self, x=None, y=None):
         """
@@ -324,21 +340,6 @@ class BalorDriver:
         :return:
         """
         self.move_abs(0, 0)
-
-    def unlock_rail(self):
-        """
-        This is called to unlock the gantry so we can move the laser plotting head freely.
-        :return:
-        """
-        # hard
-        pass
-
-    def lock_rail(self):
-        """
-        This is called to lock the gantry so we can move the laser plotting head freely.
-        :return:
-        """
-        pass
 
     def blob(self, data_type, data):
         """
@@ -425,7 +426,7 @@ class BalorDriver:
         Wants the driver to pause.
         :return:
         """
-        pass  # you don't tell me what to do!
+        self.connection.raw_stop_list()
 
     def resume(self):
         """
@@ -436,7 +437,7 @@ class BalorDriver:
 
         :return:
         """
-        pass
+        self.connection.raw_restart_list()
 
     def reset(self):
         """
@@ -444,7 +445,7 @@ class BalorDriver:
 
         :return:
         """
-        pass  # Dunno how to do this.
+        self.connection.abort()
 
     def status(self):
         """
