@@ -27,20 +27,20 @@ class BalorCommunicationException(BalorException): pass
 class BalorDataValidityException(BalorException): pass
 
 # fmt: off
+# Marked with ? - currently not seen in the wild
 DISABLE_LASER          = 0x0002
-RESET                  = 0x0003 # Corresponding list command is "LaserOnPoint"
-                                # Does it refer to the red dot aiming laser?
+RESET                  = 0x0003
 ENABLE_LASER           = 0x0004
 EXECUTE_LIST           = 0x0005
-SET_PWM_PULSE_WIDTH    = 0x0006 # Might set travel/jog speed
+SET_PWM_PULSE_WIDTH    = 0x0006 # ?
 GET_REGISTER           = 0x0007
 GET_SERIAL_NUMBER      = 0x0009 # In EzCAD mine is 32012LI43405B, Version 4.02, LMC V4 FIB
 GET_LIST_STATUS        = 0x000A
 GET_XY_POSITION        = 0x000C # Get current galvo position
 SET_XY_POSITION        = 0x000D # Travel the galvo xy to specified position
-LASER_SIGNAL_OFF       = 0x000E
-LASER_SIGNAL_ON        = 0x000F
-WRITE_CORRECTION_LINE  = 0x0010
+LASER_SIGNAL_OFF       = 0x000E # ?
+LASER_SIGNAL_ON        = 0x000F # ?
+WRITE_CORRECTION_LINE  = 0x0010 # ?
 RESET_LIST             = 0x0012
 RESTART_LIST           = 0x0013
 WRITE_CORRECTION_TABLE = 0x0015
@@ -53,8 +53,8 @@ SET_LASER_MODE         = 0x001B
 SET_TIMING             = 0x001C
 SET_STANDBY            = 0x001D
 SET_PWM_HALF_PERIOD    = 0x001E
-STOP_EXECUTE           = 0x001F
-STOP_LIST              = 0x0020
+STOP_EXECUTE           = 0x001F # ?
+STOP_LIST              = 0x0020 # ?
 WRITE_PORT             = 0x0021
 WRITE_ANALOG_PORT_1    = 0x0022 # At end of cut, seen writing 0x07FF
 WRITE_ANALOG_PORT_2    = 0x0023
@@ -65,38 +65,37 @@ SET_AXIS_ORIGIN_PARAM  = 0x0027
 GO_TO_AXIS_ORIGIN      = 0x0028
 MOVE_AXIS_TO           = 0x0029
 GET_AXIS_POSITION      = 0x002A
-GET_FLY_WAIT_COUNT     = 0x002B
-GET_MARK_COUNT         = 0x002D
+GET_FLY_WAIT_COUNT     = 0x002B # ?
+GET_MARK_COUNT         = 0x002D # ?
 SET_FPK_2E             = 0x002E # First pulse killer related, SetFpkParam2
                                 # My ezcad lists 40 microseconds as FirstPulseKiller
                                 # EzCad sets it 0x0FFB, 1, 0x199, 0x64
-IPG_CONFIG_1           = 0x002F
-IPG_CONFIG_2           = 0x0030
-LOCK_INPUT_PORT        = 0x0031
+FIBER_CONFIG_1         = 0x002F #
+FIBER_CONFIG_2         = 0x0030 #
+LOCK_INPUT_PORT        = 0x0031 # ?
 SET_FLY_RES            = 0x0032 # Unknown fiber laser parameter being set
                                 # EzCad sets it: 0x0000, 0x0063, 0x03E8, 0x0019
-IPG_OPEN_MO            = 0x0033 # "IPG (i.e. fiber) Open MO" - MO is probably Master Oscillator
-                                # (In BJJCZ documentation, the pin 18 on the IPG connector is 
+FIBER_OPEN_MO          = 0x0033 # "IPG (i.e. fiber) Open MO" - MO is probably Master Oscillator
+                                # (In BJJCZ documentation, the pin 18 on the IPG connector is
                                 #  called "main oscillator"; on the raycus docs it is "emission enable.")
                                 # Seen at end of marking operation with all
                                 # zero parameters. My Ezcad has an "open MO delay"
                                 # of 8 ms
-IPG_GET_StMO_AP         = 0x0034 # Unclear what this means; there is no
+FIBER_GET_StMO_AP      = 0x0034 # Unclear what this means; there is no
                                 # corresponding list command. It might be to
                                 # get a status register related to the source.
                                 # It is called IPG_GETStMO_AP in the dll, and the abbreviations
-                                # MO and AP are used for the master oscillator and power amplifier 
-                                # signal lines in BJJCZ documentation for the board; LASERST is 
+                                # MO and AP are used for the master oscillator and power amplifier
+                                # signal lines in BJJCZ documentation for the board; LASERST is
                                 # the name given to the error code lines on the IPG connector.
-GET_USER_DATA          = 0x0036
-GET_FLY_SPEED          = 0x0038
-ENABLE_Z_2             = 0x0039
+GET_USER_DATA          = 0x0036 # ?
+GET_FLY_SPEED          = 0x0038 # ?
+ENABLE_Z_2             = 0x0039 # ?
 ENABLE_Z               = 0x003A # Probably fiber laser related
-SETZDATA               = 0x003B
-SET_SPI_SIMMER_CURRENT = 0x003C
-IS_LITE_VERSION        = 0x0040
-GET_MARK_TIME          = 0x0041 # Seen at end of cutting with param 0x0003
-                                # Only and always called with param 3
+SET_Z_DATA             = 0x003B # ?
+SET_SPI_SIMMER_CURRENT = 0x003C # ?
+IS_LITE_VERSION        = 0x0040 # Tell laser to nerf itself for ezcad lite apparently
+GET_MARK_TIME          = 0x0041 # Seen at end of cutting with param 0x0003, Only and always called with param 3
 SET_FPK_PARAM          = 0x0062  # Probably "first pulse killer" = fpk
 # fmt: on
 
@@ -165,7 +164,7 @@ class Sender:
             cor_table = DEFAULT_COR_TABLE
         self.serial_number = self.raw_get_serial_no()
         self.version = self.raw_get_version()
-        self._usb_connection.send_command(IPG_GET_StMO_AP)
+        self._usb_connection.send_command(FIBER_GET_StMO_AP)
 
         self.raw_reset()
 
@@ -184,7 +183,7 @@ class Sender:
         # unknown function
         self.raw_set_pwm_pulse_width(pwm_pulse_width, 0)
         # "IPG_OpenMO" (main oscillator?)
-        self.raw_ipg_open_mo(0, 0)
+        self.raw_fiber_open_mo(0, 0)
         # Unclear if used for anything
         self._send_command(GET_REGISTER, 0)
 
@@ -627,10 +626,13 @@ class Sender:
         """
         return self._send_command(WRITE_ANALOG_PORT_2, 0, s1, value)
 
-    def raw_write_analog_port_x(self, v1: int, s1: int, value: int):
+    def raw_write_analog_port_x(self, v1: int, s1: int, value: int = 0):
         """
         3 parameters.
         variable, stack, value
+
+        2 parameters (called elsewhere)
+        stack, value
 
         :param v1:
         :param s1:
@@ -721,7 +723,6 @@ class Sender:
         """
         return self._send_command(SET_FLY_RES, p1, p2, p3, p4, p5)
 
-
     def raw_get_mark_count(self, p1: bool):
         """
         1 parameter
@@ -745,7 +746,7 @@ class Sender:
         """
         return self._send_command(SET_FPK_2E, v1, v2, v3, s1)
 
-    def raw_ipg_open_mo(self, s1: int, value: int):
+    def raw_fiber_open_mo(self, s1: int, value: int):
         """
         2 parameters
         stack, value
@@ -754,15 +755,15 @@ class Sender:
         :param value:
         :return: value response
         """
-        return self._send_command(IPG_OPEN_MO, s1, value)
+        return self._send_command(FIBER_OPEN_MO, s1, value)
 
-    def raw_ipg_get_st_mo_ap(self):
+    def raw_fiber_get_st_mo_ap(self):
         """
         No parameters
 
         :return: value response
         """
-        return self._send_command(IPG_GET_StMO_AP)
+        return self._send_command(FIBER_GET_StMO_AP)
 
     def raw_enable_z(self):
         """
@@ -793,7 +794,7 @@ class Sender:
         :param v2:
         :return: value response
         """
-        return self._send_command(SETZDATA, v1, s1, v2)
+        return self._send_command(SET_Z_DATA, v1, s1, v2)
 
     def raw_set_spi_simmer_count(self, v1, s1):
         """
@@ -830,18 +831,6 @@ class Sender:
         """
         return self._send_command(IS_LITE_VERSION, 1)
 
-    def raw_unknown_init_24(self, s1: int, value: int):
-        """
-        2 parameters
-
-        stack, value
-
-        :param s1:
-        :param value:
-        :return:
-        """
-        return self._send_command(WRITE_ANALOG_PORT_X, s1, value)
-
     def raw_get_fly_speed(self, p1, p2, p3, p4):
         """
 
@@ -853,14 +842,14 @@ class Sender:
         """
         self._send_command(GET_FLY_SPEED, p1, p2, p3, p4)
 
-    def raw_set_ipg_config(self, p1, p2):
-        self.raw_ipg_config_1(0, p1, p2)
+    def raw_set_fiber_config(self, p1, p2):
+        self.raw_fiber_config_1(0, p1, p2)
 
-    def raw_get_ipg_config(self):
-        self.raw_ipg_config_1(1, 0, 0)
+    def raw_get_fiber_config(self):
+        self.raw_fiber_config_1(1, 0, 0)
 
-    def raw_ipg_config_1(self, p1, p2, p3):
-        self._send_command(IPG_CONFIG_1, p1, p2, p3)
+    def raw_fiber_config_1(self, p1, p2, p3):
+        self._send_command(FIBER_CONFIG_1, p1, p2, p3)
 
     def raw_lock_input_port(self, p1):
         """
