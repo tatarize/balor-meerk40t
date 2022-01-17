@@ -730,7 +730,7 @@ class CommandList:
         if self._laser_control == control:
             return
         self._laser_control = control
-
+        self.ready()
         # TODO: Does this order matter?
         if control:
             self.append(OpLaserControl(0x0001))
@@ -765,6 +765,7 @@ class CommandList:
         # TODO: use differs by machine: 0x800A Mark Frequency, 0x800B Mark Pulse Width
         if self._frequency == frequency:
             return
+        self.ready()
         self._frequency = frequency
         self.append(OpSetQSwitchPeriod(self.convert_frequency(frequency)))
 
