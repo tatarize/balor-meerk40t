@@ -16,26 +16,26 @@
 import usb.core
 import usb.util
 import time
+import sys
 import threading
 # TODO: compatibility with ezcad .cor files
-from balor.MSBF import CommandList
 
+from balor.command_list import CommandSource, CommandList
 
 class BalorException(Exception): pass
 class BalorMachineException(BalorException): pass
 class BalorCommunicationException(BalorException): pass
 class BalorDataValidityException(BalorException): pass
 
-# fmt: off
 # Marked with ? - currently not seen in the wild
 DISABLE_LASER          = 0x0002
-RESET                  = 0x0003
-ENABLE_LASER           = 0x0004
-EXECUTE_LIST           = 0x0005
+RESET                  = 0x0003 
 SET_PWM_PULSE_WIDTH    = 0x0006 # ?
 GET_REGISTER           = 0x0007
 GET_SERIAL_NUMBER      = 0x0009 # In EzCAD mine is 32012LI43405B, Version 4.02, LMC V4 FIB
-GET_LIST_STATUS        = 0x000A
+ENABLE_LASER           = 0x0004
+EXECUTE_LIST           = 0x0005
+GET_LIST_STATUS        = 0x000A 
 GET_XY_POSITION        = 0x000C # Get current galvo position
 SET_XY_POSITION        = 0x000D # Travel the galvo xy to specified position
 LASER_SIGNAL_OFF       = 0x000E # ?
@@ -46,7 +46,6 @@ RESTART_LIST           = 0x0013
 WRITE_CORRECTION_TABLE = 0x0015
 SET_CONTROL_MODE       = 0x0016
 SET_DELAY_MODE         = 0x0017
-SET_MAX_POLY_DELAY     = 0x0018
 SET_END_OF_LIST        = 0x0019
 SET_FIRST_PULSE_KILLER = 0x001A
 SET_LASER_MODE         = 0x001B
@@ -57,48 +56,44 @@ STOP_EXECUTE           = 0x001F # ?
 STOP_LIST              = 0x0020 # ?
 WRITE_PORT             = 0x0021
 WRITE_ANALOG_PORT_1    = 0x0022 # At end of cut, seen writing 0x07FF
-WRITE_ANALOG_PORT_2    = 0x0023
-WRITE_ANALOG_PORT_X    = 0x0024
 READ_PORT              = 0x0025
 SET_AXIS_MOTION_PARAM  = 0x0026
 SET_AXIS_ORIGIN_PARAM  = 0x0027
 GO_TO_AXIS_ORIGIN      = 0x0028
-MOVE_AXIS_TO           = 0x0029
 GET_AXIS_POSITION      = 0x002A
 GET_FLY_WAIT_COUNT     = 0x002B # ?
 GET_MARK_COUNT         = 0x002D # ?
 SET_FPK_2E             = 0x002E # First pulse killer related, SetFpkParam2
                                 # My ezcad lists 40 microseconds as FirstPulseKiller
                                 # EzCad sets it 0x0FFB, 1, 0x199, 0x64
-FIBER_CONFIG_1         = 0x002F #
+FIBER_CONFIG_1         = 0x002F # 
 FIBER_CONFIG_2         = 0x0030 #
 LOCK_INPUT_PORT        = 0x0031 # ?
-SET_FLY_RES            = 0x0032 # Unknown fiber laser parameter being set
+SET_FIBER_32           = 0x0032 # Unknown fiber laser parameter being set
                                 # EzCad sets it: 0x0000, 0x0063, 0x03E8, 0x0019
 FIBER_OPEN_MO          = 0x0033 # "IPG (i.e. fiber) Open MO" - MO is probably Master Oscillator
-                                # (In BJJCZ documentation, the pin 18 on the IPG connector is
+                                # (In BJJCZ documentation, the pin 18 on the IPG connector is 
                                 #  called "main oscillator"; on the raycus docs it is "emission enable.")
                                 # Seen at end of marking operation with all
                                 # zero parameters. My Ezcad has an "open MO delay"
                                 # of 8 ms
-FIBER_GET_StMO_AP      = 0x0034 # Unclear what this means; there is no
+GET_FIBER_34           = 0x0034 # Unclear what this means; there is no
                                 # corresponding list command. It might be to
                                 # get a status register related to the source.
                                 # It is called IPG_GETStMO_AP in the dll, and the abbreviations
-                                # MO and AP are used for the master oscillator and power amplifier
-                                # signal lines in BJJCZ documentation for the board; LASERST is
+                                # MO and AP are used for the master oscillator and power amplifier 
+                                # signal lines in BJJCZ documentation for the board; LASERST is 
                                 # the name given to the error code lines on the IPG connector.
 GET_USER_DATA          = 0x0036 # ?
-GET_FLY_PULSE_COUNT    = 0x0037 # ?
 GET_FLY_SPEED          = 0x0038 # ?
 ENABLE_Z_2             = 0x0039 # ?
 ENABLE_Z               = 0x003A # Probably fiber laser related
 SET_Z_DATA             = 0x003B # ?
 SET_SPI_SIMMER_CURRENT = 0x003C # ?
-IS_LITE_VERSION        = 0x0040 # Tell laser to nerf itself for ezcad lite apparently
-GET_MARK_TIME          = 0x0041 # Seen at end of cutting with param 0x0003, Only and always called with param 3
+IS_LITE_VERSON         = 0x0040 # Tell laser to nerf itself for ezcad lite apparently
+GET_MARK_TIME          = 0x0041 # Seen at end of cutting with param 0x0003
 SET_FPK_PARAM          = 0x0062  # Probably "first pulse killer" = fpk
-# fmt: on
+
 
 
 class Sender:
@@ -117,72 +112,85 @@ class Sender:
              + bytearray(([0x02, 0x80] + [0x00]*10)*255) # NOP
             )
 
-    def __init__(self, footswitch_callback=None, debug=False):
-        self.serial_number = None
-        self.version = None
+    _packet_size = 256*12
+    def get_packet_size(self):
+        return self._packet_size # TODO maybe this should get it from the usb connection class,
+        # n.b. not instance which will not exist at the time it's needed necessarily
+
+    def __init__(self, machine_index=0, cor_table=None,
+            first_pulse_killer=200, pwm_half_period=125,
+            standby_param_1=2000, standby_param_2=20, timing_mode=1, delay_mode=1,
+            laser_mode=1, control_mode=0, footswitch_callback=None,
+            debug=False, mock=False):
         self._lock = threading.Lock()
         self._terminate_execution = False
+        self._machine_index = machine_index
+        self._cor_table=cor_table
+        self._first_pulse_killer=first_pulse_killer
+        self._pwm_half_period=pwm_half_period
+        self._standby_param_1=standby_param_1
+        self._standby_param_2=standby_param_2
+        self._timing_mode = timing_mode
+        self._delay_mode=delay_mode
+        self._laser_mode=laser_mode
+        self._control_mode=control_mode
         self._footswitch_callback = footswitch_callback
         self._debug = debug
-        self._usb_connection = None
 
-    def open(self, machine_index=0, mock=False, **kwargs):
-        if self._usb_connection is not None:
-            raise BalorCommunicationException("Attempting to open an open connection.")
         if not mock:
-            connection = UsbConnection(machine_index, debug=self._debug)
+            self._usb_connection = UsbConnection(self._machine_index, debug=debug)
         else:
-            connection = MockConnection(machine_index, debug=self._debug)
-        connection.open()
-        self._usb_connection = connection
-        self._init_machine(**kwargs)
-        time.sleep(0.05)  # We sacrifice this time at the altar of the unknown race condition
+            self._usb_connection = MockConnection(self._machine_index, debug=debug)
+
+    def open(self):
+        self._usb_connection.open()
+        self._init_machine()
+        time.sleep(0.05) # We sacrifice this time at the altar of the unknown race condition
         return True
 
-    def _init_machine(self,
-                      cor_table=None,
-                      first_pulse_killer=200,
-                      pwm_half_period=125,
-                      pwm_pulse_width=125,
-                      standby_param_1=2000,
-                      standby_param_2=20,
-                      timing_mode=1,
-                      delay_mode=1,
-                      laser_mode=1,
-                      control_mode=0,
-                      fpk2_p1=0xFFB,
-                      fpk2_p2=1,
-                      fpk2_p3=409,
-                      fpk2_p4=100,
-                      fly_res_p1=0,
-                      fly_res_p2=99,
-                      fly_res_p3=1000,
-                      fly_res_p4=25,
-                      **kwargs):
+    def close(self):
+        self._shutdown_machine()
+        self._usb_connection.close()
+
+    def job(self, *args, **kwargs):
+        return CommandList(*args, **kwargs, sender=self)
+
+    def _send_command(self, *args):
+        return self._usb_connection.send_command(*args)
+
+    def _send_correction_entry(self, *args):
+        self._usb_connection.send_correction_entry(*args)
+
+    def _send_list(self, *args):
+        self._usb_connection.send_list(*args)
+
+    def _send_list_chunk(self, *args):
+        self._usb_connection.send_list_chunk(*args)
+
+
+    def _init_machine(self):
         """Initialize the machine."""
-        if cor_table is None:
-            from .default_cor import DEFAULT_COR_TABLE
-            cor_table = DEFAULT_COR_TABLE
         self.serial_number = self.raw_get_serial_no()
         self.version = self.raw_get_version()
-        self._usb_connection.send_command(FIBER_GET_StMO_AP)
-
-        self.raw_reset()
+        self._usb_connection.send_command(GET_FIBER_34)
+        
+        # Unknown function
+        self._send_command(RESET)
 
         # Load in-machine correction table
-        self._send_correction_table(cor_table)
+        self._send_correction_table(self._cor_table)
 
         self.raw_enable_laser()
-        self.raw_set_control_mode(control_mode,0)
-        self.raw_set_laser_mode(laser_mode, 0)
-        self.raw_set_delay_mode(delay_mode, 0)
-        self.raw_set_timing(timing_mode, 0)
-        self.raw_set_standby(standby_param_1, standby_param_2, 0, 0)
-        self.raw_set_first_pulse_killer(first_pulse_killer, 0)
-        self.raw_set_pwm_half_period(pwm_half_period, 0)
+        self.raw_set_control_mode(self._control_mode,0)
+        self.raw_set_laser_mode(self._laser_mode, 0)
+        self.raw_set_delay_mode(self._delay_mode, 0)
+        self.raw_set_timing(self._timing_mode, 0)
+        self.raw_set_standby(self._standby_param_1, self._standby_param_2, 0, 0)
+        self.raw_set_first_pulse_killer(self._first_pulse_killer, 0)
+        self.raw_set_pwm_half_period(self._pwm_half_period, 0)
 
         # unknown function
-        self.raw_set_pwm_pulse_width(pwm_pulse_width, 0)
+        self.raw_set_pwm_pulse_width(125, 0)
         # "IPG_OpenMO" (main oscillator?)
         self.raw_fiber_open_mo(0, 0)
         # Unclear if used for anything
@@ -190,15 +198,15 @@ class Sender:
 
         # 0x0FFB is probably a 12 bit rendering of int12 -5
         # Apparently some parameters for the first pulse killer
-        self.raw_set_fpk_param_2(fpk2_p1, fpk2_p2, fpk2_p3, fpk2_p4)
+        self.raw_set_fpk_param_2(0xFFB, 1, 409, 100)
 
         # Unknown fiber laser related command
-        self._send_command(SET_FLY_RES, fly_res_p1, fly_res_p2, fly_res_p3, fly_res_p4)
+        self._send_command(SET_FIBER_32, 0, 99, 1000, 25)
 
         # Is this appropriate for all laser engraver machines?
         self.raw_write_port(0)
 
-        # Conjecture is that this puts the output port out of a
+        # Conjecture is that this puts the output port out of a 
         # high impedance state (based on the name in the DLL,
         # ENABLEZ)
         # Based on how it's used, it could also be about latching out
@@ -210,29 +218,8 @@ class Sender:
         self.raw_write_analog_port_1(0x07FF, 0)
         self.raw_enable_z()
 
-    def close(self):
-        self.abort()
-        if self._usb_connection is not None:
-            self._usb_connection.close()
-        self._usb_connection = None
-
-    def job(self, *args, **kwargs):
-        return CommandList(*args, **kwargs, sender=self)
-
-    def _send_command(self, *args):
-        if self._usb_connection is None:
-            raise BalorCommunicationException("No usb connection.")
-        return self._usb_connection.send_command(*args)
-
-    def _send_correction_entry(self, *args):
-        if self._usb_connection is None:
-            raise BalorCommunicationException("No usb connection.")
-        self._usb_connection.send_correction_entry(*args)
-
-    def _send_list_chunk(self, *args):
-        if self._usb_connection is None:
-            raise BalorCommunicationException("No usb connection.")
-        self._usb_connection.send_list_chunk(*args)
+    def _shutdown_machine(self):
+        pass
 
     def _send_correction_table(self, table=None):
         """Send the onboard correction table to the machine."""
@@ -256,14 +243,14 @@ class Sender:
         self.read_port()
         return bool(self._usb_connection.status & 0x04)
 
-    def execute(self, command_list: CommandList, loop_count=1,
+    
+
+    def execute(self, command_list: CommandSource, loop_count=1,
                 callback_finished=None):
         """Run a job. loop_count is the number of times to repeat the
-           job; if it is True, it repeats until aborted. If there is a job
+           job; if it is inf, it repeats until aborted. If there is a job
            already running, it will be aborted and replaced. Optionally,
            calls a callback function when the job is finished.
-           Optionally, a "prefix job" can be run before the loop, which will be
-           run only once.
            The loop job can either be regular data in multiples of 3072 bytes, or
            it can be a callable that provides data as above on command."""
         self._terminate_execution = False
@@ -291,10 +278,13 @@ class Sender:
                             return False
                         time.sleep(self.sleep_time)
                     self._usb_connection.send_list_chunk(packet)
-                    self.raw_set_end_of_list(0x8001,0x8001)
+                    self.raw_set_end_of_list(0x8001, 0x8001)
                     self.raw_execute_list()
+                    # SET_END_OF_LIST(1), EXECUTE_LIST, 7
 
-                self.raw_set_end_of_list(0,0)
+                # when done, SET_END_OF_LIST(0), SET_CONTROL_MODE(1), 7(1)
+                self.raw_set_end_of_list(0, 0)
+                #self.raw_execute_list()
                 self.raw_set_control_mode(1,0)
 
                 while self.is_busy():
@@ -304,6 +294,8 @@ class Sender:
         if callback_finished is not None:
             callback_finished()
         return True
+
+    loop_job = execute
 
     def abort(self):
         """Aborts any job in progress and puts the machine back into an
@@ -359,14 +351,6 @@ class Sender:
         """
         return self._send_command(DISABLE_LASER)
 
-    def raw_reset(self):
-        """
-        No parameters.
-        :return:
-        """
-        return self._send_command(RESET)
-
-
     def raw_enable_laser(self):
         """
         No parameters.
@@ -400,9 +384,7 @@ class Sender:
     def raw_get_serial_no(self):
         """
         No parameters
-
         Reply is presumably a serial number.
-
         :return: value response
         """
         return self._send_command(GET_SERIAL_NUMBER)
@@ -417,7 +399,6 @@ class Sender:
     def raw_get_xy_position(self):
         """
         No parameters
-
         The reply to this is the x, y coords and should be parsed.
         :return: value response
         """
@@ -426,7 +407,6 @@ class Sender:
     def raw_set_xy_position(self, x, y):
         """
         Move to X Y location
-
         :param x:
         :param y:
         :return: value response
@@ -464,11 +444,8 @@ class Sender:
     def raw_write_correction_line(self, p1, p2, p3, p4):
         """
         4 parameters.
-
         Writes a single line of a correction table. 2 entries.
-
         dx1, dy1, dx2, dy2
-
         :param p1:
         :param p2:
         :param p3:
@@ -519,9 +496,10 @@ class Sender:
 
     def raw_set_end_of_list(self, a=0, b=0):
         """
-        No parameters
+        No parameters 
         :return: value response
         """
+        # It does so have parameters, in the pcap...
         return self._send_command(SET_END_OF_LIST, a, b)
 
     def raw_set_first_pulse_killer(self, s1: int, value: int):
@@ -570,7 +548,6 @@ class Sender:
         """
         2 parameters
         stack, value
-
         :param s1:
         :param value:
         :return: value response
@@ -580,7 +557,6 @@ class Sender:
     def raw_stop_execute(self):
         """
         No parameters.
-
         :return: value response
         """
         return self._send_command(STOP_EXECUTE)
@@ -588,7 +564,6 @@ class Sender:
     def raw_stop_list(self):
         """
         No parameters
-
         :return: value response
         """
         return self._send_command(STOP_LIST)
@@ -597,7 +572,6 @@ class Sender:
         """
         3 parameters.
         variable, stack, value
-
         :param v1:
         :param s1:
         :param value:
@@ -609,7 +583,6 @@ class Sender:
         """
         2 parameters.
         stack, value
-
         :param s1:
         :param value:
         :return: value response
@@ -620,21 +593,16 @@ class Sender:
         """
         3 parameters.
         0, stack, value
-
         :param s1:
         :param value:
         :return: value response
         """
         return self._send_command(WRITE_ANALOG_PORT_2, 0, s1, value)
 
-    def raw_write_analog_port_x(self, v1: int, s1: int, value: int = 0):
+    def raw_write_analog_port_x(self, v1: int, s1: int, value: int):
         """
         3 parameters.
         variable, stack, value
-
-        2 parameters (called elsewhere)
-        stack, value
-
         :param v1:
         :param s1:
         :param value:
@@ -645,7 +613,6 @@ class Sender:
     def raw_read_port(self):
         """
         No parameters
-
         :return: Status Information
         """
         return self._send_command(READ_PORT)
@@ -654,7 +621,6 @@ class Sender:
         """
         3 parameters.
         variable, stack, value
-
         :return: value response
         """
         return self._send_command(SET_AXIS_MOTION_PARAM, v1, s1, value)
@@ -663,7 +629,6 @@ class Sender:
         """
         3 parameters.
         variable, stack, value
-
         :return: value response
         """
         return self._send_command(SET_AXIS_ORIGIN_PARAM, v1, s1, value)
@@ -672,7 +637,6 @@ class Sender:
         """
         1 parameter
         variable
-
         :param v0:
         :return: value response
         """
@@ -681,7 +645,6 @@ class Sender:
     def raw_move_axis_to(self, axis, coord):
         """
         This typically accepted 1 32 bit int and used bits 1:8 and then 16:24 as parameters.
-
         :param axis: axis being moved
         :param coord: coordinate being matched
         :return: value response
@@ -691,9 +654,7 @@ class Sender:
     def raw_get_axis_pos(self, s1: int, value: int):
         """
         2 parameters
-
         stack, value
-
         :param s1:
         :param value:
         :return: axis position?
@@ -704,31 +665,15 @@ class Sender:
         """
         1 parameter
         bool
-
         :param b1:
         :return: flywaitcount?
         """
         return self._send_command(GET_FLY_WAIT_COUNT, int(b1))
 
-    def raw_set_fly_res(self, p1, p2, p3, p4, p5):
-        """
-        5 parameter
-        Appears to use a different command call to all 5 operands
-
-        :param p1:
-        :param p2:
-        :param p3:
-        :param p4:
-        :param p5:
-        :return:
-        """
-        return self._send_command(SET_FLY_RES, p1, p2, p3, p4, p5)
-
     def raw_get_mark_count(self, p1: bool):
         """
         1 parameter
         bool
-
         :param p1:
         :return: markcount?
         """
@@ -738,7 +683,6 @@ class Sender:
         """
         4 parameters
         variable, variable, variable stack
-
         :param v1:
         :param v2:
         :param v3:
@@ -751,25 +695,22 @@ class Sender:
         """
         2 parameters
         stack, value
-
         :param s1:
         :param value:
         :return: value response
         """
         return self._send_command(FIBER_OPEN_MO, s1, value)
 
-    def raw_fiber_get_st_mo_ap(self):
+    def raw_get_fiber_34(self):
         """
         No parameters
-
         :return: value response
         """
-        return self._send_command(FIBER_GET_StMO_AP)
+        return self._send_command(GET_FIBER_34)
 
     def raw_enable_z(self):
         """
         No parameters
-
         :return: value response
         """
         return self._send_command(ENABLE_Z)
@@ -777,9 +718,7 @@ class Sender:
     def raw_enable_z_2(self):
         """
         No parameters
-
         Alternate command. if unknown==0
-
         :return: value response
         """
         return self._send_command(ENABLE_Z_2)
@@ -787,21 +726,18 @@ class Sender:
     def raw_set_z_data(self, v1, s1, v2):
         """
         3 parameters
-
         variable, stack, variable
-
         :param v1:
         :param s1:
         :param v2:
         :return: value response
         """
-        return self._send_command(SET_Z_DATA, v1, s1, v2)
+        return self._send_command(SETZDATA, v1, s1, v2)
 
     def raw_set_spi_simmer_count(self, v1, s1):
         """
         2 parameters
         variable, stack
-
         :param v1:
         :param s1:
         :return: value response
@@ -813,7 +749,6 @@ class Sender:
         Probably "first pulse killer" = fpk
         4 parameters
         variable, variable, variable, stack
-
         :param v1:
         :param v2:
         :param v3:
@@ -825,16 +760,23 @@ class Sender:
     def raw_is_lite_version(self):
         """
         no parameters.
-
         Only called for true.
-
         :return: value response
         """
         return self._send_command(IS_LITE_VERSION, 1)
 
+    def raw_unknown_init_24(self, s1: int, value: int):
+        """
+        2 parameters
+        stack, value
+        :param s1:
+        :param value:
+        :return:
+        """
+        return self._send_command(WRITE_ANALOG_PORT_X, s1, value)
+
     def raw_get_fly_speed(self, p1, p2, p3, p4):
         """
-
         :param p1:
         :param p2:
         :param p3:
@@ -842,13 +784,6 @@ class Sender:
         :return:
         """
         self._send_command(GET_FLY_SPEED, p1, p2, p3, p4)
-
-    def raw_get_fly_pulse_count(self, p1):
-        """
-        :param p1:
-        :return:
-        """
-        self._send_command(GET_FLY_PULSE_COUNT, p1)
 
     def raw_set_fiber_config(self, p1, p2):
         self.raw_fiber_config_1(0, p1, p2)
@@ -862,7 +797,6 @@ class Sender:
     def raw_lock_input_port(self, p1):
         """
         p1 varies based on call.
-
         :param p1:
         :return:
         """
@@ -882,6 +816,8 @@ class Sender:
 
     def raw_get_user_data(self):
         self._send_command(GET_USER_DATA)
+
+
 
 
 class UsbConnection:
@@ -910,26 +846,20 @@ class UsbConnection:
 
         # if the permissions are wrong, these will throw usb.core.USBError
         device.set_configuration()
-        try:
-            device.reset()
-        except usb.core.USBError:
-            pass
+        device.reset()
         self.device = device
         if self._debug:
             self._debug("Connected.")
 
     def close(self):
         self.status = None
-        if self.device is not None:
-            usb.util.dispose_resources(self.device)
-            self.device = None
         if self._debug:
             self._debug("Disconnected.")
-
+            
     def is_ready(self):
         self.send_command(READ_PORT, 0)
         return self.status & 0x20
-
+    
     def send_correction_entry(self, correction):
         """Send an individual correction table entry to the machine."""
         # This is really a command and should just be issued without reading.
@@ -961,6 +891,21 @@ class UsbConnection:
             return response[2] | (response[3] << 8), response[4] | (response[5] << 8)
         else:
             return 0, 0
+
+    def send_list(self, data):
+        """Sends a command list to the machine. Breaks it into 3072 byte 
+           chunks as needed. Returns False if the sending is aborted,
+           True if successful."""
+
+        while len(data) >= self.chunk_size:
+            while not self.is_ready(): 
+                if self._abort_flag:
+                    return False
+                time.sleep(self.sleep_time) 
+            self.send_list_chunk(data[:self.chunk_size])
+            data = data[self.chunk_size:]
+    
+        return True
 
     def send_list_chunk(self, data):
         """Send a command list chunk to the machine."""
@@ -996,17 +941,16 @@ class MockConnection:
 
     def send_correction_entry(self, correction):
         """Send an individual correction table entry to the machine."""
-        query = bytearray([0x10] + [0] * 11)
-        query[2:2 + 5] = correction
-        if len(query) != 12:
-            raise BalorCommunicationException("Failed to write correction entry")
+        pass
 
     def send_command(self, code, *parameters):
         """Send a command to the machine and return the response.
            Updates the host condition register as a side effect."""
         if self._debug:
-            self._debug("---> 0x%04x: %s" % (code, str(parameters)))
-        time.sleep(0.05)
+            self._debug("---> " + str(code) + " " + str(parameters))
+        time.sleep(0.005)
+        # This should be replaced with a robust connection to the simulation code
+        # so the fake laser can give sensical responses
         import random
         return random.randint(0, 255), random.randint(0, 255)
 
@@ -1016,4 +960,3 @@ class MockConnection:
             raise BalorDataValidityException("Invalid chunk size %d" % len(data))
         if self._debug:
             self._debug("---> " + str(data))
-
