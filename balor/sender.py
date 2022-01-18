@@ -16,7 +16,6 @@
 import usb.core
 import usb.util
 import time
-import sys
 import threading
 # TODO: compatibility with ezcad .cor files
 
@@ -30,11 +29,11 @@ class BalorDataValidityException(BalorException): pass
 # Marked with ? - currently not seen in the wild
 DISABLE_LASER          = 0x0002
 RESET                  = 0x0003 
+ENABLE_LASER           = 0x0004
+EXECUTE_LIST           = 0x0005
 SET_PWM_PULSE_WIDTH    = 0x0006 # ?
 GET_REGISTER           = 0x0007
 GET_SERIAL_NUMBER      = 0x0009 # In EzCAD mine is 32012LI43405B, Version 4.02, LMC V4 FIB
-ENABLE_LASER           = 0x0004
-EXECUTE_LIST           = 0x0005
 GET_LIST_STATUS        = 0x000A 
 GET_XY_POSITION        = 0x000C # Get current galvo position
 SET_XY_POSITION        = 0x000D # Travel the galvo xy to specified position
@@ -46,20 +45,24 @@ RESTART_LIST           = 0x0013
 WRITE_CORRECTION_TABLE = 0x0015
 SET_CONTROL_MODE       = 0x0016
 SET_DELAY_MODE         = 0x0017
+SET_MAX_POLY_DELAY     = 0x0018
 SET_END_OF_LIST        = 0x0019
 SET_FIRST_PULSE_KILLER = 0x001A
 SET_LASER_MODE         = 0x001B
 SET_TIMING             = 0x001C
 SET_STANDBY            = 0x001D
 SET_PWM_HALF_PERIOD    = 0x001E
-STOP_EXECUTE           = 0x001F # ?
+STOP_EXECUTE           = 0x001F # Since observed in the wild
 STOP_LIST              = 0x0020 # ?
 WRITE_PORT             = 0x0021
 WRITE_ANALOG_PORT_1    = 0x0022 # At end of cut, seen writing 0x07FF
+WRITE_ANALOG_PORT_2    = 0x0023 # ?
+WRITE_ANALOG_PORT_X    = 0x0024 # ?
 READ_PORT              = 0x0025
 SET_AXIS_MOTION_PARAM  = 0x0026
 SET_AXIS_ORIGIN_PARAM  = 0x0027
 GO_TO_AXIS_ORIGIN      = 0x0028
+MOVE_AXIS_TO           = 0x0029
 GET_AXIS_POSITION      = 0x002A
 GET_FLY_WAIT_COUNT     = 0x002B # ?
 GET_MARK_COUNT         = 0x002D # ?
@@ -85,13 +88,14 @@ GET_FIBER_34           = 0x0034 # Unclear what this means; there is no
                                 # signal lines in BJJCZ documentation for the board; LASERST is 
                                 # the name given to the error code lines on the IPG connector.
 GET_USER_DATA          = 0x0036 # ?
+GET_FLY_PULSE_COUNT    = 0x0037 # ?
 GET_FLY_SPEED          = 0x0038 # ?
 ENABLE_Z_2             = 0x0039 # ?
 ENABLE_Z               = 0x003A # Probably fiber laser related
 SET_Z_DATA             = 0x003B # ?
 SET_SPI_SIMMER_CURRENT = 0x003C # ?
 IS_LITE_VERSON         = 0x0040 # Tell laser to nerf itself for ezcad lite apparently
-GET_MARK_TIME          = 0x0041 # Seen at end of cutting with param 0x0003
+GET_MARK_TIME          = 0x0041 # Seen at end of cutting, only and always called with param 0x0003
 SET_FPK_PARAM          = 0x0062  # Probably "first pulse killer" = fpk
 
 
@@ -302,6 +306,8 @@ class Sender:
            idle ready condition."""
         self._terminate_execution = True
         with self._lock:
+            self.raw_stop_execute()
+            self.raw_fiber_open_mo(0,0)
             self.raw_reset_list()
             self._send_list_chunk(self._abort_list_chunk)
 
@@ -846,7 +852,10 @@ class UsbConnection:
 
         # if the permissions are wrong, these will throw usb.core.USBError
         device.set_configuration()
-        device.reset()
+        try:
+            device.reset()
+        except usb.core.USBError:
+            pass
         self.device = device
         if self._debug:
             self._debug("Connected.")
@@ -899,7 +908,7 @@ class UsbConnection:
 
         while len(data) >= self.chunk_size:
             while not self.is_ready(): 
-                if self._abort_flag:
+                if self._terminate_execution:
                     return False
                 time.sleep(self.sleep_time) 
             self.send_list_chunk(data[:self.chunk_size])
