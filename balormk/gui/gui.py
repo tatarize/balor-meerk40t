@@ -9,6 +9,7 @@ from meerk40t.gui.icons import (
 from meerk40t.kernel import signal_listener
 from .balorcontroller import BalorController
 from .balorconfig import BalorConfiguration
+from .baloroperationproperties import BalorOperationPanel
 
 try:
     import wx
@@ -66,6 +67,7 @@ def plugin(service, lifecycle):
 
             return light_program
 
+        service.register("operationproperty/Balor", BalorOperationPanel)
         service.register(
             "button/control/Light_On",
             {
