@@ -497,6 +497,23 @@ class OpSetDaZWord(Operation):
             p4=self.params[1]
         )
 
+class OpJptSetParam(Operation):
+
+    opcode = 0x8050
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+
 
 class OpReadyMark(Operation):
     name = "BEGIN JOB"
@@ -514,7 +531,7 @@ all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpCut,
                   OpSetMarkEndDelay, OpEndOfList, OpTravel, OpMarkFrequency, OpMarkPulseWidth,
                   OpWritePort, OpDirectLaserSwitch, OpFlyDelay, OpSetCo2FPK, OpFlyWaitInput,
                   OpChangeMarkCount, OpSetWeldPowerWave, OpEnableWeldPowerWave, OpFiberYLPMPulseWidth,
-                  OpFlyEncoderCount, OpSetDaZWord
+                  OpFlyEncoderCount, OpJptSetParam, OpSetDaZWord
                   ]
 
 operations_by_opcode = {OpClass.opcode: OpClass for OpClass in all_operations}
@@ -1024,6 +1041,9 @@ class CommandList(CommandSource):
 
     def raw_set_da_z_word(self, *args):
         self.append(OpSetDaZWord(*args))
+
+    def raw_jpt_set_param(self, *args):
+        self.append(OpJptSetParam(*args))
 
     def raw_ready_mark(self, *args):
         self.append(OpReadyMark(*args))
