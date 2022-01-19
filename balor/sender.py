@@ -17,7 +17,6 @@ import usb.core
 import usb.util
 import time
 import threading
-# TODO: compatibility with ezcad .cor files
 
 from balor.command_list import CommandSource, CommandList
 
@@ -150,10 +149,10 @@ class Sender:
     def job(self, *args, **kwargs):
         return CommandList(*args, **kwargs, sender=self)
 
-    def _send_command(self, *args):
+    def _send_command(self, *args, **kwargs):
         if self._usb_connection is None:
             raise BalorCommunicationException("No usb connection.")
-        return self._usb_connection.send_command(*args)
+        return self._usb_connection.send_command(*args, **kwargs)
 
     def _send_correction_entry(self, *args):
         if self._usb_connection is None:
@@ -166,7 +165,7 @@ class Sender:
         self._usb_connection.send_list_chunk(*args)
 
     def _init_machine(self,
-                      cor_table=None,
+                      cor_file=None,
                       first_pulse_killer=200,
                       pwm_half_period=125,
                       pwm_pulse_width=125,
@@ -194,6 +193,9 @@ class Sender:
         self.raw_reset()
 
         # Load in-machine correction table
+        cor_table = None
+        if cor_file is not None:
+            cor_table = self._read_correction_file(cor_file)
         self._send_correction_table(cor_table)
 
         self.raw_enable_laser()
@@ -234,16 +236,28 @@ class Sender:
         self.raw_write_analog_port_1(0x07FF, 0)
         self.raw_enable_z()
 
+    def _read_correction_file(self, filename):
+        table = []
+        with open(filename, "rb") as f:
+            f.seek(0x24)
+            for j in range(65):
+                for k in range(65):
+                    dx = int.from_bytes(f.read(4), "little", signed=True)
+                    dx = dx if dx >= 0 else -dx + 0x8000
+                    dy = int.from_bytes(f.read(4), "little", signed=True)
+                    dy = dy if dy >= 0 else -dy + 0x8000
+                    table.append([dx & 0xFFFF, dy & 0xFFFF])
+        return table
+
     def _send_correction_table(self, table=None):
         """Send the onboard correction table to the machine."""
         self.raw_write_correction_table(True)
         if table is None:
-            blank = bytearray([0]*5)
-            for _ in range(65**2):
-                self._send_correction_entry(blank)
+            for n in range(65**2):
+                self.raw_write_correction_line(0,0,0 if n == 0 else 1)
         else:
             for n in range(65**2):
-                self._send_correction_entry(table[n*5:n*5+5])
+                self.raw_write_correction_line(table[n][0], table[n][1],0 if n == 0 else 1)
 
     def is_ready(self):
         """Returns true if the laser is ready for more data, false otherwise."""
@@ -985,7 +999,7 @@ class MockConnection:
         """Send an individual correction table entry to the machine."""
         pass
 
-    def send_command(self, code, *parameters):
+    def send_command(self, code, *parameters, read=True):
         """Send a command to the machine and return the response.
            Updates the host condition register as a side effect."""
         if self._debug:
@@ -993,8 +1007,11 @@ class MockConnection:
         time.sleep(0.005)
         # This should be replaced with a robust connection to the simulation code
         # so the fake laser can give sensical responses
-        import random
-        return random.randint(0, 255), random.randint(0, 255)
+        if read:
+            import random
+            return random.randint(0, 255), random.randint(0, 255)
+        else:
+            return 0, 0
 
     def send_list_chunk(self, data):
         """Send a command list chunk to the machine."""

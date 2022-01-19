@@ -51,15 +51,10 @@ class BalorDriver:
         self.connected = False
         while not self.connected:
             try:
-                try:
-                    with open(self.service.corfile, "br") as corfile:
-                        table = corfile.read()
-                except (IOError, TypeError):
-                    table = None
                 self.connected = self.connection.open(
                     mock=self.service.mock,
                     machine_index=self.service.machine_index,
-                    cor_table=table,
+                    cor_file=self.service.corfile,
                     first_pulse_killer=self.service.first_pulse_killer,
                     pwm_pulse_width=self.service.pwm_pulse_width,
                     pwm_half_period=self.service.pwm_half_period,
