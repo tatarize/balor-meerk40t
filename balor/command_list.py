@@ -167,6 +167,22 @@ class OpTravel(Operation):
         sim.travel(self.params[self.x], self.params[self.y])
 
 
+class OpLaserOnPoint(Operation):
+
+    opcode = 0x8003
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4]
+        )
+
+
 class OpSetMarkEndDelay(Operation):
     name = "WAIT (time)"
     opcode = 0x8004
@@ -966,6 +982,9 @@ class CommandList(CommandSource):
 
     def raw_travel(self, *args):
         self.append(OpTravel(*args))
+
+    def raw_laser_on_point(self, *args):
+        self.append(OpLaserOnPoint(*args))
 
     def raw_mark_end_delay(self, *args):
         self.append(OpSetMarkEndDelay(*args))
