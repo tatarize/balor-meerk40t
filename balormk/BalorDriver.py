@@ -4,7 +4,7 @@ import time
 from meerk40t.core.cutcode import LaserSettings
 
 from balor.Cal import Cal
-from balor.MSBF import CommandList
+from balor.command_list import CommandList
 from balor.sender import Sender, BalorMachineException
 
 
@@ -37,6 +37,10 @@ class BalorDriver:
 
     def service_detach(self):
         self._shutdown = True
+
+    def connect_if_needed(self):
+        if not self.connected:
+            self.connect()
 
     def connect(self):
         """
@@ -164,7 +168,13 @@ class BalorDriver:
         @param queue:
         @return:
         """
-        job = CommandList(cal=Cal(self.service.calibration_file))
+        cal = None
+        if self.calibration_file is not None:
+            try:
+                cal = Cal(self.calibration_file)
+            except TypeError:
+                pass
+        job = CommandList(cal=cal)
         job.set_mark_settings(
             travel_speed=self.service.travel_speed,
             power=self.service.laser_power,
@@ -216,8 +226,7 @@ class BalorDriver:
         return False
 
     def balor_job(self, job):
-        if not self.connected:
-            self.connect()
+        self.connect_if_needed()
         self.connection.execute(job, 1)
 
     def laser_off(self, *values):
@@ -259,14 +268,12 @@ class BalorDriver:
         @param job:
         @return:
         """
-        if not self.connected:
-            self.connect()
+        self.connect_if_needed()
         self.connection.raw_write_port(0x100)
         self.connection.execute(job, 1)
 
     def light_data(self, job):
-        if not self.connected:
-            self.connect()
+        self.connect_if_needed()
         self.connection.raw_write_port(0x100)
         self.connection.execute(job, 1)
 
@@ -276,8 +283,7 @@ class BalorDriver:
 
         :return:
         """
-        if not self.connected:
-            self.connect()
+        self.connect_if_needed()
         job = self.cutcode_to_mark_job(self.queue)
         self.queue = []
         self.connection.execute(job, 1)
@@ -291,8 +297,7 @@ class BalorDriver:
         :param y:
         :return:
         """
-        if not self.connected:
-            self.connect()
+        self.connect_if_needed()
         unit_x = self.service.length(x, 0, relative_length=self.service.lens_size, as_float=True)
         unit_y = self.service.length(y, 1, relative_length=self.service.lens_size, as_float=True)
         unit_x *= self.service.get_native_scale_x
@@ -320,8 +325,7 @@ class BalorDriver:
         :param dy:
         :return:
         """
-        if not self.connected:
-            self.connect()
+        self.connect_if_needed()
         unit_dx = self.service.length(dx, 0, relative_length=self.service.lens_size, as_float=True)
         unit_dy = self.service.length(dy, 1, relative_length=self.service.lens_size, as_float=True)
         unit_dx *= self.service.get_native_scale_x
@@ -361,8 +365,7 @@ class BalorDriver:
         :return:
         """
         if data_type == "balor":
-            if not self.connected:
-                self.connect()
+            self.connect_if_needed()
             self.connection.execute(data, 1)
 
     def set(self, attribute, value):
@@ -439,8 +442,7 @@ class BalorDriver:
         Wants the driver to pause.
         :return:
         """
-        if not self.connected:
-            self.connect()
+        self.connect_if_needed()
         if self.paused:
             self.resume()
             return
@@ -456,8 +458,7 @@ class BalorDriver:
 
         :return:
         """
-        if not self.connected:
-            self.connect()
+        self.connect_if_needed()
         self.paused = False
         self.connection.raw_restart_list()
 

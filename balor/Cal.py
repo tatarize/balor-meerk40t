@@ -9,21 +9,9 @@ MAX_CACHE = 2048
 
 class Cal:
     def __init__(self, cal_file):
-        self.enabled = False
-
-        if cal_file is None:
-            self.enabled = False
-            return
-
-        if cal_file is not None:
-            try:
-                calfile = [h.split() for h in open(cal_file, "r").readlines()]
-            except (IOError, OSError):
-                print("Calibration file could not be loaded.")
-                return
-
         self.cache = {}
-        self.enabled = True
+
+        calfile = [h.split() for h in open(cal_file, 'r').readlines()]
         mcal = np.asarray([(float(h[0]), float(h[1])) for h in calfile])
         gcal = np.asarray([(int(h[4],16), int(h[5],16)) for h in calfile])
 
@@ -52,12 +40,9 @@ class Cal:
         #        )
     @lru_cache(maxsize=MAX_CACHE)
     def interpolate(self, x, y):
-        if self.enabled:
-            rv = self.interpolator([(y, x)])[0]
-            return int(round(rv[1])), int(round(rv[0]))
-        else:
-            # A disabled cal file interpolates 1 to 1 with bound range checks.
-            return int(round(x)), int(round(y))
+        rv =  self.interpolator([(y,x)])[0]
+        rv =  int(round(rv[1])), int(round(rv[0]))
+        return rv
 
     #def interpolate_list(self, xys):
         #rv =  self.interpolator(xys)

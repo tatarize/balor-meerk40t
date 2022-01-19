@@ -8,7 +8,7 @@ from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape, 
 
 import balor
 from balor.Cal import Cal
-from balor.MSBF import CommandList
+from balor.command_list import CommandList
 from balormk.BalorDriver import BalorDriver
 
 import numpy as np
@@ -436,7 +436,13 @@ class BalorDevice(Service, ViewPort):
             paths = data
             from balor.Cal import Cal
 
-            job = CommandList(cal=Cal(self.calibration_file))
+            cal = None
+            if self.calibration_file is not None:
+                try:
+                    cal = Cal(self.calibration_file)
+                except TypeError:
+                    pass
+            job = CommandList(cal=cal)
             job.set_mark_settings(
                 travel_speed=self.travel_speed
                 if travel_speed is None
@@ -516,7 +522,13 @@ class BalorDevice(Service, ViewPort):
         ):
             channel("Creating light job out of elements.")
             paths = data
-            job = CommandList(cal=Cal(self.calibration_file))
+            cal = None
+            if self.calibration_file is not None:
+                try:
+                    cal = Cal(self.calibration_file)
+                except TypeError:
+                    pass
+            job = CommandList(cal=cal)
             if travel_speed is None:
                 travel_speed = self.travel_speed
             if simulation_speed is None:
@@ -684,6 +696,7 @@ class BalorDevice(Service, ViewPort):
             output_type="balor",
         )
         def balor_loop(command, channel, _, data=None, remainder=None, **kwgs):
+            self.driver.connect_if_needed()
             self.driver.connection.raw_write_port(0x0100)
             channel("Looping job: {job}".format(job=str(data)))
             self.spooler.set_idle(("light", data))
@@ -699,6 +712,7 @@ class BalorDevice(Service, ViewPort):
             if x is not None and y is not None:
                 rx = int(0x8000 + x) & 0xFFFF
                 ry = int(0x8000 + y) & 0xFFFF
+                self.driver.connect_if_needed()
                 self.driver.connection.set_xy(rx, ry)
 
         @self.console_argument("off", type=str)
@@ -708,9 +722,11 @@ class BalorDevice(Service, ViewPort):
         )
         def balor_on(command, channel, _, off=None, remainder=None, **kwgs):
             if off == "off":
+                self.driver.connect_if_needed()
                 reply = self.driver.connection.raw_write_port(0)
                 channel("Turning off redlight.")
             else:
+                self.driver.connect_if_needed()
                 reply = self.driver.connection.raw_write_port(0x0100)
                 channel("Turning on redlight.")
 
@@ -719,6 +735,7 @@ class BalorDevice(Service, ViewPort):
             help=_("Sends status check"),
         )
         def balor_status(command, channel, _, remainder=None, **kwgs):
+            self.driver.connect_if_needed()
             reply = self.driver.connection.read_port()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
@@ -733,6 +750,7 @@ class BalorDevice(Service, ViewPort):
             help=_("Checks the list status."),
         )
         def balor_status(command, channel, _, remainder=None, **kwgs):
+            self.driver.connect_if_needed()
             reply = self.driver.connection.raw_get_list_status()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
@@ -747,6 +765,7 @@ class BalorDevice(Service, ViewPort):
             help=_("Checks the serial number."),
         )
         def balor_serial(command, channel, _, remainder=None, **kwgs):
+            self.driver.connect_if_needed()
             reply = self.driver.connection.raw_get_serial_no()
             channel("Command replied: {reply}".format(reply=str(reply)))
             for index, b in enumerate(reply):
@@ -1096,7 +1115,13 @@ class BalorDevice(Service, ViewPort):
                 gsmin = grayscale_min
                 gsmax = grayscale_max
                 gsslope = (gsmax - gsmin) / 256.0
-            job = CommandList(cal=balor.Cal.Cal(self.calibration_file))
+            cal = None
+            if self.calibration_file is not None:
+                try:
+                    cal = Cal(self.calibration_file)
+                except TypeError:
+                    pass
+            job = CommandList(cal=cal)
 
             img = scipy.interpolate.RectBivariateSpline(
                 np.linspace(y0, y0 + height, in_file.size[1]),
@@ -1238,7 +1263,13 @@ class BalorDevice(Service, ViewPort):
                   **kwargs):
             from balor.Cal import Cal
 
-            job = CommandList(cal=Cal(self.calibration_file))
+            cal = None
+            if self.calibration_file is not None:
+                try:
+                    cal = Cal(self.calibration_file)
+                except TypeError:
+                    pass
+            job = CommandList(cal=cal)
             job.set_mark_settings(
                 travel_speed=self.travel_speed
                 if travel_speed is None

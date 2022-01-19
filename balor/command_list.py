@@ -4,8 +4,6 @@ import numpy as np
 
 import sys
 
-#TODO: Angle for Travel and Cut is really high bits of distance.
-
 
 class Simulation:
     def __init__(self, job, machine, draw, resolution, show_travels=False):
@@ -76,7 +74,7 @@ class Operation:
         self.params = [0] * 5
         if from_binary is None:
             for n, p in enumerate(params):
-                self.params[n] = p
+                self.params[n] = int(p)
                 if p > 0xFFFF:
                     print("Parameter overflow", self.name, self.opcode, p, file=sys.stderr)
                     raise ValueError
@@ -95,7 +93,6 @@ class Operation:
         blank[1] = self.opcode >> 8
         i = 2
         for param in self.params:
-            param = int(round(param))
             blank[i] = param & 0xFF
             try:
                 blank[i + 1] = param >> 8
@@ -223,6 +220,36 @@ class OpSetLaserOffDelay(Operation):
         return "Set off time compensation = %d us" % (self.params[0])
 
 
+class OpMarkFrequency(Operation):
+    opcode = 0x800A
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
+class OpMarkPulseWidth(Operation):
+    opcode = 0x800B
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
 class OpSetCutSpeed(Operation):
     name = "SET CUTTING SPEED (speed)"
     opcode = 0x800C
@@ -250,6 +277,21 @@ class OpSetPolygonDelay(Operation):
         return "Set polygon delay, param=%d" % self.params[0]
 
 
+class OpWritePort(Operation):
+    opcode = 0x8011
+    # name = "Name"
+    name = str(opcode)
+
+    def text_decode(self):
+        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
+            opcode=self.opcode,
+            p1=self.params[1],
+            p2=self.params[1],
+            p3=self.params[1],
+            p4=self.params[1]
+        )
+
+
 class OpMarkPowerRatio(Operation):
     name = "SET LASER POWER (power)"
     opcode = 0x8012
@@ -259,38 +301,6 @@ class OpMarkPowerRatio(Operation):
 
     def simulate(self, sim):
         sim.laser_power = self.params[0] / 40.960
-
-
-class OpSetQSwitchPeriod(Operation):
-    name = "SET Q SWITCH PERIOD (period)"
-    opcode = 0x801B
-
-    def text_decode(self):
-        return "Set Q-switch period = %d ns (%.0f kHz)" % (
-            self.params[0] * 50,
-            1.0 / (1000 * self.params[0] * 50e-9))
-
-    def simulate(self, sim):
-        sim.q_switch_period = self.params[0] * 50.0
-
-
-class OpLaserControl(Operation):
-    name = "LASER CONTROL (on)"
-    opcode = 0x8021
-
-    def text_decode(self):
-        return "Laser control - turn " + ('ON' if self.params[0] else 'OFF')
-
-    def simulate(self, sim):
-        sim.laser_on = bool(self.params[0])
-
-
-class OpReadyMark(Operation):
-    name = "BEGIN JOB"
-    opcode = 0x8051
-
-    def text_decode(self):
-        return "Begin job"
 
 
 class OpFlyEnable(Operation):
@@ -309,50 +319,17 @@ class OpFlyEnable(Operation):
         )
 
 
-class OpMarkFrequency(Operation):
-    opcode = 0x800A
-    # name = "Name"
-    name = str(opcode)
+class OpSetQSwitchPeriod(Operation):
+    name = "SET Q SWITCH PERIOD (period)"
+    opcode = 0x801B
 
     def text_decode(self):
-        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
-            opcode=self.opcode,
-            p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
-        )
+        return "Set Q-switch period = %d ns (%.0f kHz)" % (
+            self.params[0] * 50,
+            1.0 / (1000 * self.params[0] * 50e-9))
 
-
-class OpMarkPulseWidth(Operation):
-
-    opcode = 0x800B
-    # name = "Name"
-    name = str(opcode)
-
-    def text_decode(self):
-        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
-            opcode=self.opcode,
-            p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
-        )
-
-
-class OpWritePort(Operation):
-    opcode = 0x8011
-    # name = "Name"
-    name = str(opcode)
-
-    def text_decode(self):
-        return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
-            opcode=self.opcode,
-            p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
-        )
+    def simulate(self, sim):
+        sim.q_switch_period = self.params[0] * 50.0
 
 
 class OpDirectLaserSwitch(Operation):
@@ -414,6 +391,17 @@ class OpFlyWaitInput(Operation):
             p3=self.params[1],
             p4=self.params[1]
         )
+
+
+class OpLaserControl(Operation):
+    name = "LASER CONTROL (on)"
+    opcode = 0x8021
+
+    def text_decode(self):
+        return "Laser control - turn " + ('ON' if self.params[0] else 'OFF')
+
+    def simulate(self, sim):
+        sim.laser_on = bool(self.params[0])
 
 
 class OpChangeMarkCount(Operation):
@@ -510,6 +498,16 @@ class OpSetDaZWord(Operation):
         )
 
 
+class OpReadyMark(Operation):
+    name = "BEGIN JOB"
+    opcode = 0x8051
+
+    def text_decode(self):
+        return "Begin job"
+
+
+
+
 all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpCut,
                   OpMarkPowerRatio, OpSetPolygonDelay, OpJumpCalibration, OpSetCutSpeed,
                   OpSetLaserOffDelay, OpSetLaserOnDelay, OpSetTravelSpeed,
@@ -527,8 +525,24 @@ def OperationFactory(code, tracking=None, position=0):
     OpClass = operations_by_opcode.get(opcode, Operation)
     return OpClass(from_binary=code, tracking=tracking, position=position)
 
+class CommandSource:
+    tick = None
+    def packet_generator(self):
+        assert False, "Override this abstract method!"
 
-class CommandList:
+class CommandBinary(CommandSource):
+    def __init__(self, data):
+        self._data = data
+
+    def packet_generator(self):
+        while len(self._data):
+            data = self._data[:0xC00]
+            assert len(data) == 3072
+            yield data
+            self._data = self._data[0xC00:]
+
+
+class CommandList(CommandSource):
     def __init__(self,
                  machine=None,
                  x=0x8000,
@@ -614,7 +628,6 @@ class CommandList:
     def serialize(self):
         """
         Performs final operations before creating bytearray.
-
         :return:
         """
         # Calculate distances.
@@ -640,7 +653,6 @@ class CommandList:
     def packet_generator(self):
         """
         Performs final operations and generates packets on the fly.
-
         :return:
         """
         last_xy = self._start_x, self._start_y
@@ -713,7 +725,6 @@ class CommandList:
     def ready(self):
         """
         Flag this job with ReadyMark.
-
         :return:
         """
         if not self._ready:
@@ -723,14 +734,13 @@ class CommandList:
     def laser_control(self, control):
         """
         Enable the laser control.
-
         :param control:
         :return:
         """
         if self._laser_control == control:
             return
         self._laser_control = control
-        self.ready()
+
         # TODO: Does this order matter?
         if control:
             self.append(OpLaserControl(0x0001))
@@ -765,7 +775,6 @@ class CommandList:
         # TODO: use differs by machine: 0x800A Mark Frequency, 0x800B Mark Pulse Width
         if self._frequency == frequency:
             return
-        self.ready()
         self._frequency = frequency
         self.append(OpSetQSwitchPeriod(self.convert_frequency(frequency)))
 
@@ -814,7 +823,6 @@ class CommandList:
     def mark(self, x, y):
         """
         Mark to a new location with the laser firing.
-
         :param x:
         :param y:
         :return:
@@ -846,7 +854,6 @@ class CommandList:
     def light(self, x, y, calibration=None):
         """
         Move to a new location with light enabled.
-
         :param x:
         :param y:
         :param calibration:
@@ -857,7 +864,6 @@ class CommandList:
     def goto(self, x, y, light=False, calibration=None):
         """
         Move to a new location without laser or light.
-
         :param x:
         :param y:
         :param light:
@@ -879,7 +885,6 @@ class CommandList:
         """
         Sets the initial position. This is the position we came from to get to this set of operations. It matters for
         the time calculation to the initial goto or mark commands.
-
         :param x:
         :param y:
         :return:
@@ -914,7 +919,6 @@ class CommandList:
     def add_packet(self, data, tracking=None):
         """
         Parse MSBF data and add it as operations
-
         :param data:
         :param tracking:
         :return:
@@ -936,3 +940,90 @@ class CommandList:
         with open(file, "wb") as out_file:
             out_file.write(self.serialize())
 
+    ######################
+    # RAW APPENDS
+    ######################
+
+    def raw_end_of_list(self, *args):
+        self.append(OpEndOfList(*args))
+
+    def raw_travel(self, *args):
+        self.append(OpTravel(*args))
+
+    def raw_mark_end_delay(self, *args):
+        self.append(OpSetMarkEndDelay(*args))
+
+    def raw_cut(self, *args):
+        self.append(OpCut(*args))
+
+    def raw_travel_speed(self, *args):
+        self.append(OpSetTravelSpeed(*args))
+
+    def raw_laser_on_delay(self, *args):
+        self.append(OpSetLaserOnDelay(*args))
+
+    def raw_laser_off_delay(self, *args):
+        self.append(OpSetLaserOffDelay(*args))
+
+    def raw_mark_frequency(self, *args):
+        self.append(OpMarkFrequency(*args))
+
+    def raw_mark_pulse_width(self, *args):
+        self.append(OpMarkPulseWidth(*args))
+
+    def raw_cut_speed(self, *args):
+        self.append(OpSetCutSpeed(*args))
+
+    def raw_jump_calibration(self, *args):
+        self.append(OpJumpCalibration(*args))
+
+    def raw_set_polygon_delay(self, *args):
+        self.append(OpSetPolygonDelay(*args))
+
+    def raw_write_port(self, *args):
+        self.append(OpWritePort(*args))
+
+    def raw_mark_power_ratio(self, *args):
+        self.append(OpMarkPowerRatio(*args))
+
+    def raw_fly_enabled(self, *args):
+        self.append(OpFlyEnable(*args))
+
+    def raw_q_switch_period(self, *args):
+        self.append(OpSetQSwitchPeriod(*args))
+
+    def raw_direct_laser_switch(self, *args):
+        self.append(OpDirectLaserSwitch(*args))
+
+    def raw_fly_delay(self, *args):
+        self.append(OpFlyDelay(*args))
+
+    def raw_set_co2_fpk(self, *args):
+        self.append(OpSetCo2FPK(*args))
+
+    def raw_fly_wait_input(self, *args):
+        self.append(OpFlyWaitInput(*args))
+
+    def raw_laser_control(self, *args):
+        self.append(OpLaserControl(*args))
+
+    def raw_change_mark_count(self, *args):
+        self.append(OpChangeMarkCount(*args))
+
+    def raw_set_weld_power_wave(self, *args):
+        self.append(OpSetWeldPowerWave(*args))
+
+    def raw_enable_weld_power_wave(self, *args):
+        self.append(OpEnableWeldPowerWave(*args))
+
+    def raw_fiber_ylpmp_pulse_width(self, *args):
+        self.append(OpFiberYLPMPulseWidth(*args))
+
+    def raw_fly_encoder_count(self, *args):
+        self.append(OpFlyEncoderCount(*args))
+
+    def raw_set_da_z_word(self, *args):
+        self.append(OpSetDaZWord(*args))
+
+    def raw_ready_mark(self, *args):
+        self.append(OpReadyMark(*args))
