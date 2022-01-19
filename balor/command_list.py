@@ -245,9 +245,9 @@ class OpMarkFrequency(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -260,9 +260,9 @@ class OpMarkPulseWidth(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -302,9 +302,9 @@ class OpWritePort(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -329,9 +329,9 @@ class OpFlyEnable(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -357,9 +357,9 @@ class OpDirectLaserSwitch(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -372,9 +372,9 @@ class OpFlyDelay(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -387,9 +387,9 @@ class OpSetCo2FPK(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -403,9 +403,9 @@ class OpFlyWaitInput(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -429,9 +429,9 @@ class OpChangeMarkCount(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -445,9 +445,9 @@ class OpSetWeldPowerWave(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -461,9 +461,9 @@ class OpEnableWeldPowerWave(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -476,9 +476,9 @@ class OpFiberYLPMPulseWidth(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -492,9 +492,9 @@ class OpFlyEncoderCount(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -508,9 +508,9 @@ class OpSetDaZWord(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 class OpJptSetParam(Operation):
@@ -523,9 +523,9 @@ class OpJptSetParam(Operation):
         return "sets command {opcode}={p1}, {p2}, {p3}, {p4}".format(
             opcode=self.opcode,
             p1=self.params[1],
-            p2=self.params[1],
-            p3=self.params[1],
-            p4=self.params[1]
+            p2=self.params[2],
+            p3=self.params[3],
+            p4=self.params[4],
         )
 
 
@@ -541,7 +541,7 @@ class OpReadyMark(Operation):
 
 
 
-all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpCut,
+all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpCut, OpLaserOnPoint,
                   OpMarkPowerRatio, OpSetPolygonDelay, OpJumpCalibration, OpSetCutSpeed,
                   OpSetLaserOffDelay, OpSetLaserOnDelay, OpSetTravelSpeed,
                   OpSetMarkEndDelay, OpEndOfList, OpTravel, OpMarkFrequency, OpMarkPulseWidth,
