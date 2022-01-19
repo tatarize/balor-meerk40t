@@ -564,15 +564,18 @@ class CommandSource:
         assert False, "Override this abstract method!"
 
 class CommandBinary(CommandSource):
-    def __init__(self, data):
-        self._data = data
-
+    def __init__(self, data, repeat=1):
+        self._original_data = data
+        self._repeat = repeat
     def packet_generator(self):
-        while len(self._data):
-            data = self._data[:0xC00]
-            assert len(data) == 3072
-            yield data
-            self._data = self._data[0xC00:]
+        while self._repeat > 0:
+            self._data = self._original_data
+            while len(self._data):
+                data = self._data[:0xC00]
+                assert len(data) == 3072
+                yield data
+                self._data = self._data[0xC00:]
+            self._repeat -= 1
 
 
 class CommandList(CommandSource):
