@@ -164,9 +164,9 @@ class BalorDriver:
         @return:
         """
         cal = None
-        if self.calibration_file is not None:
+        if self.service.calibration_file is not None:
             try:
-                cal = Cal(self.calibration_file)
+                cal = Cal(self.service.calibration_file)
             except TypeError:
                 pass
         job = CommandList(cal=cal)
