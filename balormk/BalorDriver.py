@@ -181,6 +181,7 @@ class BalorDriver:
         )
         job.goto(0x8000, 0x8000)
         job.laser_control(True)
+        last_on = None
         for plot in queue:
             start = plot.start()
             job.goto(start[0], start[1])
@@ -197,6 +198,9 @@ class BalorDriver:
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
+                    if last_on is None or on != last_on:
+                        last_on = on
+                        job.set_power(self.service.cut_speed * on)
                     job.mark(x, y)
         job.laser_control(False)
         return job
