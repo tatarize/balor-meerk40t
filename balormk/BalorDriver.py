@@ -200,7 +200,7 @@ class BalorDriver:
                 else:
                     if last_on is None or on != last_on:
                         last_on = on
-                        job.set_power(self.service.cut_speed * on)
+                        job.set_power(self.service.laser_power * on)
                     job.mark(x, y)
         job.laser_control(False)
         return job
