@@ -418,6 +418,9 @@ class BalorDriver:
     def wait(self, secs):
         time.sleep(secs)
 
+    def console(self, value):
+        self.service(value)
+
     def beep(self):
         """
         Wants a system beep to be issued.
