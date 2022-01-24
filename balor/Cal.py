@@ -3,13 +3,17 @@ import scipy
 import scipy.interpolate
 import gc
 from . import RBFInterpolator
-
+import sys
 from functools import lru_cache
 MAX_CACHE = 2048
 
 class Cal:
     def __init__(self, cal_file):
         self.cache = {}
+
+        if cal_file is None:
+            print("A calibration file must be provided.", file=sys.stderr)
+            sys.exit(-1)
 
         calfile = [h.split() for h in open(cal_file, 'r').readlines()]
         mcal = np.asarray([(float(h[0]), float(h[1])) for h in calfile])

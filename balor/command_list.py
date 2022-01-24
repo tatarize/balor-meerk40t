@@ -21,13 +21,13 @@ class Simulation:
         self.y = 0x8000
         self.show_travels = show_travels
 
+
     def simulate(self, op):
         op.simulate(self)
 
     def cut(self, x, y):
         cm = 128 if self.segcount % 2 else 255
         self.segcount += 1
-
         if not self.laser_on:
             color = (cm, 0, 0)
         else:
@@ -128,7 +128,8 @@ class Operation:
         self.validate()
 
     def set_d(self, d):
-        self.params[self.d] = d
+        self.params[self.d] = d & 0xFFFF
+        self.params[self.d + 1] = (d >> 16) & 0x0001
         self.validate()
 
     def set_a(self, a):
@@ -158,7 +159,8 @@ class OpTravel(Operation):
         xs, ys, unit = self.job.get_scale()
         x = '%.3f %s' % (self.params[1] * xs, unit) if unit else '%d' % self.params[1]
         y = '%.3f %s' % (self.params[0] * ys, unit) if unit else '%d' % self.params[0]
-        d = '%.3f %s' % (self.params[3] * xs, unit) if unit else '%d' % self.params[3]
+        distance = self.params[3] | ((self.params[3] & 0x0001) << 16)
+        d = '%.3f %s' % (distance * xs, unit) if unit else '%d' % distance
         return "Travel to x=%s y=%s angle=%04X dist=%s" % (
             x, y, self.params[2],
             d)
@@ -278,11 +280,11 @@ class OpSetCutSpeed(Operation):
 
 
 class OpJumpCalibration(Operation):
-    name = "Alternate travel (0x800D)"
+    name = "Travel compensation (0x800D)"
     opcode = 0x800D
 
     def text_decode(self):
-        return "Travel compensation operation 0x800D, param=%d" % self.params[0]
+        return "Travel compensation operation 0x800D, param=(%d,%d)" % (self.params[0],self.params[1])
 
 
 class OpSetPolygonDelay(Operation):
@@ -601,7 +603,7 @@ class CommandList(CommandSource):
         self._ready = False
         self._cut_speed = None
         self._travel_speed = None
-        self._frequency = None
+        self._q_switch_frequency = None
         self._power = None
         self._jump_calibration = None
         self._laser_control = None
@@ -619,6 +621,9 @@ class CommandList(CommandSource):
     def position(self):
         return len(self.operations) - 1
 
+    def get_last_xy(self):
+        return self._last_x, self._last_y
+
     def get_scale(self):
         return self._scale_x, self._scale_y, self._units
 
@@ -627,7 +632,7 @@ class CommandList(CommandSource):
         self._ready = False
         self._cut_speed = None
         self._travel_speed = None
-        self._frequency = None
+        self._q_switch_frequency = None
         self._power = None
         self._jump_calibration = None
         self._laser_control = None
@@ -729,6 +734,7 @@ class CommandList(CommandSource):
 
         for n in range(segs):
             # print ("*", xs[n], ys[n], self.cal.interpolate(xs[n], ys[n]), file=sys.stderr)
+            self._last_x, self._last_y = xs[n], ys[n]
             self.append(Op(*self.pos(xs[n], ys[n])))
 
     ######################
@@ -750,9 +756,12 @@ class CommandList(CommandSource):
     def convert_power(self, power):
         return int(round(power * 40.95))
 
-    def convert_frequency(self, frequency):
+    def convert_frequency_to_period(self, frequency):
         # q_switch_period
         return int(round(1.0 / (frequency * 1e3) / 50e-9))
+
+    #def convert_period(self, period):
+    #    return int(round(period / 50e-9))
 
     ######################
     # COMMAND DELEGATES
@@ -778,6 +787,15 @@ class CommandList(CommandSource):
         self._laser_control = control
 
         # TODO: Does this order matter?
+        # Yes it does, very much so. You're waiting for the laser source
+        # to turn on, it doesn't come on instantly. It takes time for the pump
+        # diodes to come on and create a population inversion in the gain
+        # medium. It also takes time for the laser to stop lasing from the
+        # time the command is sent, and you wouldn't want it to still be
+        # firing when you started the next non-marking travel op, say.
+        # TODO: These should probably be configurable, the idea values might
+        # be different for different (e.g. non raycus q-switched fiber) lasers.
+        # EzCAD lets you configure them.
         if control:
             self.append(OpLaserControl(0x0001))
             self.set_mark_end_delay(0x0320)
@@ -807,12 +825,18 @@ class CommandList(CommandSource):
         self._power = power
         self.append(OpMarkPowerRatio(self.convert_power(power)))
 
+    # def set_q_switch_period(self, period):
+    #     if self._q_switch_period == period:
+    #        return
+    #    self._q_switch_period = period
+    #    self.append(OpSetQSwitchPeriod(self.convert_period(period)))
+
     def set_frequency(self, frequency):
         # TODO: use differs by machine: 0x800A Mark Frequency, 0x800B Mark Pulse Width
-        if self._frequency == frequency:
+        if self._q_switch_frequency == frequency:
             return
-        self._frequency = frequency
-        self.append(OpSetQSwitchPeriod(self.convert_frequency(frequency)))
+        self._q_switch_frequency = frequency
+        self.append(OpSetQSwitchPeriod(self.convert_frequency_to_period(frequency)))
 
     def set_light(self, on):
         if self._light == on:
@@ -864,7 +888,7 @@ class CommandList(CommandSource):
         :return:
         """
         self.ready()
-        if self._frequency is None:
+        if self._q_switch_frequency is None:
             raise ValueError("Qswitch frequency must be set before a mark(x,y)")
         if self._power is None:
             raise ValueError("Laser Power must be set before a mark(x,y)")
