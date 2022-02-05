@@ -289,7 +289,7 @@ class Sender:
                 if self._terminate_execution:
                     return False
 
-            self.raw_write_port(0x0001)
+            self.raw_write_port(0x0101) #Inpain test
 
             loop_index = 0
             while loop_index < loop_count:
@@ -1017,5 +1017,6 @@ class MockConnection:
         """Send a command list chunk to the machine."""
         if len(data) != 0xC00:
             raise BalorDataValidityException("Invalid chunk size %d" % len(data))
+        print(str(data))
         if self._debug:
             self._debug("---> " + str(data))
