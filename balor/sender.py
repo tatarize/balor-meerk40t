@@ -292,7 +292,7 @@ class Sender:
                 if self._terminate_execution:
                     return False
 
-            self.port_on(1)
+            self.port_on(0)
 
             loop_index = 0
             while loop_index < loop_count:
