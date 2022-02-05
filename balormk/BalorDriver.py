@@ -179,6 +179,7 @@ class BalorDriver(Parameters):
             laser_off_delay=100,
             polygon_delay=100,
         )
+        job.set_write_port(self.connection.get_port())
         job.goto(0x8000, 0x8000)
         job.laser_control(True)
         last_on = None

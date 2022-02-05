@@ -366,8 +366,10 @@ class Sender:
         self._write_port = ~self._write_port
         self.raw_write_port(self._write_port)
 
-    def get_port(self, bit):
-        return bool((self.properties >> bit) & 1)
+    def get_port(self, bit=None):
+        if bit is None:
+            return self._write_port
+        return (self._write_port >> bit) & 1
 
     def light_on(self):
         self.port_on(bit=8) # 0x100
