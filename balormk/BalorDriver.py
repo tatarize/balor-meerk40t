@@ -1,15 +1,16 @@
 import sys
 import time
 
-from meerk40t.core.cutcode import LaserSettings
+from meerk40t.core.parameters import Parameters
 
 from balor.Cal import Cal
 from balor.command_list import CommandList
 from balor.sender import Sender, BalorMachineException
 
 
-class BalorDriver:
+class BalorDriver(Parameters):
     def __init__(self, service):
+        Parameters.__init__(self)
         self.service = service
         self.native_x = 0x8000
         self.native_y = 0x8000
@@ -20,7 +21,6 @@ class BalorDriver:
 
         self.connected = False
 
-        self.settings = LaserSettings()
 
         self.is_relative = False
         self.laser = False
