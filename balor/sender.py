@@ -1024,6 +1024,5 @@ class MockConnection:
         """Send a command list chunk to the machine."""
         if len(data) != 0xC00:
             raise BalorDataValidityException("Invalid chunk size %d" % len(data))
-        print(str(data))
         if self._debug:
             self._debug("---> " + str(data))

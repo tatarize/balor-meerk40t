@@ -754,9 +754,11 @@ class CommandList(CommandSource):
         return int(round(speed / 2.0))  # units are 2mm/sec
 
     def convert_power(self, power):
+        "Power in percent of full power."
         return int(round(power * 40.95))
 
     def convert_frequency_to_period(self, frequency):
+        "Frequency in kHz"
         # q_switch_period
         return int(round(1.0 / (frequency * 1e3) / 50e-9))
 
