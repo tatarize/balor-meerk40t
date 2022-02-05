@@ -460,7 +460,7 @@ class BalorDevice(Service, ViewPort):
                 if polygon_delay is None
                 else polygon_delay,
             )
-            job.goto(0x8000, 0x8000)
+            job.light_on()
             job.laser_control(True)
             for e in paths:
                 if isinstance(e, Shape):
@@ -548,14 +548,14 @@ class BalorDevice(Service, ViewPort):
                 x, y = e.point(0)
                 x *= self.get_native_scale_x
                 y *= self.get_native_scale_y
-                job.goto(x, y)
+                job.light(x, y, False)
                 if speed:
                     job.set_travel_speed(simulation_speed)
                 for i in range(1, quantization + 1):
                     x, y = e.point(i / float(quantization))
                     x *= self.get_native_scale_x
                     y *= self.get_native_scale_y
-                    job.light(x, y)
+                    job.light(x, y, True)
                 if speed:
                     job.set_travel_speed(travel_speed)
             return "balor", job
@@ -1287,6 +1287,7 @@ class BalorDevice(Service, ViewPort):
                 if polygon_delay is None
                 else polygon_delay,
             )
+            job.light_on()
             elements = self.elements
             channel(_("Hatch Filling"))
             if distance is not None:

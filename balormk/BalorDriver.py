@@ -135,8 +135,13 @@ class BalorDriver(Parameters):
         :param queue:
         :return:
         """
-
-        job = CommandList(cal=Cal(self.service.calibration_file))
+        cal = None
+        if self.service.calibration_file is not None:
+            try:
+                cal = Cal(self.service.calibration_file)
+            except TypeError:
+                pass
+        job = CommandList(cal=cal)
         job.set_travel_speed(self.service.travel_speed)
         for plot in queue:
             start = plot.start()
@@ -149,11 +154,11 @@ class BalorDriver(Parameters):
                     x, y, on = e
                 if on == 0:
                     try:
-                        job.light(x, y)
+                        job.light(x, y, True)
                     except ValueError:
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
-                    job.goto(x, y)
+                    job.light(x, y, False)
         return job
 
     def cutcode_to_mark_job(self, queue):
