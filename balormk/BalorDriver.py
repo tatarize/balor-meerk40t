@@ -183,7 +183,7 @@ class BalorDriver(Parameters):
         job.laser_control(True)
         last_on = None
         for plot in queue:
-            start = plot.start()
+            start = plot.start
             job.goto(start[0], start[1])
 
             for e in self.group(plot.generator()):
