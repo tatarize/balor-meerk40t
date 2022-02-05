@@ -126,6 +126,13 @@ class Sender:
         self._footswitch_callback = footswitch_callback
         self._debug = debug
         self._usb_connection = None
+        self._prefer_light = True
+
+    def light_on(self):
+        self._prefer_light = True
+
+    def light_off(self):
+        self._prefer_light = False
 
     def open(self, machine_index=0, mock=False, **kwargs):
         if self._usb_connection is not None:

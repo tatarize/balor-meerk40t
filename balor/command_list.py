@@ -921,7 +921,7 @@ class CommandList(CommandSource):
         """
         self.goto(x, y, light=True, calibration=calibration)
 
-    def goto(self, x, y, light=False, calibration=None):
+    def goto(self, x, y, light=True, calibration=None):
         """
         Move to a new location without laser or light.
         :param x:
@@ -971,6 +971,7 @@ class CommandList(CommandSource):
         self.set_laser_on_delay(laser_on_delay)
         self.set_laser_off_delay(laser_off_delay)
         self.set_polygon_delay(polygon_delay)
+        self.raw_write_port(0x101)
 
     ######################
     # DEBUG FUNCTIONS
