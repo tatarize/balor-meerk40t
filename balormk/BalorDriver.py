@@ -268,12 +268,12 @@ class BalorDriver(Parameters):
         @return:
         """
         self.connect_if_needed()
-        self.connection.raw_write_port(0x100)
+        self.connection.light_on()
         self.connection.execute(job, 1)
 
     def light_data(self, job):
         self.connect_if_needed()
-        self.connection.raw_write_port(0x100)
+        self.connection.light_on()
         self.connection.execute(job, 1)
 
     def plot_start(self):
