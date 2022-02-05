@@ -126,13 +126,9 @@ class Sender:
         self._footswitch_callback = footswitch_callback
         self._debug = debug
         self._usb_connection = None
-        self._prefer_light = True
+        self._write_port = 0x0000
+        self.light_on()
 
-    def light_on(self):
-        self._prefer_light = True
-
-    def light_off(self):
-        self._prefer_light = False
 
     def open(self, machine_index=0, mock=False, **kwargs):
         if self._usb_connection is not None:
@@ -229,7 +225,7 @@ class Sender:
         self.raw_set_fly_res(fly_res_p1, fly_res_p2, fly_res_p3, fly_res_p4)
 
         # Is this appropriate for all laser engraver machines?
-        self.raw_write_port(0)
+        self.raw_write_port(self._write_port)
 
         # Conjecture is that this puts the output port out of a 
         # high impedance state (based on the name in the DLL,
@@ -296,7 +292,7 @@ class Sender:
                 if self._terminate_execution:
                     return False
 
-            self.raw_write_port(0x0101) #Inpain test
+            self.port_on(1)
 
             loop_index = 0
             while loop_index < loop_count:
@@ -355,6 +351,29 @@ class Sender:
         """Returns the 16-bit condition register value (from whatever
            command was run last.)"""
         return self._usb_connection.status
+
+    def port_toggle(self, bit):
+        self._write_port ^= 1 << bit
+        self.raw_write_port(self._write_port)
+
+    def port_on(self, bit):
+        self._write_port &= 1 << bit
+        self.raw_write_port(self._write_port)
+
+    def port_off(self, bit):
+        self._write_port = ~self._write_port
+        self._write_port &= 1 << bit
+        self._write_port = ~self._write_port
+        self.raw_write_port(self._write_port)
+
+    def get_port(self, bit):
+        return bool((self.properties >> bit) & 1)
+
+    def light_on(self):
+        self.port_on(9) # 0x100
+
+    def light_off(self):
+        self.port_off(9)
 
     def read_port(self):
         port = self.raw_read_port()
