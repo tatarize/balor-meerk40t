@@ -611,7 +611,7 @@ class CommandList(CommandSource):
         self._laser_off_delay = None
         self._poly_delay = None
         self._mark_end_delay = None
-        self._light = None
+        self._write_port = None
 
         self._scale_x = 1.0
         self._scale_y = 1.0
@@ -640,7 +640,7 @@ class CommandList(CommandSource):
         self._laser_off_delay = None
         self._poly_delay = None
         self._mark_end_delay = None
-        self._light = None
+        self._write_port = None
 
     def duplicate(self, begin, end, repeats=1):
         for _ in range(repeats):
@@ -837,18 +837,16 @@ class CommandList(CommandSource):
         # TODO: use differs by machine: 0x800A Mark Frequency, 0x800B Mark Pulse Width
         if self._q_switch_frequency == frequency:
             return
+        self.ready()
         self._q_switch_frequency = frequency
         self.append(OpSetQSwitchPeriod(self.convert_frequency_to_period(frequency)))
 
-    def set_light(self, on):
-        if self._light == on:
+    def set_write_port(self, port):
+        if self._write_port == port:
             return
         self.ready()
-        if on:
-            self.append(OpWritePort(0x100))
-        else:
-            self.append(OpWritePort(0))
-        self._light = on
+        self.append(OpWritePort(port))
+        self._write_port = port
 
     def set_laser_on_delay(self, *args):
         # TODO: WEAK IMPLEMENTATION
@@ -913,17 +911,22 @@ class CommandList(CommandSource):
         self._jump_calibration = calibration
         self.append(OpJumpCalibration(calibration))
 
-    def light(self, x, y, calibration=None):
+    def light(self, x, y, light=True, calibration=None):
         """
         Move to a new location with light enabled.
         :param x:
         :param y:
+        :param light: explicitly set light state
         :param calibration:
         :return:
         """
-        self.goto(x, y, light=True, calibration=calibration)
+        if light:
+            self.light_on()
+        else:
+            self.light_off()
+        self.goto(x, y, calibration=calibration)
 
-    def goto(self, x, y, light=True, calibration=None):
+    def goto(self, x, y, calibration=None):
         """
         Move to a new location without laser or light.
         :param x:
@@ -937,8 +940,6 @@ class CommandList(CommandSource):
             raise ValueError("Travel speed must be set before a jumping")
         self._last_x = x
         self._last_y = y
-        if light != self._light:
-            self.set_light(light)
         if calibration is not None:
             self.jump_calibration(calibration)
         self.append(OpTravel(*self.pos(x, y)))
@@ -973,7 +974,29 @@ class CommandList(CommandSource):
         self.set_laser_on_delay(laser_on_delay)
         self.set_laser_off_delay(laser_off_delay)
         self.set_polygon_delay(polygon_delay)
-        self.raw_write_port(0x101)
+        # This was set on during execute but singleton commands could turn it off.
+        self.port_on(0)
+
+    def port_toggle(self, bit):
+        port = self._write_port ^ (1 << bit)
+        self.set_write_port(port)
+
+    def port_on(self, bit):
+        port = self._write_port & (1 << bit)
+        self.set_write_port(port)
+
+    def port_off(self, bit):
+        port = ~((~self._write_port) & (1 << bit))
+        self.set_write_port(port)
+
+    def get_port(self, bit):
+        return bool((self.properties >> bit) & 1)
+
+    def light_on(self):
+        self.port_on(9) # 0x100
+
+    def light_off(self):
+        self.port_off(9)
 
     ######################
     # DEBUG FUNCTIONS
