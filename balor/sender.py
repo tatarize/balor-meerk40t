@@ -370,10 +370,10 @@ class Sender:
         return bool((self.properties >> bit) & 1)
 
     def light_on(self):
-        self.port_on(bit=9) # 0x100
+        self.port_on(bit=8) # 0x100
 
     def light_off(self):
-        self.port_off(bit=9)
+        self.port_off(bit=8)
 
     def read_port(self):
         port = self.raw_read_port()

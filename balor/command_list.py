@@ -975,7 +975,7 @@ class CommandList(CommandSource):
         self.set_laser_off_delay(laser_off_delay)
         self.set_polygon_delay(polygon_delay)
         # This was set on during execute but singleton commands could turn it off.
-        self.port_on(0)
+        self.port_on(bit=0)
 
     def port_toggle(self, bit):
         port = self._write_port ^ (1 << bit)
@@ -993,10 +993,10 @@ class CommandList(CommandSource):
         return bool((self.properties >> bit) & 1)
 
     def light_on(self):
-        self.port_on(9) # 0x100
+        self.port_on(bit=8) # 0x100
 
     def light_off(self):
-        self.port_off(9)
+        self.port_off(bit=8)
 
     ######################
     # DEBUG FUNCTIONS
