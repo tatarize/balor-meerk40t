@@ -127,7 +127,6 @@ class Sender:
         self._debug = debug
         self._usb_connection = None
         self._write_port = 0x0000
-        self.light_on()
 
 
     def open(self, machine_index=0, mock=False, **kwargs):

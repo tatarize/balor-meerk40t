@@ -73,6 +73,7 @@ class BalorDriver(Parameters):
                     fly_res_p3=self.service.fly_res_p3,
                     fly_res_p4=self.service.fly_res_p4,
                 )
+                self.connection.light_on()
             except BalorMachineException as e:
                 self.service.signal("pipe;usb_status", str(e))
                 self.channel(str(e))
