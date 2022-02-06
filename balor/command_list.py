@@ -611,7 +611,10 @@ class CommandList(CommandSource):
         self._laser_off_delay = None
         self._poly_delay = None
         self._mark_end_delay = None
-        self._write_port = None
+        if self._sender:
+            self._write_port = self._sender._write_port
+        else:
+            self._write_port = 0x0001
 
         self._scale_x = 1.0
         self._scale_y = 1.0
@@ -640,7 +643,10 @@ class CommandList(CommandSource):
         self._laser_off_delay = None
         self._poly_delay = None
         self._mark_end_delay = None
-        self._write_port = None
+        if self._sender:
+            self._write_port = self._sender._write_port
+        else:
+            self._write_port = 0x0001
 
     def duplicate(self, begin, end, repeats=1):
         for _ in range(repeats):
