@@ -63,12 +63,13 @@ def tick(cmds, loop_index):
     for digit in current_time:
         pts = points[digit]
         typeset_digit = pts
-        cmds.goto(int(typeset_digit[0][0]*scaling + start), int(typeset_digit[0][1]*scaling + 0x8000), calibration=8)
+        cmds.light(int(typeset_digit[0][0]*scaling + start), int(typeset_digit[0][1]*scaling + 0x8000), False)
 
         for pt in typeset_digit:
-            cmds.light(int(pt[0]*scaling + start) , int(pt[1]*scaling + 0x8000))
+            cmds.light(int(pt[0]*scaling + start) , int(pt[1]*scaling + 0x8000), True)
         typeset_max_x = max(typeset_digit[:, 0]) - min(typeset_digit[:, 0])
         start += typeset_max_x * scaling
+    cmds.light_off()
         # print(start)
 
     # from balor.MSBF import CommandList
