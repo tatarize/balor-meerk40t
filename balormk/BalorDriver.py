@@ -242,7 +242,7 @@ class BalorDriver(Parameters):
         if self.redlight_preferred:
             self.connection.light_on()
         else:
-            self.connection.light_off
+            self.connection.light_off()
 
     def laser_off(self, *values):
         """
@@ -286,11 +286,10 @@ class BalorDriver(Parameters):
         self.connect_if_needed()
         self.connection.light_off()
         self.connection.execute(job, 1)
-        self.connection.light_off()
-        # if self.redlight_preferred:
-        #     self.connection.light_on()
-        # else:
-        #     self.connection.light_off()
+        if self.redlight_preferred:
+            self.connection.light_on()
+        else:
+            self.connection.light_off()
 
     def plot_start(self):
         """
@@ -305,7 +304,7 @@ class BalorDriver(Parameters):
         if self.redlight_preferred:
             self.connection.light_on()
         else:
-            self.connection.light_off
+            self.connection.light_off()
 
     def move_abs(self, x, y):
         """
