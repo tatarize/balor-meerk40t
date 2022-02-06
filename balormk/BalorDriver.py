@@ -150,7 +150,7 @@ class BalorDriver(Parameters):
         job.set_travel_speed(self.service.travel_speed)
         for plot in queue:
             start = plot.start()
-            job.goto(start[0], start[1])
+            job.light(start[0], start[1], False)
             for e in self.group(plot.generator()):
                 on = 1
                 if len(e) == 2:
@@ -164,6 +164,7 @@ class BalorDriver(Parameters):
                         print("Not including this stroke path:", file=sys.stderr)
                 else:
                     job.light(x, y, False)
+        job.light_off()
         return job
 
     def cutcode_to_mark_job(self, queue):
