@@ -547,7 +547,7 @@ class BalorDevice(Service, ViewPort):
                 x, y = e.point(0)
                 x *= self.get_native_scale_x
                 y *= self.get_native_scale_y
-                job.light(x, y, False, calibration=100)
+                job.light(x, y, False, calibration=200)
                 if speed:
                     job.set_travel_speed(simulation_speed)
                 for i in range(1, quantization + 1):
