@@ -284,7 +284,6 @@ class BalorDriver(Parameters):
         @return:
         """
         self.connect_if_needed()
-        self.connection.light_on()
         self.connection.execute(job, 1)
         if self.redlight_preferred:
             self.connection.light_on()
@@ -293,7 +292,6 @@ class BalorDriver(Parameters):
 
     def light_data(self, job):
         self.connect_if_needed()
-        self.connection.light_on()
         self.connection.execute(job, 1)
         if self.redlight_preferred:
             self.connection.light_on()
