@@ -557,6 +557,7 @@ class BalorDevice(Service, ViewPort):
                     job.light(x, y, True)
                 if speed:
                     job.set_travel_speed(travel_speed)
+            job.light_off()
             return "balor", job
 
         @self.console_command(
