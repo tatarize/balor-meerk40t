@@ -284,19 +284,13 @@ class BalorDriver(Parameters):
         @return:
         """
         self.connect_if_needed()
+        self.connection.light_off()
         self.connection.execute(job, 1)
-        if self.redlight_preferred:
-            self.connection.light_on()
-        else:
-            self.connection.light_off
-
-    def light_data(self, job):
-        self.connect_if_needed()
-        self.connection.execute(job, 1)
-        if self.redlight_preferred:
-            self.connection.light_on()
-        else:
-            self.connection.light_off
+        self.connection.light_off()
+        # if self.redlight_preferred:
+        #     self.connection.light_on()
+        # else:
+        #     self.connection.light_off()
 
     def plot_start(self):
         """
