@@ -697,7 +697,6 @@ class BalorDevice(Service, ViewPort):
         )
         def balor_loop(command, channel, _, data=None, remainder=None, **kwgs):
             self.driver.connect_if_needed()
-            self.driver.connection.raw_write_port(0x0100)
             channel("Looping job: {job}".format(job=str(data)))
             self.spooler.set_idle(("light", data))
             return "balor", data

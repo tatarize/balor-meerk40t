@@ -988,11 +988,11 @@ class CommandList(CommandSource):
         self.set_write_port(port)
 
     def port_on(self, bit):
-        port = self._write_port & (1 << bit)
+        port = self._write_port | (1 << bit)
         self.set_write_port(port)
 
     def port_off(self, bit):
-        port = ~((~self._write_port) & (1 << bit))
+        port = ~((~self._write_port) | (1 << bit))
         self.set_write_port(port)
 
     def get_port(self, bit=None):

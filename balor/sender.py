@@ -356,11 +356,11 @@ class Sender:
         self.raw_write_port(self._write_port)
 
     def port_on(self, bit):
-        self._write_port &= 1 << bit
+        self._write_port |= 1 << bit
         self.raw_write_port(self._write_port)
 
     def port_off(self, bit):
-        self._write_port = ~((~self._write_port) & (1 << bit))
+        self._write_port = ~((~self._write_port) | (1 << bit))
         self.raw_write_port(self._write_port)
 
     def get_port(self, bit=None):
