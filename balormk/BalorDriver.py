@@ -28,6 +28,7 @@ class BalorDriver(Parameters):
         self._shutdown = False
 
         self.queue = []
+        self.redlight_preferred = True
 
     def __repr__(self):
         return "BalorDriver(%s)" % self.name
@@ -73,7 +74,10 @@ class BalorDriver(Parameters):
                     fly_res_p3=self.service.fly_res_p3,
                     fly_res_p4=self.service.fly_res_p4,
                 )
-                self.connection.light_on()
+                if self.redlight_preferred:
+                    self.connection.light_on()
+                else:
+                    self.connection.light_off()
             except BalorMachineException as e:
                 self.service.signal("pipe;usb_status", str(e))
                 self.channel(str(e))
@@ -234,6 +238,10 @@ class BalorDriver(Parameters):
     def balor_job(self, job):
         self.connect_if_needed()
         self.connection.execute(job, 1)
+        if self.redlight_preferred:
+            self.connection.light_on()
+        else:
+            self.connection.light_off
 
     def laser_off(self, *values):
         """
@@ -277,11 +285,19 @@ class BalorDriver(Parameters):
         self.connect_if_needed()
         self.connection.light_on()
         self.connection.execute(job, 1)
+        if self.redlight_preferred:
+            self.connection.light_on()
+        else:
+            self.connection.light_off
 
     def light_data(self, job):
         self.connect_if_needed()
         self.connection.light_on()
         self.connection.execute(job, 1)
+        if self.redlight_preferred:
+            self.connection.light_on()
+        else:
+            self.connection.light_off
 
     def plot_start(self):
         """
@@ -293,6 +309,10 @@ class BalorDriver(Parameters):
         job = self.cutcode_to_mark_job(self.queue)
         self.queue = []
         self.connection.execute(job, 1)
+        if self.redlight_preferred:
+            self.connection.light_on()
+        else:
+            self.connection.light_off
 
     def move_abs(self, x, y):
         """

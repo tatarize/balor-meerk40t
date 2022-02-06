@@ -460,7 +460,6 @@ class BalorDevice(Service, ViewPort):
                 if polygon_delay is None
                 else polygon_delay,
             )
-            job.light_on()
             job.laser_control(True)
             for e in paths:
                 if isinstance(e, Shape):
@@ -722,12 +721,14 @@ class BalorDevice(Service, ViewPort):
         def balor_on(command, channel, _, off=None, remainder=None, **kwgs):
             if off == "off":
                 self.driver.connect_if_needed()
-                reply = self.driver.connection.raw_write_port(0)
+                reply = self.driver.connection.light_off()
+                self.driver.redlight_preferred = False
                 channel("Turning off redlight.")
             else:
                 self.driver.connect_if_needed()
-                reply = self.driver.connection.raw_write_port(0x0100)
+                reply = self.driver.connection.light_on()
                 channel("Turning on redlight.")
+                self.driver.redlight_preferred = True
 
         @self.console_command(
             "status",
