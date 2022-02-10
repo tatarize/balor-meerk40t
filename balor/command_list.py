@@ -279,12 +279,12 @@ class OpSetCutSpeed(Operation):
         sim.cut_speed = self.params[0] * 1.9656
 
 
-class OpJumpCalibration(Operation):
-    name = "Travel compensation (0x800D)"
+class OpSetJumpDelay(Operation):
+    name = "JUMP DELAY (0x800D)"
     opcode = 0x800D
 
     def text_decode(self):
-        return "Travel compensation operation 0x800D, param=(%d,%d)" % (self.params[0],self.params[1])
+        return "Set jump delay, param=(%d,%d)" % (self.params[0],self.params[1])
 
 
 class OpSetPolygonDelay(Operation):
@@ -544,7 +544,7 @@ class OpReadyMark(Operation):
 
 
 all_operations = [OpReadyMark, OpLaserControl, OpSetQSwitchPeriod, OpCut, OpLaserOnPoint,
-                  OpMarkPowerRatio, OpSetPolygonDelay, OpJumpCalibration, OpSetCutSpeed,
+                  OpMarkPowerRatio, OpSetPolygonDelay, OpSetJumpDelay, OpSetCutSpeed,
                   OpSetLaserOffDelay, OpSetLaserOnDelay, OpSetTravelSpeed,
                   OpSetMarkEndDelay, OpEndOfList, OpTravel, OpMarkFrequency, OpMarkPulseWidth,
                   OpWritePort, OpDirectLaserSwitch, OpFlyDelay, OpSetCo2FPK, OpFlyWaitInput,
@@ -605,7 +605,7 @@ class CommandList(CommandSource):
         self._travel_speed = None
         self._q_switch_frequency = None
         self._power = None
-        self._jump_calibration = None
+        self._jump_delay = None
         self._laser_control = None
         self._laser_on_delay = None
         self._laser_off_delay = None
@@ -637,7 +637,7 @@ class CommandList(CommandSource):
         self._travel_speed = None
         self._q_switch_frequency = None
         self._power = None
-        self._jump_calibration = None
+        self._jump_delay = None
         self._laser_control = None
         self._laser_on_delay = None
         self._laser_off_delay = None
@@ -910,35 +910,35 @@ class CommandList(CommandSource):
         self._last_y = y
         self.append(OpCut(*self.pos(x, y)))
 
-    def jump_calibration(self, calibration=0x0008):
-        if self._jump_calibration == calibration:
+    def jump_delay(self, delay=0x0008):
+        if self._jump_delay == delay:
             return
         self.ready()
-        self._jump_calibration = calibration
-        self.append(OpJumpCalibration(calibration))
+        self._jump_delay = delay
+        self.append(OpSetJumpDelay(delay))
 
-    def light(self, x, y, light=True, calibration=None):
+    def light(self, x, y, light=True, jump_delay=None):
         """
         Move to a new location with light enabled.
         :param x:
         :param y:
         :param light: explicitly set light state
-        :param calibration:
+        :param jump_delay:
         :return:
         """
         if light:
             self.light_on()
         else:
             self.light_off()
-        self.goto(x, y, calibration=calibration)
+        self.goto(x, y, jump_delay=jump_delay)
 
-    def goto(self, x, y, calibration=None):
+    def goto(self, x, y, jump_delay=None):
         """
         Move to a new location without laser or light.
         :param x:
         :param y:
         :param light:
-        :param calibration:
+        :param jump_delay:
         :return:
         """
         self.ready()
@@ -946,8 +946,8 @@ class CommandList(CommandSource):
             raise ValueError("Travel speed must be set before a jumping")
         self._last_x = x
         self._last_y = y
-        if calibration is not None:
-            self.jump_calibration(calibration)
+        if jump_delay is not None:
+            self.jump_delay(jump_delay)
         self.append(OpTravel(*self.pos(x, y)))
 
     def init(self, x, y):
@@ -1071,8 +1071,8 @@ class CommandList(CommandSource):
     def raw_cut_speed(self, *args):
         self.append(OpSetCutSpeed(*args))
 
-    def raw_jump_calibration(self, *args):
-        self.append(OpJumpCalibration(*args))
+    def raw_jump_delay(self, *args):
+        self.append(OpSetJumpDelay(*args))
 
     def raw_set_polygon_delay(self, *args):
         self.append(OpSetPolygonDelay(*args))
