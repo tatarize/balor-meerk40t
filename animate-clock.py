@@ -42,11 +42,15 @@ for p in points:
     qx = max(q[:, 1])
     q[:, 1] -= (qm + qx) / 2.0
 
-# sender = Sender()
-sender = Sender()
-sender.open()
+scale_x = -100.0
+scale_y = 100.0
+digit_gap = 2
+colon_gap = 7
 
-desired_width = 10000
+digits_width = (digit_gap + max(points['0'][:,0]) - min(points['0'][:,0])) * scale_x
+colon_width = (colon_gap + max(points[':'][:,0]) - min(points[':'][:,0])) * scale_x
+total_width = 6*digits_width + 2*colon_width
+start = 0x8000 - (total_width/2)
 
 
 def tick(cmds, loop_index):
@@ -54,46 +58,44 @@ def tick(cmds, loop_index):
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     job.set_travel_speed(8000)
-    total_width = 0
+    start = 0x8000 - (total_width / 2)
     for digit in current_time:
-        pts = points[digit]
-        total_width += max(pts[0,:]) - min(pts[0,:])
-    scaling = desired_width / total_width
-    start = 0x8000 - (desired_width / 2)
-    for digit in current_time:
-        pts = points[digit]
-        typeset_digit = pts
-        cmds.light(int(typeset_digit[0][0]*scaling + start), int(typeset_digit[0][1]*scaling + 0x8000), False)
-
+        start += digits_width / 2 if digit in "0123456789" else colon_width / 2
+        typeset_digit = points[digit]
+        cmds.light(
+            int(typeset_digit[0][0] * scale_x + start),
+            int(typeset_digit[0][1] * scale_y + 0x8000),
+            light=False,
+            jump_delay=200,
+        )
         for pt in typeset_digit:
-            cmds.light(int(pt[0]*scaling + start) , int(pt[1]*scaling + 0x8000), True)
-        typeset_max_x = max(typeset_digit[:, 0]) - min(typeset_digit[:, 0])
-        start += typeset_max_x * scaling
+            cmds.light(
+                int(pt[0] * scale_x + start) ,
+                int(pt[1] * scale_y + 0x8000),
+                light=True,
+                jump_delay=0,
+            )
+        start += digits_width / 2 if digit in "0123456789" else colon_width / 2
     cmds.light_off()
-        # print(start)
-
-    # from balor.MSBF import CommandList
-    # c = CommandList()
-    # for packet in cmds.packet_generator():
-    #     c.add_packet(packet)
-    # c.set_scale_x = 1.0
-    # c.set_scale_y = 1.0
-    # for operation in c:
-    #     print(operation.text_debug(show_tracking=True))
-    #
-    # from PIL import Image, ImageDraw
-    # im = Image.new('RGB', (0xFFF, 0xFFF), color=0)
-    # cmds.plot(ImageDraw.Draw(im), 0xFFF, show_travels=True)
-    # im.save('{time}.png'.format(time=current_time.replace(':', ';'), format='png'))
 
 
+sender = Sender()
+sender.open()
 job = sender.job(tick=tick)
+
+# tick(job, 0)
+# from PIL import Image, ImageDraw, ImageOps
+# job.scale_x = 1.0
+# job.scale_y = 1.0
+# job.size = "decagalvo"
+# im = Image.new("RGB", (0xFFF, 0xFFF), color=0)
+# job.plot(ImageDraw.Draw(im), show_travels=True)
+# im = im.rotate(-90)
+# im.save("clock.png", format="png")
+
+
 try:
     job.execute(1000)
 except KeyboardInterrupt as e:
     print("Interrupted, quitting", e)
 sender.close()
-
-sender.close()
-
-
