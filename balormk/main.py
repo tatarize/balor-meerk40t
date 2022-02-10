@@ -547,7 +547,7 @@ class BalorDevice(Service, ViewPort):
                 x, y = e.point(0)
                 x *= self.get_native_scale_x
                 y *= self.get_native_scale_y
-                job.light(x, y, False, calibration=200)
+                job.light(x, y, False, jump_delay=200)
                 if speed:
                     job.set_travel_speed(simulation_speed)
                 for i in range(1, quantization + 1):
@@ -557,7 +557,7 @@ class BalorDevice(Service, ViewPort):
                     # if i == quantization:
                     #     job.light(x, y, True, calibration=50)
                     # else:
-                    job.light(x, y, True, calibration=0)
+                    job.light(x, y, True, jump_delay=0)
                 if speed:
                     job.set_travel_speed(travel_speed)
             job.light_off()

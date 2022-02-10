@@ -21,7 +21,6 @@ class BalorDriver(Parameters):
 
         self.connected = False
 
-
         self.is_relative = False
         self.laser = False
 
