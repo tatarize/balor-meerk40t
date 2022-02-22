@@ -1,7 +1,7 @@
 import os
 import sys
 from meerk40t.core.spoolers import Spooler
-from meerk40t.core.units import ViewPort, UNITS_PER_INCH
+from meerk40t.core.units import ViewPort
 from meerk40t.kernel import Service
 
 from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape, Angle, Matrix, Polyline
@@ -332,7 +332,7 @@ class BalorDevice(Service, ViewPort):
 
         self.state = 0
 
-        ViewPort.__init__(self, 0, 0, self.lens_size, self.lens_size)
+        ViewPort.__init__(self, self.lens_size, self.lens_size)
         self.spooler = Spooler(self)
         self.driver = BalorDriver(self)
         self.spooler.driver = self.driver
