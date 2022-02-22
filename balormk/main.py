@@ -4,7 +4,7 @@ from meerk40t.core.spoolers import Spooler
 from meerk40t.core.units import ViewPort
 from meerk40t.kernel import Service
 
-from meerk40t.svgelements import Point, Path, SVGImage, Length, Polygon, Shape, Angle, Matrix, Polyline
+from meerk40t.svgelements import Point, Path, SVGImage, Polygon, Shape, Angle, Matrix
 
 import balor
 from balor.Cal import Cal
@@ -332,7 +332,7 @@ class BalorDevice(Service, ViewPort):
 
         self.state = 0
 
-        ViewPort.__init__(self, self.lens_size, self.lens_size)
+        ViewPort.__init__(self, self.lens_size, self.lens_size, origin_x=0.5, origin_y=0.5, flip_y=True)
         self.spooler = Spooler(self)
         self.driver = BalorDriver(self)
         self.spooler.driver = self.driver
@@ -1332,20 +1332,30 @@ class BalorDevice(Service, ViewPort):
                         job.goto(p.x, p.y)
             return "balor", job
 
+    @property
+    def current(self):
+        """
+        @return: the location in nm for the current known x value.
+        """
+        # return float(self.driver.native_x / self.width) * 0xFFF
+        return self.device_to_scene_position(
+            self.driver.native_x,
+            self.driver.native_y,
+        )
 
     @property
     def current_x(self):
         """
-        @return: the location in nm for the current known x value.
+        @return: the location in nm for the current known y value.
         """
-        return float(self.driver.native_x / self.width) * 0xFFF
+        return self.current[0]
 
     @property
     def current_y(self):
         """
         @return: the location in nm for the current known y value.
         """
-        return float(self.driver.native_y * (0xFFFF / self.height))
+        return self.current[1]
 
     @property
     def get_native_scale_x(self):
@@ -1353,14 +1363,14 @@ class BalorDevice(Service, ViewPort):
         Native x goes from 0x0000 to 0xFFFF with 0x8000 being zero.
         :return:
         """
-        actual_size_in_nm = self.width
+        actual_size_in_nm = self.width_as_nm
         galvo_range = 0xFFFF
         nm_per_galvo = actual_size_in_nm / galvo_range
         return 1.0 / nm_per_galvo
 
     @property
     def get_native_scale_y(self):
-        actual_size_in_nm = self.height
+        actual_size_in_nm = self.height_as_nm
         galvo_range = 0xFFFF
         nm_per_galvo = actual_size_in_nm / galvo_range
         return 1.0 / nm_per_galvo
