@@ -1,5 +1,6 @@
 import wx
 from meerk40t.gui.propertiespanel import PropertiesPanel
+from ..balor_params import Parameters
 
 _ = wx.GetTranslation
 
@@ -12,11 +13,12 @@ class BalorOperationPanel(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         self.context = context
         self.operation = node
+        params = Parameters(self.operation.settings)
 
         choices = [
             {
                 "attr": "travel_speed",
-                "object": self.operation.settings,
+                "object": params,
                 "default": 2000.0,
                 "type": float,
                 "label": _("Travel Speed"),
@@ -24,7 +26,7 @@ class BalorOperationPanel(wx.Panel):
             },
             {
                 "attr": "laser_power",
-                "object": self.operation.settings,
+                "object": params,
                 "default": 50.0,
                 "type": float,
                 "label": _("Laser Power"),
@@ -32,7 +34,7 @@ class BalorOperationPanel(wx.Panel):
             },
             {
                 "attr": "cut_speed",
-                "object": self.operation.settings,
+                "object": params,
                 "default": 100.0,
                 "type": float,
                 "label": _("Cut Speed"),
@@ -40,7 +42,7 @@ class BalorOperationPanel(wx.Panel):
             },
             {
                 "attr": "q_switch_frequency",
-                "object": self.operation.settings,
+                "object": params,
                 "default": 30.0,
                 "type": float,
                 "label": _("Q Switch Frequency"),
@@ -48,7 +50,7 @@ class BalorOperationPanel(wx.Panel):
             },
             {
                 "attr": "delay_laser_on",
-                "object": self.operation.settings,
+                "object": params,
                 "default": 100.0,
                 "type": float,
                 "label": _("Laser On Delay"),
@@ -56,7 +58,7 @@ class BalorOperationPanel(wx.Panel):
             },
             {
                 "attr": "delay_laser_off",
-                "object": self.operation.settings,
+                "object": params,
                 "default": 100.0,
                 "type": float,
                 "label": _("Laser Off Delay"),
@@ -64,7 +66,7 @@ class BalorOperationPanel(wx.Panel):
             },
             {
                 "attr": "delay_polygon",
-                "object": self.operation.settings,
+                "object": params,
                 "default": 100.0,
                 "type": float,
                 "label": _("Polygon Delay"),
