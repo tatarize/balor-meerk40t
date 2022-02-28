@@ -1363,17 +1363,17 @@ class BalorDevice(Service, ViewPort):
         Native x goes from 0x0000 to 0xFFFF with 0x8000 being zero.
         :return:
         """
-        actual_size_in_nm = self.width_as_nm
+        unit_size = self.unit_width
         galvo_range = 0xFFFF
-        nm_per_galvo = actual_size_in_nm / galvo_range
-        return 1.0 / nm_per_galvo
+        unit_per_galvo = unit_size / galvo_range
+        return 1.0 / unit_per_galvo
 
     @property
     def get_native_scale_y(self):
-        actual_size_in_nm = self.height_as_nm
+        unit_size = self.unit_height
         galvo_range = 0xFFFF
-        nm_per_galvo = actual_size_in_nm / galvo_range
-        return 1.0 / nm_per_galvo
+        unit_per_galvo = unit_size / galvo_range
+        return 1.0 / unit_per_galvo
 
     @property
     def calibration_file(self):
