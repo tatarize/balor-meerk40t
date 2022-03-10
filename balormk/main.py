@@ -128,7 +128,9 @@ class BalorDevice(Service, ViewPort):
                 "default": 0,
                 "type": int,
                 "label": _("Machine index to select"),
-                "tip": _("Which machine should we connect to? -- Leave at 0 if you have 1 machine."),
+                "tip": _(
+                    "Which machine should we connect to? -- Leave at 0 if you have 1 machine."
+                ),
             },
         ]
         self.register_choices("balor", choices)
@@ -335,7 +337,14 @@ class BalorDevice(Service, ViewPort):
 
         self.state = 0
 
-        ViewPort.__init__(self, self.lens_size, self.lens_size, origin_x=0.5, origin_y=0.5, flip_y=True)
+        ViewPort.__init__(
+            self,
+            self.lens_size,
+            self.lens_size,
+            origin_x=0.5,
+            origin_y=0.5,
+            flip_y=True,
+        )
         self.spooler = Spooler(self)
         self.driver = BalorDriver(self)
         self.spooler.driver = self.driver
@@ -1253,21 +1262,23 @@ class BalorDevice(Service, ViewPort):
         @self.console_command(
             "hatch",
             help=_("hatch <angle> <distance>"),
-            output_type = "balor",
+            output_type="balor",
         )
-        def hatch(command,
-                  channel,
-                  _,
-                  angle=None,
-                  distance=None,
-                  travel_speed=None,
-                  power=None,
-                  frequency=None,
-                  cut_speed=None,
-                  laser_on_delay=None,
-                  laser_off_delay=None,
-                  polygon_delay=None,
-                  **kwargs):
+        def hatch(
+            command,
+            channel,
+            _,
+            angle=None,
+            distance=None,
+            travel_speed=None,
+            power=None,
+            frequency=None,
+            cut_speed=None,
+            laser_on_delay=None,
+            laser_off_delay=None,
+            polygon_delay=None,
+            **kwargs
+        ):
             from balor.Cal import Cal
 
             cal = None
@@ -1322,10 +1333,10 @@ class BalorDevice(Service, ViewPort):
                 pos = 0
                 for i, pts in enumerate(points):
                     if pts is None:
-                        yield points[pos: i - 1]
+                        yield points[pos : i - 1]
                         pos = i + 1
                 if pos != len(points):
-                    yield points[pos: len(points)]
+                    yield points[pos : len(points)]
 
             for s in split(points):
                 for p in s:
@@ -1384,4 +1395,3 @@ class BalorDevice(Service, ViewPort):
             return self.calfile
         else:
             return None
-

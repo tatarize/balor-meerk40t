@@ -315,8 +315,12 @@ class BalorDriver(Parameters):
         :return:
         """
         self.connect_if_needed()
-        unit_x = self.service.length(x, 0, relative_length=self.service.lens_size, as_float=True)
-        unit_y = self.service.length(y, 1, relative_length=self.service.lens_size, as_float=True)
+        unit_x = self.service.length(
+            x, 0, relative_length=self.service.lens_size, as_float=True
+        )
+        unit_y = self.service.length(
+            y, 1, relative_length=self.service.lens_size, as_float=True
+        )
         unit_x *= self.service.get_native_scale_x
         unit_y *= self.service.get_native_scale_y
         self.native_x = unit_x
@@ -343,8 +347,12 @@ class BalorDriver(Parameters):
         :return:
         """
         self.connect_if_needed()
-        unit_dx = self.service.length(dx, 0, relative_length=self.service.lens_size, as_float=True)
-        unit_dy = self.service.length(dy, 1, relative_length=self.service.lens_size, as_float=True)
+        unit_dx = self.service.length(
+            dx, 0, relative_length=self.service.lens_size, as_float=True
+        )
+        unit_dy = self.service.length(
+            dy, 1, relative_length=self.service.lens_size, as_float=True
+        )
         unit_dx *= self.service.get_native_scale_x
         unit_dy *= self.service.get_native_scale_y
         self.native_x += unit_dx

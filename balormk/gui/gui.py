@@ -19,7 +19,6 @@ except ImportError as e:
     raise Mk40tImportAbort("wxpython")
 
 
-
 def plugin(service, lifecycle):
     if lifecycle == "service":
         return "provider/device/balor"
@@ -81,9 +80,9 @@ def plugin(service, lifecycle):
                     (_("Ants"), light_click(2)),
                     (_("Full"), light_click(3)),
                     (_("Simulate"), light_click(4)),
-
-              ),
-            })
+                ),
+            },
+        )
         service.register(
             "button/control/Light_Off",
             {
