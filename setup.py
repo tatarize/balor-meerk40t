@@ -4,9 +4,8 @@ setup(
         "scipy"
     ],
     entry_points={
-        'meerk40t.plugins': [
+        'meerk40t.plugin': [
             'Balor=balormk.main:plugin',
-            'BalorGui=balormk.gui.gui:plugin',
         ],
     },
 )

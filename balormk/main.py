@@ -15,10 +15,13 @@ import numpy as np
 import scipy
 import scipy.interpolate
 
+from balormk.gui import gui
 from balormk.pathtools import EulerianFill
 
 
 def plugin(kernel, lifecycle):
+    if lifecycle == "plugins":
+        return [gui.plugin]
     if lifecycle == "register":
         kernel.register("provider/device/balor", BalorDevice)
     elif lifecycle == "preboot":
